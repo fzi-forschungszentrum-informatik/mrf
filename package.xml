@@ -31,6 +31,9 @@
     <depend>mrt_opencv</depend> 
   -->
   
+  <depend>eigen</depend>
+  <depend>boost</depend>
+  
   <export>
     <!-- Other tools can request additional information be placed here -->
   </export>
