@@ -14,7 +14,7 @@ public:
 };
 
 
-Mrf createMrf(const SolverType& solvertype, MrfData& data);
-std::unique_ptr<MrfSolver> getMrfSolver(const SolverType& solvertype,MrfData& data);
+//Mrf createMrf(const SolverType& solvertype, MrfData& data);
+//std::unique_ptr<MrfSolver> getMrfSolver(const SolverType& solvertype,MrfData& data);
 
 } // end of mrf namespace

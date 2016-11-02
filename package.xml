@@ -30,7 +30,7 @@
     Example:
     <depend>mrt_opencv</depend> 
   -->
-  
+  <depend>generic_logger</depend>
   <depend>eigen</depend>
   <depend>boost</depend>
   
