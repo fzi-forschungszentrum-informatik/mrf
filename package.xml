@@ -31,6 +31,7 @@
     <depend>mrt_opencv</depend> 
   -->
   <depend>generic_logger</depend>
+  <depend>mrt_opencv</depend>
   <depend>eigen</depend>
   <depend>boost</depend>
   
