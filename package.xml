@@ -34,6 +34,7 @@
   <depend>mrt_opencv</depend>
   <depend>eigen</depend>
   <depend>boost</depend>
+  <depend>mrt_ceres</depend>
   
   <export>
     <!-- Other tools can request additional information be placed here -->

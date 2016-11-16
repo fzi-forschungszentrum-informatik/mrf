@@ -1,3 +1,4 @@
+#include <limits>
 #include <solver.hpp>
 #include <stdlib.h>
 #include <generic_logger/generic_logger.hpp>
@@ -14,10 +15,14 @@ Solver::Solver(const Data& data_in, const Params& params_in) {
     s_.setZero();
     w_.setZero();
     b_.setZero();
-    z_.setZero();
+    z_.setZero(dim_);
+    xf_.setZero();
+    xd_.setZero();
+    results_string_.clear();
+    setZ();
 
-    DEBUG_STREAM("Data in: "<< data_);
-    DEBUG_STREAM("Params in: "<< params_);
+    DEBUG_STREAM("Data in: " << data_);
+    DEBUG_STREAM("Params in: " << params_);
 
     if (params_in.solver_type == SolverType::EIGEN_CONJUGATE_GRADIENT) {
         a_.resize(dim_, dim_);
@@ -27,7 +32,7 @@ Solver::Solver(const Data& data_in, const Params& params_in) {
         w_.resize(dim_, dim_);
         w_.setZero();
         b_.setZero(dim_);
-        z_.setZero(dim_);
+        xf_.setZero(dim_);
         norm_factor_ = data_.depth.maxCoeff();
         // DEBUG_STREAM("norm Factor: " << norm_factor_);
         num_certain_points = countCertainPoints();
@@ -39,6 +44,11 @@ Solver::Solver(const Data& data_in, const Params& params_in) {
         setS();
         setAandB();
     }
+
+    if (params_in.solver_type == SolverType::CERES_CGNR || params_in.solver_type == SolverType::CERES_ITERATIVE_SCHUR) {
+    	xd_ = data_in.depth.cast<double>();
+
+    }
 }
 
 Solver& Solver::operator=(Solver& mrf_in) {
@@ -47,16 +57,22 @@ Solver& Solver::operator=(Solver& mrf_in) {
     return *this;
 }
 
-bool Solver::solve(Data& results) {
-
+bool Solver::solve(Data& results, std::stringstream& res_string) {
+	DEBUG_STREAM("mrf::Solver::solve");
     bool success{false};
 
     if (params_.solver_type == SolverType::EIGEN_CONJUGATE_GRADIENT) {
         success = solveEigen(results);
-    } else {
-    }
 
-    INFO_STREAM("SUCCESSFULL SOLVING:   " << success);
+    } else if(params_.solver_type == SolverType::CERES_CGNR || params_.solver_type == SolverType::CERES_ITERATIVE_SCHUR){
+    	success = solveCeres(results);
+    }
+    if (success) {
+        INFO_STREAM("SUCCESSFULL SOLVING:   " << success);
+    } else {
+        ERROR_STREAM("SUCCESSFULL SOLVING:   " << success);
+    }
+    res_string << results_string_.str();
     return success;
 }
 
@@ -76,32 +92,38 @@ bool Solver::setAandB() {
     return true;
 }
 
+bool Solver::setZ() {
+    for (int i = 0; i < dim_; i++) {
+        if (data_.certainty(i) >= params_.certainty_threshhold) { //&& std::isfinite(data_.depth(i))
+            z_(i) = data_.depth(i);                               //&& !std::isinf(data_.depth(i)
+        }
+    }
+}
+
 bool Solver::setW() {
     std::vector<TripT> w_triplets;
     std::vector<float> ww;
 
     w_triplets.reserve(num_certain_points);
     ww.reserve(num_certain_points);
-    int c = 0;
     int depth_zeros = 0;
     for (int i = 0; i < dim_; i++) {
-        if (data_.certainty(i) >= params_.certainty_threshhold) {
-            const float value{data_.depth(i)}; ///< norm_factor_
-//            if (value == 0) {
-//                depth_zeros++;
-//            } else {
-                z_(i) = value;
+        if (data_.certainty(i) >= params_.certainty_threshhold) { //&& std::isfinite(data_.depth(i))
+            //&& !std::isinf(data_.depth(i)                    ///< norm_factor_
+            if (data_.depth(i) == 0) {
+                depth_zeros++;
+            } else {
                 const float value2{z_(i) * params_.kd};
                 w_triplets.emplace_back(i, i, value2);
                 ww.emplace_back(value2);
-                c++;
-            //}
+            }
         }
     }
     if (z_ != z_) {
         ERROR_STREAM("z_ contains nan");
     }
     DEBUG_STREAM("w_triplets size: " << w_triplets.size());
+    DEBUG_STREAM("certain points containing zero depth: " << depth_zeros);
     auto maxx = std::max_element(std::begin(ww), std::end(ww));
     auto minn = std::min_element(std::begin(ww), std::end(ww));
     DEBUG_STREAM("W_w max, min: " << *maxx << ", " << *minn);
@@ -109,12 +131,12 @@ bool Solver::setW() {
     w_.setFromTriplets(w_triplets.begin(), w_triplets.end());
     w_.makeCompressed();
 
-//    if ((z_.array() != 0).count() != num_certain_points - depth_zeros) {
-//        ERROR_STREAM("z non zeros: " << (z_.array() != 0).count() << ", should be "
-//                                     << num_certain_points - depth_zeros
-//                                     << "depth_zeros: " << depth_zeros);
-//        throw std::runtime_error("z  not set up correctly");
-//    }
+    //    if ((z_.array() != 0).count() != num_certain_points - depth_zeros) {
+    //        ERROR_STREAM("z non zeros: " << (z_.array() != 0).count() << ", should be "
+    //                                     << num_certain_points - depth_zeros
+    //                                     << "depth_zeros: " << depth_zeros);
+    //        throw std::runtime_error("z  not set up correctly");
+    //    }
     if (w_.nonZeros() != w_triplets.size()) {
         ERROR_STREAM("w non zeros: " << w_.nonZeros() << ", should be " << w_triplets.size());
         throw std::runtime_error("W Cost Matrix not set up correctly");
@@ -138,16 +160,24 @@ bool Solver::setS() {
             int pnext_lr = p + pow(-1, x);
             int pnext_tb = p + pow(-1, x) * data_.width;
 
-            float eij_lr{addToSTriplet(S_triplets, p, pnext_lr, NeighbourCases::leftright)};
-            float eij_tb{addToSTriplet(S_triplets, p, pnext_tb, NeighbourCases::topbottom)};
-            sum_eij += eij_lr;
-            sum_eij += eij_tb;
-            eijs.emplace_back(eij_lr);
-            eijs.emplace_back(eij_tb);
-            if (eij_lr == 0)
+            float eij_lr{neighbourDiff(p, pnext_lr, NeighbourCases::leftright)};
+            float eij_tb{neighbourDiff(p, pnext_tb, NeighbourCases::topbottom)};
+
+            if (eij_lr == 0) {
                 count_n++;
-            if (eij_tb == 0)
+            } else {
+                S_triplets.emplace_back(p, pnext_lr, -eij_lr);
+                eijs.emplace_back(eij_lr);
+                sum_eij += eij_lr;
+            }
+
+            if (eij_tb == 0) {
                 count_n++;
+            } else {
+                S_triplets.emplace_back(p, pnext_tb, -eij_tb);
+                sum_eij += eij_tb;
+                eijs.emplace_back(eij_tb);
+            }
         }
 
         if (params_.neighbours == 8) {
@@ -160,18 +190,20 @@ bool Solver::setS() {
                 int pnext_tlr = p - data_.width + pow(-1, x);
                 int pnext_blr = p + data_.width + pow(-1, x);
 
-                float eij_tlr{addToSTriplet(S_triplets, p, pnext_tlr, NeighbourCases::toplr)};
-                float eij_blr{addToSTriplet(S_triplets, p, pnext_blr, NeighbourCases::bottomlr)};
+                float eij_tlr{neighbourDiff(p, pnext_tlr, NeighbourCases::toplr)};
+                float eij_blr{neighbourDiff(p, pnext_blr, NeighbourCases::bottomlr)};
 
                 if (eij_tlr == 0) {
                     count_n++;
                 } else {
+                	S_triplets.emplace_back(p, pnext_tlr, -eij_tlr);
                     eijs.emplace_back(eij_tlr);
                     sum_eij += eij_tlr;
                 }
                 if (eij_blr == 0) {
                     count_n++;
                 } else {
+                	S_triplets.emplace_back(p, pnext_blr, -eij_blr);
                     eijs.emplace_back(eij_blr);
                     sum_eij += eij_blr;
                 }
@@ -210,20 +242,9 @@ bool Solver::setS() {
     return true;
 }
 
-float Solver::addToSTriplet(std::vector<TripT>& S, const int p, const int pnext,
-                            const NeighbourCases nc) {
-    bool neigh;
-    neigh = neighbourTest(p, pnext, nc);
-    if (!neigh) {
-        return 0;
-    } else {
-        const float eij{diff(p, pnext)};
-        S.emplace_back(p, pnext, -eij);
-        return eij;
-    }
-}
 
-bool Solver::neighbourTest(const int p, int pnext, const NeighbourCases nc) {
+
+float Solver::neighbourDiff(const int p, int pnext, const NeighbourCases nc) {
     if (((abs((p % data_.width) - (pnext % data_.width)) > 1) || pnext < 0) &&
         (nc == NeighbourCases::leftright || nc == NeighbourCases::bottomlr ||
          nc == NeighbourCases::toplr)) {
@@ -231,7 +252,7 @@ bool Solver::neighbourTest(const int p, int pnext, const NeighbourCases nc) {
          * Criteria for left right border pass
          */
         pnext = p;
-        return false;
+        return 0;
     }
     if (((floor(p / data_.width) == 0) && (pnext < 0)) &&
         (nc == NeighbourCases::topbottom || nc == NeighbourCases::toplr)) {
@@ -239,22 +260,23 @@ bool Solver::neighbourTest(const int p, int pnext, const NeighbourCases nc) {
          * Criteria for top pass
          */
         pnext = p;
-        return false;
+        return 0;
     }
     if ((pnext >= dim_) && (nc == NeighbourCases::topbottom || nc == NeighbourCases::bottomlr)) {
         /*
          * Criteria for bottom pass
          */
         pnext = p;
-        return false;
+        return 0;
     }
-    return true;
+
+    return diff(p, pnext);
 }
 
 float Solver::diff(const int i, const int j) {
     float delta = abs(data_.image(i) - data_.image(j));
     if (params_.ks == 0) {
-        return 0.25;
+        return 1;
     }
     float ks = 1 / (params_.ks);
     float eij = 1 / (params_.ks * sqrt(2 * M_1_PI)) * exp(-1 / 2 * (ks * delta) * (ks * delta));
@@ -267,8 +289,8 @@ int Solver::countCertainPoints() {
 }
 
 bool Solver::solveEigen(Data& results) {
-
-    bool successfull;
+    results_string_ << "Eigen Conjugate Gradient Solver used" << std::endl;
+    bool successfull = false;
     Eigen::ConjugateGradient<SpMatT> eigen_solver;
     if (params_.max_iterations > 0) {
         INFO_STREAM("Max Iterations set to " << params_.max_iterations);
@@ -286,52 +308,105 @@ bool Solver::solveEigen(Data& results) {
         ERROR_STREAM("Compute A not Successfull!!");
     }
 
-    Eigen::VectorXf res;
-    res.setZero(dim_);
-    res = eigen_solver.solveWithGuess(this->b_, data_.depth);
+
+    xf_ = eigen_solver.solveWithGuess(this->b_, data_.depth);
 
     info = eigen_solver.info();
     if (info == Eigen::ComputationInfo::Success) {
         INFO_STREAM("Compute Successfull");
-    } else if (info == Eigen::ComputationInfo::InvalidInput) {
-        INFO_STREAM("Invalid input");
-    } else if (info == Eigen::ComputationInfo::NumericalIssue) {
-        INFO_STREAM("Numerical issue");
-    } else if (info == Eigen::ComputationInfo::NoConvergence) {
-        INFO_STREAM("No Convergence");
-    }
-    DEBUG_STREAM("MRF res max, min: " << res.maxCoeff() << ", " << res.minCoeff());
-
-    if (res == res) {
-        results.depth = res;
-        results.certainty = data_.depth - results.depth;
-        DEBUG_STREAM("RESULT size: " << res.size());
-        DEBUG_STREAM("RESULT  Zeros: " << res.size() - res.nonZeros());
+        results_string_ << "Computation: Successfull" << std::endl;
         successfull = true;
-    } else {
+    } else if (info == Eigen::ComputationInfo::InvalidInput) {
+        ERROR_STREAM("Invalid input");
+        results_string_ << "Computation: InvalidInput" << std::endl;
+        successfull = false;
+    } else if (info == Eigen::ComputationInfo::NumericalIssue) {
+        ERROR_STREAM("Numerical issue");
+        results_string_ << "Computation: NumericalIssue" << std::endl;
+        successfull = false;
+    } else if (info == Eigen::ComputationInfo::NoConvergence) {
+        ERROR_STREAM("No Convergence");
+        results_string_ << "Computation: NoConvergence" << std::endl;
+        successfull = true;
+    }
+    INFO_STREAM("Iterations used: " << eigen_solver.iterations());
+    results_string_ << "Iterations Used: " << eigen_solver.iterations() << std::endl;
+    results_string_ << "Estimated Error: " << eigen_solver.error() << std::endl;
+    if (xf_ != xf_) {
         ERROR_STREAM("RESULT contain nan: ");
-        results.depth = data_.depth;
         successfull = false;
     }
 
-    // results.depth *= norm_factor_;
-    //    DEBUG_STREAM("MRF res z  max, min: " << results.depth.maxCoeff() << ", "
-    //                                         << results.depth.minCoeff());
-    //        INFO_STREAM("MRF Depth result max, min: " << data_.depth.maxCoeff() << ", "
-    //                                              << data_.depth.minCoeff());
+    if (successfull) {
+        results.depth = xf_;
+        results.certainty = data_.depth - results.depth;
+        DEBUG_STREAM("MRF Results: " << results);
+    } else {
+        results.depth = data_.depth;
+    }
+
     return successfull;
 }
 
-std::ostream& operator<<(std::ostream& os, const Solver& s){
-	os << "Solver: "<< std::endl;
-	os << "dim: "<< s.dim_<< std::endl;
-	os << "num_certain_points: "<< s.num_certain_points<< std::endl;
-	os << "z_ size: "<< s.z_.size() << std::endl;
-	os << "z_ minmax: "<< s.z_.minCoeff()<< ", " << s.z_.maxCoeff() << std::endl;
-	os << "z_ non Zeros: "<< (s.z_.array() != 0).count() << std::endl;
-	os << "b_ size: "<< s.b_.size() << std::endl;
-	os << "b_ minmax: "<< s.b_.minCoeff()<< ", "<< s.b_.maxCoeff() << std::endl;
-	os << "b_ non Zeros: "<< (s.b_.array() != 0).count() << std::endl;
+bool Solver::solveCeres(Data& results) {
+	DEBUG_STREAM("Solve Ceres");
+    ceres::Problem problem;
+    ceres::Solver solver;
+    ceres::Solver::Options options;
+    ceres::Solver::Summary summary;
 
+
+    /**
+     * Set up Rediuals
+     */
+    for (size_t i = 0; i < dim_; i++) {
+        if (z_(i) != 0) { ///< add CostConstraint
+            const double& zi{static_cast<double>(z_(i))};
+            problem.AddResidualBlock(CostFunctor::create(zi, params_.kd), nullptr, &xd_(i));
+        }
+
+        //> add Smoothness Constraints
+        for (size_t j = 1; j < 3; j++) {
+            int pnext_lr = i + pow(-1, j);
+            int pnext_tb = i + pow(-1, j) * data_.width;
+            const float eij_lr{neighbourDiff(i, pnext_lr, NeighbourCases::leftright)};
+            const float eij_tb{neighbourDiff(i, pnext_tb, NeighbourCases::topbottom)};
+            if(eij_lr!=0){
+            	problem.AddResidualBlock(SmoothFunctor::create(-eij_lr),nullptr,&xd_(i),&xd_(pnext_lr));
+            }
+            if(eij_tb!=0){
+            	problem.AddResidualBlock(SmoothFunctor::create(-eij_tb),nullptr,&xd_(i),&xd_(pnext_tb));
+            }
+        }
+    }
+    std::string is_valid;
+    if(options.IsValid(&is_valid)){
+    	INFO_STREAM("All Residuals set up correctly");
+    }
+
+
+    options.max_num_iterations = params_.max_iterations;
+    options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+    options.minimizer_progress_to_stdout = true;
+    options.num_threads = 8;
+    ceres::Solve(options,&problem,&summary);
+
+    results.depth = xd_.cast<float>();
+
+    results_string_ << "Ceres solving used"<< std::endl;
+    results_string_ << summary.FullReport()<< std::endl;
+    return true;
+}
+
+std::ostream& operator<<(std::ostream& os, const Solver& s) {
+    os << "Solver: " << std::endl;
+    os << "dim: " << s.dim_ << std::endl;
+    os << "num_certain_points: " << s.num_certain_points << std::endl;
+    os << "z_ size: " << s.z_.size() << std::endl;
+    os << "z_ minmax: " << s.z_.minCoeff() << ", " << s.z_.maxCoeff() << std::endl;
+    os << "z_ non Zeros: " << (s.z_.array() != 0).count() << std::endl;
+    os << "b_ size: " << s.b_.size() << std::endl;
+    os << "b_ minmax: " << s.b_.minCoeff() << ", " << s.b_.maxCoeff() << std::endl;
+    os << "b_ non Zeros: " << (s.b_.array() != 0).count() << std::endl;
 }
 } // end of mrf namespace

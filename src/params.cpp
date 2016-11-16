@@ -4,7 +4,9 @@ namespace mrf {
 Params::Params(const int ks_in, const int kd_in, const SolverType type, const int max_iterations_in,
                const int neighbours_in, const double certainty_threshhold_in,
                const int tolerance_in)
-        : ks(ks_in), kd(kd_in), solver_type(type), max_iterations(max_iterations_in),neighbours(neighbours_in),certainty_threshhold(certainty_threshhold_in),tolerance(tolerance_in) {
+        : ks(ks_in), kd(kd_in), solver_type(type), max_iterations(max_iterations_in),
+          neighbours(neighbours_in), certainty_threshhold(certainty_threshhold_in),
+          tolerance(tolerance_in) {
 
     if (!(neighbours_in == 4 || neighbours_in == 8))
         neighbours = 4;
@@ -14,10 +16,9 @@ Params::Params(const int ks_in, const int kd_in, const SolverType type, const in
     if (max_iterations_in <= 0) {
         max_iterations = -1;
     }
-    if(ks <=0){
-    	ks = 10;
+    if (ks < 0) {
+        ks = 0;
     }
-
 }
 
 Params& Params::operator=(const Params& in) {
@@ -48,6 +49,20 @@ std::ostream& operator<<(std::ostream& os, const Params& p) {
     os << "kd: " << p.kd << std::endl;
     os << "max_iterations: " << p.max_iterations << std::endl;
     os << "tolerance: " << p.tolerance << std::endl;
+    switch (p.solver_type) {
+    case SolverType::EIGEN_CONJUGATE_GRADIENT:
+        os << "solver_type: "
+           << "EIGEN_CONJUGATE_GRADIENT" << std::endl;
+        break;
+    case SolverType::CERES_ITERATIVE_SCHUR:
+        os << "solver_type: "
+           << "CERES_ITERATIVE_SCHUR" << std::endl;
+        break;
+    case SolverType::CERES_CGNR:
+        os << "solver_type: "
+           << "CERES_CGNR" << std::endl;
+        break;
+    }
 }
 
 } // end of mrf namespace

@@ -4,7 +4,7 @@
 
 namespace mrf {
 
-enum class SolverType { EIGEN_CONJUGATE_GRADIENT = 0, CERES_LEAST_SQUARE = 1 };
+enum class SolverType { EIGEN_CONJUGATE_GRADIENT = 0, CERES_ITERATIVE_SCHUR = 1 ,CERES_CGNR = 2};
 
 class Params {
 public:
