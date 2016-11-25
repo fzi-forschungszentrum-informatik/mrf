@@ -12,25 +12,19 @@ public:
     using Ptr = std::shared_ptr<Params>;
 
 public:
-    Params(const double ks = 10, const double kd = 10,const double discont_threh = 255,
-           const SolverType type = SolverType::EIGEN_CONJUGATE_GRADIENT,
+    Params(const double ks = 1, const double kd = 1,const double discont_threh = 20,
+           const SolverType type = SolverType::CERES_SPARSE_NORMAL_CHOLESKY,
            const int max_iterations = -1, const int neighbours = 4,
            const double certainty_threshhold = 0.8, const int tolerance = -1);
 
     void setCeresOptions(const ceres::Solver::Options& options_in);
-//    Params(const int ks = 10, const int kd = 10,
-//           const SolverType type = SolverType::EIGEN_CONJUGATE_GRADIENT,
-//           const int max_iterations = -1, const int neighbours = 4,
-//           const double certainty_threshhold = 0.8, const int tolerance = -1):
-//    ks(ks), kd(kd), solver_type(type), max_iterations(max_iterations), neighbours(neighbours),
-//        certainty_threshhold(certainty_threshhold), tolerance(tolerance){};
 
 
     void setMaxIteration(const int max_iterations);
     Params& operator=(const Params& in);
 
-    static Params::Ptr create(const double ks = 10, const double kd = 10,const double discont_threh = 255,
-                              const SolverType type = SolverType::EIGEN_CONJUGATE_GRADIENT,
+    static Params::Ptr create(const double ks = 1, const double kd = 1,const double discont_threh = 20,
+                              const SolverType type = SolverType::CERES_SPARSE_NORMAL_CHOLESKY,
                               const int max_iterations = -1, const int neighbours = 4,
                               const double certainty_threshhold = 0.8, const int tolerance = -1);
 

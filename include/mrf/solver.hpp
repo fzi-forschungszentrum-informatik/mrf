@@ -8,7 +8,6 @@
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
 #include <ceres/ceres.h>
-#include <eigen3/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h>
 
 namespace mrf {
 
@@ -21,8 +20,6 @@ public:
     using Ptr = std::shared_ptr<Solver>;
 
 private:
-    using SpMatT = Eigen::SparseMatrix<float>;
-    using TripT = Eigen::Triplet<float>;
     enum class NeighbourCases { topbottom, leftright, toplr, bottomlr };
 
 public:
@@ -38,35 +35,14 @@ public:
 private:
     Data data_;
     Params params_;
-    int dim_;
+    size_t dim_;
     std::stringstream results_string_;
-    Eigen::VectorXf xf_;
     Eigen::VectorXd xd_;
 
-    SpMatT a_;
-    SpMatT w_;
-    SpMatT s_;
-    Eigen::VectorXf b_;
-    Eigen::VectorXf z_;
-   // std::map<int,float,>
-    float norm_factor_;
-    int num_certain_points;
-
-
-    bool solveEigen(Data& results);
-    bool initEigen();
-    bool setZ();
-    bool setW();
-    bool setS();
-    bool setAandB();
     float neighbourDiff(const int p, const int pnext, const NeighbourCases& nc);
     float diff(const int i, const int j);
 
-    int countCertainPoints();
-
     bool solveCeres(Data& results);
-    void filterPrior();
-
 
     friend std::ostream& operator<<(std::ostream& os, const Solver& s);
 };
