@@ -1,10 +1,10 @@
 #include <params.hpp>
 
 namespace mrf {
-Params::Params(const int ks_in, const int kd_in, const SolverType type, const int max_iterations_in,
+Params::Params(const double ks_in, const double kd_in,const double discont_thresh_in, const SolverType type, const int max_iterations_in,
                const int neighbours_in, const double certainty_threshhold_in,
                const int tolerance_in)
-        : ks(ks_in), kd(kd_in), solver_type(type), max_iterations(max_iterations_in),
+        : ks(ks_in), kd(kd_in),discont_thresh(discont_thresh_in), solver_type(type), max_iterations(max_iterations_in),
           neighbours(neighbours_in), certainty_threshhold(certainty_threshhold_in),
           tolerance(tolerance_in) {
 
@@ -24,6 +24,7 @@ Params::Params(const int ks_in, const int kd_in, const SolverType type, const in
 Params& Params::operator=(const Params& in) {
     ks = in.ks;
     kd = in.kd;
+    discont_thresh = in.discont_thresh;
     neighbours = in.neighbours;
     max_iterations = in.max_iterations;
     tolerance = in.tolerance;
@@ -32,12 +33,17 @@ Params& Params::operator=(const Params& in) {
     return *this;
 }
 
-Params::Ptr Params::create(const int ks_in, const int kd_in, const SolverType type,
+Params::Ptr Params::create(const double ks_in, const double kd_in,const double discont_thresh_in, const SolverType type,
                            const int max_iterations_in, const int neighbours_in,
                            const double certainty_threshhold_in, const int tolerance_in) {
-    return std::make_shared<Params>(ks_in, kd_in, type, neighbours_in, max_iterations_in,
+    return std::make_shared<Params>(ks_in, kd_in,discont_thresh_in, type, neighbours_in, max_iterations_in,
                                     tolerance_in, certainty_threshhold_in);
 }
+
+void Params::setCeresOptions(const ceres::Solver::Options& opts){
+	ceres_options = opts;
+}
+
 
 void Params::setMaxIteration(const int max_iterations) {
     this->max_iterations = max_iterations;
@@ -45,6 +51,7 @@ void Params::setMaxIteration(const int max_iterations) {
 //
 std::ostream& operator<<(std::ostream& os, const Params& p) {
     os << "Parameters: " << std::endl;
+    os << "discontinuity threshold: " << p.discont_thresh << std::endl;
     os << "ks: " << p.ks << std::endl;
     os << "kd: " << p.kd << std::endl;
     os << "max_iterations: " << p.max_iterations << std::endl;

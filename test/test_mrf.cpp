@@ -32,6 +32,8 @@
 //=======================================================================================================================================================
 #include "gtest/gtest.h"
 
+
+#include "test_data.hpp"
 //A google test function (uncomment the next function, add code and 
 //change the names TestGroupName and TestName)
 //TEST(TestGroupName, TestName) {

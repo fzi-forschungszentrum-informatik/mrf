@@ -19,25 +19,22 @@ Data::Data(const cv::Mat& cv_image, const Eigen::VectorXf& depth, const Eigen::V
         throw std::runtime_error("Input dimension do not match");
     }
     if (depth != depth) {
-            ERROR_STREAM("Data constructor: depth contains nan");
-   }
-
-
+        ERROR_STREAM("Data constructor: depth contains nan");
+    }
+    DEBUG_STREAM("Data Constructor: cv_imag type: "<< cv_image.type());
+    DEBUG_STREAM("Data Constructor: cv_imag channels: "<< cv_image.channels());
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> eigen_mat;
-    if (cv_image.type() != 0) {
-        cv::Mat temp;
-        ;
-        cv_image.convertTo(temp, 0);
-        cv::cv2eigen(temp, eigen_mat);
-    } else {
-        cv::cv2eigen(cv_image, eigen_mat);
-    }
-    if (eigen_mat.isZero()) {
-        throw std::runtime_error("Cv->Eigen conversion failed");
-    }
+
+    cv::Mat_<float> cv_temp{cv_image};
+    cv::transpose(cv_temp,cv_temp);
+    cv::cv2eigen(cv_temp, eigen_mat);
     if (!(eigen_mat.size() == depth.size() && certainty.size() == depth.size())) {
+        ERROR_STREAM("Eigen mat Size:  " << eigen_mat.size();)
+        ERROR_STREAM("depth Size: " << depth.size());
         throw std::runtime_error(" image and depth dimensions do not match");
     }
+
+    eigen_mat.resize(1, depth.size());
     this->image = eigen_mat;
     if (image.size() != depth.size()) {
         throw std::runtime_error(" image and depth dimensions do not match");
@@ -45,6 +42,7 @@ Data::Data(const cv::Mat& cv_image, const Eigen::VectorXf& depth, const Eigen::V
     this->certainty = certainty;
     this->depth = depth;
     this->width = width;
+
 }
 
 Data::Data(const Eigen::VectorXf& eigen_image, const Eigen::VectorXf& depth,

@@ -23,7 +23,7 @@ public:
 private:
     using SpMatT = Eigen::SparseMatrix<float>;
     using TripT = Eigen::Triplet<float>;
-    enum NeighbourCases { topbottom, leftright, toplr, bottomlr };
+    enum class NeighbourCases { topbottom, leftright, toplr, bottomlr };
 
 public:
     Solver(const Data&, const Params& = Params());
@@ -48,10 +48,9 @@ private:
     SpMatT s_;
     Eigen::VectorXf b_;
     Eigen::VectorXf z_;
+   // std::map<int,float,>
     float norm_factor_;
     int num_certain_points;
-
-
 
 
     bool solveEigen(Data& results);
@@ -60,12 +59,13 @@ private:
     bool setW();
     bool setS();
     bool setAandB();
-    float neighbourDiff(const int p, int pnext, const NeighbourCases nc);
+    float neighbourDiff(const int p, const int pnext, const NeighbourCases& nc);
     float diff(const int i, const int j);
 
     int countCertainPoints();
 
     bool solveCeres(Data& results);
+    void filterPrior();
 
 
     friend std::ostream& operator<<(std::ostream& os, const Solver& s);

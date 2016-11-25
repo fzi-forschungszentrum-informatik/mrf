@@ -1,6 +1,5 @@
 #include <limits>
 #include <solver.hpp>
-#include <stdlib.h>
 #include <generic_logger/generic_logger.hpp>
 
 namespace mrf {
@@ -8,6 +7,7 @@ namespace mrf {
 Solver::Solver(const Data& data_in, const Params& params_in) {
     data_ = data_in;
     params_ = params_in;
+    filterPrior();
     dim_ = data_.depth.size();
     num_certain_points = 0;
     norm_factor_ = 0;
@@ -43,11 +43,9 @@ Solver::Solver(const Data& data_in, const Params& params_in) {
         setW();
         setS();
         setAandB();
-    }
-
-    if (params_in.solver_type == SolverType::CERES_CGNR || params_in.solver_type == SolverType::CERES_ITERATIVE_SCHUR) {
-    	xd_ = data_in.depth.cast<double>();
-
+    } else {
+        // xd_.setConstant(dim_,100);
+        xd_ = data_in.depth.cast<double>();
     }
 }
 
@@ -58,14 +56,14 @@ Solver& Solver::operator=(Solver& mrf_in) {
 }
 
 bool Solver::solve(Data& results, std::stringstream& res_string) {
-	DEBUG_STREAM("mrf::Solver::solve");
+    DEBUG_STREAM("mrf::Solver::solve");
     bool success{false};
 
     if (params_.solver_type == SolverType::EIGEN_CONJUGATE_GRADIENT) {
         success = solveEigen(results);
 
-    } else if(params_.solver_type == SolverType::CERES_CGNR || params_.solver_type == SolverType::CERES_ITERATIVE_SCHUR){
-    	success = solveCeres(results);
+    } else {
+        success = solveCeres(results);
     }
     if (success) {
         INFO_STREAM("SUCCESSFULL SOLVING:   " << success);
@@ -163,17 +161,17 @@ bool Solver::setS() {
             float eij_lr{neighbourDiff(p, pnext_lr, NeighbourCases::leftright)};
             float eij_tb{neighbourDiff(p, pnext_tb, NeighbourCases::topbottom)};
 
-            if (eij_lr == 0) {
+            if (eij_lr == -1) {
                 count_n++;
-            } else {
+            } else if (eij_lr != 0 && eij_lr != -1) {
                 S_triplets.emplace_back(p, pnext_lr, -eij_lr);
                 eijs.emplace_back(eij_lr);
                 sum_eij += eij_lr;
             }
 
-            if (eij_tb == 0) {
+            if (eij_tb == -1) {
                 count_n++;
-            } else {
+            } else if (eij_tb != 0 && eij_tb != -1) {
                 S_triplets.emplace_back(p, pnext_tb, -eij_tb);
                 sum_eij += eij_tb;
                 eijs.emplace_back(eij_tb);
@@ -196,14 +194,14 @@ bool Solver::setS() {
                 if (eij_tlr == 0) {
                     count_n++;
                 } else {
-                	S_triplets.emplace_back(p, pnext_tlr, -eij_tlr);
+                    S_triplets.emplace_back(p, pnext_tlr, -eij_tlr);
                     eijs.emplace_back(eij_tlr);
                     sum_eij += eij_tlr;
                 }
                 if (eij_blr == 0) {
                     count_n++;
                 } else {
-                	S_triplets.emplace_back(p, pnext_blr, -eij_blr);
+                    S_triplets.emplace_back(p, pnext_blr, -eij_blr);
                     eijs.emplace_back(eij_blr);
                     sum_eij += eij_blr;
                 }
@@ -229,52 +227,54 @@ bool Solver::setS() {
     s_.setFromTriplets(S_triplets.begin(), S_triplets.end());
     s_.makeCompressed();
 
-    if (s_.nonZeros() != S_triplets.size()) {
-        throw std::runtime_error("Smoothness Matrix not set correctly");
-    }
-    if (s_.nonZeros() !=
-        ((params_.neighbours + 1) * dim_ - 2 * (dim_ / data_.width) - 2 * data_.width)) {
-        ERROR_STREAM("s nonzeros: " << s_.nonZeros());
-        ERROR_STREAM("s nonzeros should be: " << ((params_.neighbours + 1) * dim_ -
-                                                  2 * (dim_ / data_.width) - 2 * data_.width));
-        throw std::runtime_error("Smoothness Matrix not set correctly");
-    }
+    //    if (s_.nonZeros() != S_triplets.size()) {
+    //        throw std::runtime_error("Smoothness Matrix not set correctly");
+    //    }
+    //    if (s_.nonZeros() !=
+    //        ((params_.neighbours + 1) * dim_ - 2 * (dim_ / data_.width) - 2 * data_.width)) {
+    //        ERROR_STREAM("s nonzeros: " << s_.nonZeros());
+    //        ERROR_STREAM("s nonzeros should be: " << ((params_.neighbours + 1) * dim_ -
+    //                                                  2 * (dim_ / data_.width) - 2 *
+    //                                                  data_.width));
+    //        throw std::runtime_error("Smoothness Matrix not set correctly");
+    //    }
     return true;
 }
 
-
-
-float Solver::neighbourDiff(const int p, int pnext, const NeighbourCases nc) {
+float Solver::neighbourDiff(const int p, const int pnext, const NeighbourCases& nc) {
     if (((abs((p % data_.width) - (pnext % data_.width)) > 1) || pnext < 0) &&
         (nc == NeighbourCases::leftright || nc == NeighbourCases::bottomlr ||
          nc == NeighbourCases::toplr)) {
         /*
          * Criteria for left right border pass
          */
-        pnext = p;
-        return 0;
+        return -1;
     }
     if (((floor(p / data_.width) == 0) && (pnext < 0)) &&
         (nc == NeighbourCases::topbottom || nc == NeighbourCases::toplr)) {
         /*
          * Criteria for top pass
          */
-        pnext = p;
-        return 0;
+        return -1;
     }
     if ((pnext >= dim_) && (nc == NeighbourCases::topbottom || nc == NeighbourCases::bottomlr)) {
         /*
          * Criteria for bottom pass
          */
-        pnext = p;
-        return 0;
+        return -1;
     }
-
     return diff(p, pnext);
 }
 
 float Solver::diff(const int i, const int j) {
-    float delta = abs(data_.image(i) - data_.image(j));
+    const float delta = abs(data_.image(i) - data_.image(j));
+
+    if (delta < params_.discont_thresh) {
+        return 1;
+    } else {
+        return 0;
+    }
+
     if (params_.ks == 0) {
         return 1;
     }
@@ -307,7 +307,6 @@ bool Solver::solveEigen(Data& results) {
     if (info != Eigen::ComputationInfo::Success) {
         ERROR_STREAM("Compute A not Successfull!!");
     }
-
 
     xf_ = eigen_solver.solveWithGuess(this->b_, data_.depth);
 
@@ -349,53 +348,77 @@ bool Solver::solveEigen(Data& results) {
 }
 
 bool Solver::solveCeres(Data& results) {
-	DEBUG_STREAM("Solve Ceres");
+
+    DEBUG_STREAM("Solve Ceres");
     ceres::Problem problem;
-    ceres::Solver solver;
-    ceres::Solver::Options options;
-    ceres::Solver::Summary summary;
-
-
-    /**
-     * Set up Rediuals
-     */
+    int count_wrong_neighbours{0};
     for (size_t i = 0; i < dim_; i++) {
-        if (z_(i) != 0) { ///< add CostConstraint
-            const double& zi{static_cast<double>(z_(i))};
-            problem.AddResidualBlock(CostFunctor::create(zi, params_.kd), nullptr, &xd_(i));
-        }
+        /**
+         * Distance costs
+         */
+        problem.AddResidualBlock(CostFunctor::create(static_cast<double>(z_(i)), params_.kd),
+                                 new ceres::HuberLoss(static_cast<double>(data_.certainty(i))), &xd_(i));
+                                 //ceres::ScaledLoss(new ceres::TrivialLoss,static_cast<double>(data_.certainty(i))
 
-        //> add Smoothness Constraints
+        /**
+         *  Smoothness costs
+         */
         for (size_t j = 1; j < 3; j++) {
-            int pnext_lr = i + pow(-1, j);
-            int pnext_tb = i + pow(-1, j) * data_.width;
+            const int pnext_lr{i + pow(-1, j)};
+            const int pnext_tb{i + pow(-1, j) * data_.width};
             const float eij_lr{neighbourDiff(i, pnext_lr, NeighbourCases::leftright)};
             const float eij_tb{neighbourDiff(i, pnext_tb, NeighbourCases::topbottom)};
-            if(eij_lr!=0){
-            	problem.AddResidualBlock(SmoothFunctor::create(-eij_lr),nullptr,&xd_(i),&xd_(pnext_lr));
+            if (eij_lr != -1) { // eij_lr != 0 &&
+                problem.AddResidualBlock(SmoothFunctor::create(eij_lr * params_.ks), nullptr,
+                                         &xd_(i), &xd_(pnext_lr));
+            } else {
+                count_wrong_neighbours++;
             }
-            if(eij_tb!=0){
-            	problem.AddResidualBlock(SmoothFunctor::create(-eij_tb),nullptr,&xd_(i),&xd_(pnext_tb));
+
+            if (eij_tb != -1) { // eij_tb != 0 &&
+                problem.AddResidualBlock(SmoothFunctor::create(eij_tb * params_.ks), nullptr,
+                                         &xd_(i), &xd_(pnext_tb));
+            } else {
+                count_wrong_neighbours++;
             }
         }
     }
-    std::string is_valid;
-    if(options.IsValid(&is_valid)){
-    	INFO_STREAM("All Residuals set up correctly");
+    DEBUG_STREAM("Wrong Neighbours: " << count_wrong_neighbours);
+
+    /**
+     * Check parameters
+     */
+    std::string err_str;
+    if (params_.ceres_options.IsValid(&err_str)) {
+        INFO_STREAM("All Residuals set up correctly");
+    } else {
+        ERROR_STREAM(err_str);
     }
 
+    /**
+     * Solve problem
+     */
+    ceres::Solver solver;
+    ceres::Solver::Summary summary;
+    params_.ceres_options.max_num_iterations = params_.max_iterations;
+    params_.ceres_options.minimizer_progress_to_stdout = true;
+    params_.ceres_options.num_threads = 8;
+    ceres::Solve(params_.ceres_options, &problem, &summary);
+    results_string_ << summary.FullReport() << std::endl;
 
-    options.max_num_iterations = params_.max_iterations;
-    options.linear_solver_type = ceres::ITERATIVE_SCHUR;
-    options.minimizer_progress_to_stdout = true;
-    options.num_threads = 8;
-    ceres::Solve(options,&problem,&summary);
-
-    results.depth = xd_.cast<float>();
-
-    results_string_ << "Ceres solving used"<< std::endl;
-    results_string_ << summary.FullReport()<< std::endl;
+    results.depth = xd_.cast<float>(); ///< Parse data
     return true;
+}
+
+void Solver::filterPrior() {
+    for (size_t i = 0; i < data_.depth.size(); i++) {
+        if (data_.depth(i) < 0) {
+            data_.depth(i) = 0;
+        }
+        if (data_.depth(i) > 500) {
+            data_.depth(i) = 500;
+        }
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const Solver& s) {

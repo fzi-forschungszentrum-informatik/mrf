@@ -22,6 +22,7 @@ public:
      Eigen::VectorXf image;
      Eigen::VectorXf depth;
      Eigen::VectorXf certainty;
+
      int width;
 private:
      friend std::ostream& operator<<(std::ostream& os, const Data& f);
