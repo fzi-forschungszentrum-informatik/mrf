@@ -1,7 +1,7 @@
 
+#include <data.hpp>
 #include "gtest/gtest.h"
 
-#include <data.hpp>
 
 TEST(MrfData, DataImport) {
     // TODO: Add your test code here

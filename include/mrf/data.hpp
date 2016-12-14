@@ -1,31 +1,38 @@
 #pragma once
 
-#include <Eigen/Eigen>
-#include <opencv/cxcore.h>
 #include <memory>
+#include <pcl/point_cloud.h>
+#include <Eigen/src/Geometry/Transform.h>
+#include <opencv2/core/core.hpp>
 
-namespace mrf{
+namespace mrf {
 
-class Data {
-public:
-	using Ptr = std::shared_ptr<Data>;
-public:
-    Data(const cv::Mat& cv_image, const Eigen::VectorXf& depth, const Eigen::VectorXf& certainty, const int width);
-    Data(const  Eigen::VectorXf& eigen_image, const Eigen::VectorXf& depth, const Eigen::VectorXf& certainty,const int width);
-    Data(const int dim);
-    Data(){};
+template <typename T>
+struct Data {
+    using Ptr = std::shared_ptr<Data>;
 
-    static Data::Ptr create(const cv::Mat& cv_image, const Eigen::VectorXf& depth, const Eigen::VectorXf& certainty,const int width);
-    static Data::Ptr create(const  Eigen::VectorXf& eigen_image, const Eigen::VectorXf& depth,const Eigen::VectorXf& certainty, const int width);
-    Data& operator=(const Data& in);
+    using Cloud = pcl::PointCloud<T>;
+    using Image = cv::Mat;
+    using Transform = Eigen::Affine3d;
 
-     Eigen::VectorXf image;
-     Eigen::VectorXf depth;
-     Eigen::VectorXf certainty;
+    inline Data(const typename Cloud::Ptr& cl, const Image& img, const Transform& tf)
+            : cloud{cl}, image{img}, transform{tf} {};
 
-     int width;
-private:
-     friend std::ostream& operator<<(std::ostream& os, const Data& f);
+    inline static Ptr create(const typename Cloud::Ptr& cl, const cv::Mat& img,
+                             const Transform& tf) {
+        return std::make_shared<Data>(cl, img, tf);
+    }
 
+    inline friend std::ostream& operator<<(std::ostream& os, const Data& d) {
+        os << "Image size: " << d.image.rows << " x " << d.image.cols << std::endl
+           << "Number of cloud points: " << cloud->size() << std::endl
+           << "Transform: \n"
+           << transform.matrix();
+        return os;
+    }
+
+    const typename Cloud::Ptr cloud;
+    Image image;
+    Transform transform; ///< Transform between camera to laser
 };
-}//end of mrf namespace
+}

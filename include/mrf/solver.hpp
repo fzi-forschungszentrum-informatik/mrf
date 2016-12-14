@@ -1,52 +1,39 @@
 #pragma once
 
-#include "data.hpp"
-#include "params.hpp"
-#include "functors.hpp"
-
 #include <memory>
-#include <Eigen/Eigen>
-#include <Eigen/Sparse>
-#include <ceres/ceres.h>
+#include <camera_models/camera_model.h>
+
+#include "data.hpp"
+#include "parameters.hpp"
 
 namespace mrf {
 
-struct CostFunctor;
-struct SmoothFunctor;
-
 class Solver {
+
+    enum class NeighbourCase { top_bottom, left_right, top_left_right, bottom_left_right };
 
 public:
     using Ptr = std::shared_ptr<Solver>;
 
-private:
-    enum class NeighbourCases { topbottom, leftright, toplr, bottomlr };
+    inline Solver(const std::unique_ptr<CameraModel>& cam, const Parameters& p = Parameters())
+            : camera_{std::move(cam)}, params_(p){};
 
-public:
-    Solver(const Data&, const Params& = Params());
-    //    Mrf(){};
-    Solver& operator=(Solver& mrf_in);
-    bool solve(Data& res_data, std::stringstream& results);
+    template <typename T>
+    bool solve(Data<T>&);
 
-    inline static Solver::Ptr create(const Data& data_in, const Params params_in) {
-        return std::make_shared<Solver>(data_in, params_in);
+    inline static Ptr create(std::unique_ptr<CameraModel> cam, const Parameters& p = Parameters()) {
+        return std::make_shared<Solver>(cam, p);
     }
 
 private:
-    Data data_;
-    Params params_;
-    size_t dim_;
-    std::stringstream results_string_;
-    Eigen::VectorXd xd_;
+    double neighbourDiff(const int p, const int pnext, const NeighbourCase& nc, const int width,
+                        const int dim);
+    double diff(const double depth_i, const double depth_j);
+    bool solveCeres(Data&);
 
-    float neighbourDiff(const int p, const int pnext, const NeighbourCases& nc);
-    float diff(const int i, const int j);
-
-    bool solveCeres(Data& results);
-
-    friend std::ostream& operator<<(std::ostream& os, const Solver& s);
+    std::unique_ptr<CameraModel> camera_;
+    Parameters params_;
 };
+}
 
-
-
-} // end of mrf namespace
+#include "internal/solver_impl.hpp"
