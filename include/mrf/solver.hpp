@@ -26,7 +26,7 @@ public:
     }
 
 private:
-
+    void getNNdepths(Eigen::VectorXd& depth_est);
     std::unique_ptr<CameraModel> camera_;
     Parameters params_;
 };
