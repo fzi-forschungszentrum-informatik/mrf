@@ -1,9 +1,13 @@
+
+#include "solver.hpp"
+
 #include <limits>
 #include <ostream>
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
 #include <generic_logger/generic_logger.hpp>
-#include <util_ceres/eigen_quaternion_parametrization.h>
+// #include <util_ceres/eigen_quaternion_parametrization.h> //todo:: Bei depend einbauen.(util_ceres hat nicht geklappt)
+
 
 #include "cloud_preprocessing.hpp"
 #include "functor_distance.hpp"
@@ -101,8 +105,8 @@ bool Solver::solve(Data<T>& data) {
     /**
      * Parametriztation and boundaries
      */
-    problem.SetParameterization(rotation.coeffs().data(),
-                                new util_ceres::EigenQuaternionParametrization);
+//    problem.SetParameterization(rotation.coeffs().data(),
+//                                new util_ceres::EigenQuaternionParametrization);
 
     /**
      * Check parameters
@@ -123,48 +127,6 @@ bool Solver::solve(Data<T>& data) {
     INFO_STREAM(summary.FullReport());
     return summary.IsSolutionUsable();
 }
-
-//double Solver::neighbourDiff(const int p, const int pnext, const NeighbourCase& nc, const int width,
-//                             const int dim) {
-//    if (((abs((p % width) - (pnext % width)) > 1) || pnext < 0) &&
-//        nc != NeighbourCase::top_bottom) {
-//        /*
-//         * Criteria for left right border pass
-//         */
-//        return -1;
-//    }
-//    if (((floor(p / width) == 0) && (pnext < 0)) &&
-//        (nc == NeighbourCase::top_bottom || nc == NeighbourCase::top_left_right)) {
-//        /*
-//         * Criteria for top pass
-//         */
-//        return -1;
-//    }
-//    if ((pnext >= static_cast<int>(dim)) &&
-//        (nc == NeighbourCase::top_bottom || nc == NeighbourCase::bottom_left_right)) {
-//        /*
-//         * Criteria for bottom pass
-//         */
-//        return -1;
-//    }
-//    return diff(p, pnext);
-//}
-//
-//double Solver::diff(const double depth_i, const double depth_j) {
-//    const float delta{std::abs(depth_i - depth_j)};
-//
-//    /**
-//     * \warning Hier wird effektiv nur 1 oder 0 ausgegeben. Das soll wahrscheinlich nicht so sein,
-//     * oder?
-//     */
-//    if (delta < params_.discontinuity_threshold || params_.ks == 0) {
-//        return 1;
-//    } else {
-//        return 0;
-//    }
-//    return std::sqrt(1 / (params_.ks * std::sqrt(2 * M_1_PI)) *
-//                     std::exp(-1 / 2 * std::pow(delta / params_.ks, 2)));
-//}
 
 std::vector<double> smoothnessWeights(const int p, const std::vector<int>& neighbs,
                                       const cv::Mat& img) {

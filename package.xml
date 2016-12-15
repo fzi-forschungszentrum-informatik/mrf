@@ -19,7 +19,8 @@
   <depend>mrt_ceres</depend>
   <depend>mrt_opencv</depend>
   <depend>mrt_pcl</depend>
-  <depend>pointcloud_camera</depend>
+  <depend>camera_models</depend>
+ 
 
   <export>
   </export>

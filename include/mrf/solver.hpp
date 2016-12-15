@@ -26,15 +26,12 @@ public:
     }
 
 private:
-//    double neighbourDiff(const int p, const int pnext, const NeighbourCase& nc, const int width,
-//                        const int dim);
-//    double diff(const double depth_i, const double depth_j);
-    std::vector<double> smoothnessWeights(const int p,const std::vector<int>&neighbours,const cv::Mat& img);
-    bool solveCeres(Data&);
 
     std::unique_ptr<CameraModel> camera_;
     Parameters params_;
 };
-}
 
-#include "internal/solver_impl.hpp"
+std::vector<double> smoothnessWeights(const int p, const std::vector<int>& neighbours,
+                                          const cv::Mat& img);
+
+}
