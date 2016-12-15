@@ -25,9 +25,9 @@ struct Data {
 
     inline friend std::ostream& operator<<(std::ostream& os, const Data& d) {
         os << "Image size: " << d.image.rows << " x " << d.image.cols << std::endl
-           << "Number of cloud points: " << cloud->size() << std::endl
+           << "Number of cloud points: " << d.cloud->size() << std::endl
            << "Transform: \n"
-           << transform.matrix();
+           << d.transform.matrix();
         return os;
     }
 

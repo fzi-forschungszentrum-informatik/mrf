@@ -44,5 +44,5 @@ public:
 
 private:
     Eigen::Vector3d p_; ///< 3D world point associated to this pixel
-    const double w_;    ///< Weight
+    double w_;          ///< Weight
 };
