@@ -15,19 +15,19 @@ class Solver {
 public:
     using Ptr = std::shared_ptr<Solver>;
 
-    inline Solver(std::unique_ptr<CameraModel>& cam, const Parameters& p = Parameters())
-            : camera_(std::move(cam)), params_(p){};
+    inline Solver(const std::shared_ptr<CameraModel>& cam, const Parameters& p = Parameters())
+            : camera_(cam), params_(p){};
 
     template <typename T>
     bool solve(Data<T>&);
 
-    inline static Ptr create(std::unique_ptr<CameraModel> cam, const Parameters& p = Parameters()) {
+    inline static Ptr create(const std::shared_ptr<CameraModel>& cam, const Parameters& p = Parameters()) {
         return std::make_shared<Solver>(cam, p);
     }
 
 private:
     void getNNdepths(Eigen::VectorXd& depth_est);
-    std::unique_ptr<CameraModel> camera_;
+    const std::shared_ptr<CameraModel> camera_;
     Parameters params_;
 };
 
