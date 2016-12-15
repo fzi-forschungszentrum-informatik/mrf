@@ -1,7 +1,8 @@
 #pragma once
 #include <memory>
 #include <ostream>
-#include <ceres/ceres.h>
+#include <ceres/problem.h>
+#include <ceres/solver.h>
 
 namespace mrf {
 

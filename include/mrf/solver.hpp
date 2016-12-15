@@ -15,8 +15,8 @@ class Solver {
 public:
     using Ptr = std::shared_ptr<Solver>;
 
-    inline Solver(const std::unique_ptr<CameraModel>& cam, const Parameters& p = Parameters())
-            : camera_{std::move(cam)}, params_(p){};
+    inline Solver(std::unique_ptr<CameraModel>& cam, const Parameters& p = Parameters())
+            : camera_(std::move(cam)), params_(p){};
 
     template <typename T>
     bool solve(Data<T>&);
