@@ -7,7 +7,7 @@ namespace mrf {
 cv::Mat gradientSobel(const cv::Mat& in, const bool normalize) {
     using namespace cv;
 
-    Mat grad_x, grad_y;
+    Mat grad_x(in.rows, in.cols, in.type()), grad_y(in.rows, in.cols, in.type());
     Sobel(in, grad_x, CV_32F, 1, 0, 3);
     Sobel(in, grad_y, CV_32F, 0, 1, 3);
     convertScaleAbs(grad_x, grad_x);

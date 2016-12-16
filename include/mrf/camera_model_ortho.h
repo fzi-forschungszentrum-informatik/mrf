@@ -10,14 +10,16 @@ struct CameraModelOrthoGetViewingRay {
     bool operator()(T, T1&& imagePoint, T2&& pos, T3&& direction) const {
         direction[0] = 0;
         direction[1] = 0;
-        direction[2] = T(1.0);
-        pos[0] = pos[1] = pos[2] = T(0.0);
+        direction[2] = T(1);
+        pos[0] = imagePoint[0];
+        pos[1] = imagePoint[1];
+        pos[2] = T(0);
         return true;
     }
 };
 struct CameraModelOrthoGetImagePoint {
     template <typename T, typename T1, typename T2>
-    bool operator()(T, T1&& point3d, T2&& imagePoint) const {
+    inline bool operator()(T, T1&& point3d, T2&& imagePoint) const {
         imagePoint[0] = point3d[0];
         imagePoint[1] = point3d[1];
         return true;
