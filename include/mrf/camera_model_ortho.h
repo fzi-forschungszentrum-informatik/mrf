@@ -11,7 +11,9 @@ struct CameraModelOrthoGetViewingRay {
         direction[0] = 0;
         direction[1] = 0;
         direction[2] = T(1.0);
-        pos[0] = pos[1] = pos[2] = T(0.0);
+        pos[0] = imagePoint[0];
+        pos[1] = imagePoint[1];
+        pos[2] = T(0.0);
         return true;
     }
 };

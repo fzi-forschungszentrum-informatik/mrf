@@ -30,7 +30,7 @@ struct GroundTruthParams {
     double noise_sigma;
 
     GroundTruthParams()
-            : equidistant{true}, rows_inbetween{20}, cols_inbetween{10}, seedpoint_number{100},
+            : equidistant{false}, rows_inbetween{20}, cols_inbetween{10}, seedpoint_number{1000},
               addCloudNoise{false}, addImageNoise{false}, addImageBlur{false}, blur_size{3},
               noise_sigma{2} {};
 
@@ -62,7 +62,9 @@ void addNoiseToCloud(const Cloud::Ptr& cloud_sparse, const GroundTruthParams par
 
 void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_sparse, const int width,
                      const int height, const GroundTruthParams params) {
+
     cloud_sparse->points.reserve(width * height);
+
 
     if (params.equidistant) { //> equidistant randomiser
         for (int i = 1; i < height; i += params.rows_inbetween) {
@@ -79,8 +81,8 @@ void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_spar
                 cloud_dense->points[(std::rand() % (int)(width * height + 1))]);
         }
     }
-    cloud_sparse->width = 1;
-    cloud_sparse->height = cloud_sparse->points.size();
+    cloud_sparse->width = cloud_sparse->points.size();
+    cloud_sparse->height = 1;
 
     if (params.addCloudNoise) {
         addNoiseToCloud(cloud_sparse, params);
@@ -98,29 +100,30 @@ TEST(MRF, loadGT) {
     /**
      * Load GT Data
      */
-    std::cout << "Loading cloud\n";
     pcl::io::loadPCDFile<Point>("gt_dense.pcd", *cloud_dense);
-    std::cout << "Loading image\n";
     cv::Mat image{cv::imread("gt_image.png")};
     const int width{image.cols};
     const int height{image.rows};
     const int dim{width * height};
-    cv::Mat gt_depth_image{cv::imread("gt_image_depth.png")};
+    std::cout << "\n Image width,height:\n" << width <<","<<height;
     GroundTruthParams params_gt;
-    Eigen::VectorXd gt_depth{Eigen::VectorXd::Zero(dim)};
+    std::cout << "\nTest GroundTruthParams:\n" << params_gt;
+
     loadCloudSparse(cloud_dense, cloud_sparse, width, height, params_gt);
-    cloud_sparse->height = 1; ///< Force  non-dense normal estimation even when structure is organized
+    std::cout << "\n cloud_sparse points:\n" << cloud_sparse->points.size() << std::endl;
 
     /**
     * Solver
     */
     std::shared_ptr<CameraModelOrtho> cam_ptr {std::make_shared<CameraModelOrtho>(width, height)};
-    Parameters params;
+    const Parameters::Ptr p{Parameters::create()};
     const Data<Point>::Transform tf{Data<Point>::Transform::Identity()};
     Data<Point>::Ptr d{Data<Point>::create(cloud_sparse, image, tf)};
-    Solver solver(cam_ptr, params);
+    Solver solver(cam_ptr, *p);
+
 
     bool success;
+    std::cout << "\n solve start :\n";
     success = solver.solve(*d);
 }
 
