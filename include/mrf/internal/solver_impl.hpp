@@ -32,10 +32,11 @@ bool Solver::solve(Data<T>& data) {
     /**
      * Compute point projection in camera image
      */
-    Eigen::Matrix2Xd img_pts_raw;
+
     const Eigen::Matrix3Xd pts_3d{cl->getMatrixXfMap().topRows<3>().cast<double>()};
     const double depth_max_in{pts_3d.colwise().norm().maxCoeff()};
     const double depth_min_in{pts_3d.colwise().norm().minCoeff()};
+    Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     std::vector<bool> in_img{camera_->getImagePoints(pts_3d, img_pts_raw)};
     int width, height;
     camera_->getImageSize(width, height);
