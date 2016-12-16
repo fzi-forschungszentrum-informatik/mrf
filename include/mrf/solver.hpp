@@ -30,10 +30,6 @@ private:
     const std::shared_ptr<CameraModel> camera_;
     Parameters params_;
 };
-
-std::vector<double> smoothnessWeights(const int p, const std::vector<int>& neighbours,
-                                          const cv::Mat& img);
-
 }
 
 #include "internal/solver_impl.hpp"

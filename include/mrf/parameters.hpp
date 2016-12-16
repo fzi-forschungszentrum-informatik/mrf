@@ -24,7 +24,7 @@ struct Parameters {
            << "ks: " << p.ks << std::endl
            << "kd: " << p.kd << std::endl
            << "max_iterations: " << p.max_iterations << std::endl
-           << "set_depth_limits: " << p.set_depth_limits << std::endl;
+           << "set_depth_limits: " << p.use_custom_depth_limits << std::endl;
     }
 
     double ks{1};
@@ -34,7 +34,9 @@ struct Parameters {
     int max_iterations{20};
     Initialization initialization{Initialization::triangles};
     double radius_normal_estimation{0.5};
-    bool set_depth_limits{true};
+    bool use_custom_depth_limits{true};
+    double custom_depth_limit_min{0};
+    double custom_depth_limit_max{100};
 
     ceres::Solver::Options solver;
     ceres::Problem::Options problem;
