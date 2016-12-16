@@ -1,12 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <ostream>
 #include <ceres/autodiff_cost_function.h>
 #include <util_ceres/eigen.h>
 
 namespace mrf {
 
-class FunctorDistance {
+struct FunctorDistance {
 
     using Ptr = std::shared_ptr<FunctorDistance>;
 
@@ -15,7 +16,6 @@ class FunctorDistance {
     static constexpr size_t DimRotation = 4;
     static constexpr size_t DimTranslation = 3;
 
-public:
     inline FunctorDistance(const Eigen::Vector3d& p, const double& w) : p_{p}, w_{w} {};
 
     template <typename T>
@@ -35,6 +35,11 @@ public:
                                                DimTranslation>(this);
     }
 
+    inline friend std::ostream& operator<<(std::ostream& os, const FunctorDistance& f) {
+        os << "Vector: " << f.p_ << std::endl << "Weight: " << f.w_ << std::endl;
+        return os;
+    }
+
     inline void setPoint(const Eigen::Vector3d& p) {
         p_ = p;
     }
@@ -46,3 +51,4 @@ private:
     Eigen::Vector3d p_; ///< 3D world point associated to this pixel
     double w_;          ///< Weight
 };
+}

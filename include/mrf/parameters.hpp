@@ -20,11 +20,11 @@ struct Parameters {
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const Parameters& p) {
-        os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl;
-        os << "ks: " << p.ks << std::endl;
-        os << "kd: " << p.kd << std::endl;
-        os << "max_iterations: " << p.max_iterations << std::endl;
-        os << "set_depth_limits: " << p.set_depth_limits << std::endl;
+        os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
+           << "ks: " << p.ks << std::endl
+           << "kd: " << p.kd << std::endl
+           << "max_iterations: " << p.max_iterations << std::endl
+           << "set_depth_limits: " << p.set_depth_limits << std::endl;
     }
 
     double ks{1};
