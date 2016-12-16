@@ -9,6 +9,6 @@ TEST(ImagePreprocessing, Instantiation) {
 
     constexpr size_t width = 100;
 	constexpr size_t height = 100;
-    cv::Mat in(height, width, CV_32FC1, 0);
+    cv::Mat in(height, width, CV_32FC1, double(0));
     cv::Mat out = gradientSobel(in);
 }
