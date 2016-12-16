@@ -35,3 +35,5 @@ std::vector<double> smoothnessWeights(const int p, const std::vector<int>& neigh
                                           const cv::Mat& img);
 
 }
+
+#include "internal/solver_impl.hpp"

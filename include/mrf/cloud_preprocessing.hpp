@@ -6,14 +6,14 @@
 namespace mrf {
 
 template <typename T, typename U>
-const typename pcl::PointCloud<T>::Ptr estimateNormals(const typename pcl::PointCloud<T>::ConstPtr& in,
+const typename pcl::PointCloud<U>::Ptr estimateNormals(const typename pcl::PointCloud<T>::ConstPtr& in,
                                               const double& radius) {
     using namespace pcl;
     const typename PointCloud<U>::Ptr out{new PointCloud<U>};
     NormalEstimationOMP<T, U> ne;
     ne.setRadiusSearch(radius);
     ne.setInputCloud(in);
-    ne.compute(out);
+    ne.compute(*out);
     return out;
 }
 

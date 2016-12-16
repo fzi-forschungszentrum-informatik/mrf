@@ -27,7 +27,7 @@ bool Solver::solve(Data<T>& data) {
      */
     using PointT = pcl::PointXYZINormal;
     const pcl::PointCloud<PointT>::Ptr cl{estimateNormals<T, PointT>(
-        transform(data.cloud, data.transform), params_.radius_normal_estimation)};
+        transform<T>(data.cloud, data.transform), params_.radius_normal_estimation)};
 
     /**
      * Compute point projection in camera image
@@ -82,11 +82,11 @@ bool Solver::solve(Data<T>& data) {
          *  Smoothness costs
          */
         std::vector<int> neighbours{getNeighbours(c, params_, width, width * height)};
-        std::vector<int> weight{smoothnessWeights(c, neighbours, img)};
+        std::vector<double> weight{smoothnessWeights(c, neighbours, img)};
         for (size_t i = 0; i < neighbours.size(); i++) {
-            if (neighbours(i) != -1) {
-                problem.AddResidualBlock(FunctorSmoothness::create(weight(i) * params_.ks), nullptr,
-                                         &depth_est(c), &depth_est(neighbours(i)));
+            if (neighbours[i] != -1) {
+                problem.AddResidualBlock(FunctorSmoothness::create(weight[i] * params_.ks), nullptr,
+                                         &depth_est(c), &depth_est(neighbours[i]));
             }
         }
         /**
@@ -102,7 +102,7 @@ bool Solver::solve(Data<T>& data) {
      * Parametriztation and boundaries
      */
     problem.SetParameterization(rotation.coeffs().data(),
-                                new util_ceres::EigenQuaternionParametrization);
+                                new util_ceres::EigenQuaternionParameterization);
     /**
      * Check parameters
      */
