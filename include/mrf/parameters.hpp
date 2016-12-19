@@ -30,8 +30,8 @@ struct Parameters {
            << "set_depth_limits: " << p.use_custom_depth_limits << std::endl;
     }
 
-    double ks{1};
-    double kd{1};
+    double ks{0.1};
+    double kd{100};
     double discontinuity_threshold{20};
     Neighborhood neighborhood{Neighborhood::eight};
     int max_iterations{20};
