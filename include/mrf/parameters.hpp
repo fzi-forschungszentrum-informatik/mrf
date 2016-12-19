@@ -6,16 +6,17 @@
 
 namespace mrf {
 
+enum class Initialization { nearestNeighbor, triangles, meanDepth, none };
+
 struct Parameters {
 
     enum class Neighborhood { four = 4, eight = 8 };
-    enum class Initialization { nearest_neighbor, triangles };
 
     using Ptr = std::shared_ptr<Parameters>;
 
-    inline Parameters(){
-    	problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-    	problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+    inline Parameters() {
+        problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+        problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
     };
 
     inline static Ptr create() {
