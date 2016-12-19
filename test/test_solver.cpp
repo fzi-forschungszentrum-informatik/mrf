@@ -21,15 +21,8 @@ TEST(Solver, Instantiation) {
     using DataT = Data<PointT>;
     DataT::Image img{cv::Mat::eye(rows, cols, CV_32FC1)};
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
-    PointT p;
-    p.x = 1;
-    p.y = rows - 1;
-    p.z = 1;
-    cl->push_back(p);
-    p.x = cols - 1;
-    p.y = 1;
-    p.z = 0;
-    cl->push_back(p);
+    cl->push_back(PointT(1, rows - 1, 1));
+    cl->push_back(PointT(cols - 1, 1, 0));
     DataT d(cl, img, DataT::Transform::Identity());
 
     Solver solver{cam};
