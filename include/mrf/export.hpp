@@ -1,10 +1,11 @@
 #pragma once
 
+#include <camera_models/camera_model.h>
 #include <glog/logging.h>
-#include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
-#include <camera_models/camera_model.h>
+
+#include "data.hpp"
 
 namespace mrf {
 

@@ -1,9 +1,7 @@
-#pragma once
-
-#include "gtest/gtest.h"
-
 #include <fstream>
 #include <Eigen/Eigen>
+#include <glog/logging.h>
+#include <gtest/gtest.h>
 #include <opencv/cxcore.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -65,7 +63,6 @@ void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_spar
 
     cloud_sparse->points.reserve(width * height);
 
-
     if (params.equidistant) { //> equidistant randomiser
         for (int i = 1; i < height; i += params.rows_inbetween) {
             for (int j = 1; j < width; j += params.cols_inbetween) {
@@ -105,7 +102,7 @@ TEST(MRF, loadGT) {
     const int width{image.cols};
     const int height{image.rows};
     const int dim{width * height};
-    std::cout << "\n Image width,height:\n" << width <<","<<height;
+    std::cout << "\n Image width,height:\n" << width << "," << height;
     GroundTruthParams params_gt;
     std::cout << "\nTest GroundTruthParams:\n" << params_gt;
 
@@ -115,15 +112,13 @@ TEST(MRF, loadGT) {
     /**
     * Solver
     */
-    std::shared_ptr<CameraModelOrtho> cam_ptr {std::make_shared<CameraModelOrtho>(width, height)};
+    std::shared_ptr<CameraModelOrtho> cam_ptr{std::make_shared<CameraModelOrtho>(width, height)};
     const Parameters::Ptr p{Parameters::create()};
     const Data<Point>::Transform tf{Data<Point>::Transform::Identity()};
     Data<Point>::Ptr d{Data<Point>::create(cloud_sparse, image, tf)};
     Solver solver(cam_ptr, *p);
 
-
     bool success;
     std::cout << "\n solve start :\n";
     success = solver.solve(*d);
 }
-
