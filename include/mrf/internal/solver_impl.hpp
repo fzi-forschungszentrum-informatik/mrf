@@ -83,38 +83,38 @@ bool Solver::solve(Data<T>& data) {
                                  translation.data());
     }
 
-//    LOG(INFO) << "Add smoothness costs";
-//    for (int row = 0; row < rows; row++) {
-//        for (int col = 0; col < cols; col++) {
-//            const Pixel p(row, col);
-//            for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
-//                problem.AddResidualBlock(
-//                    FunctorSmoothness::create(
-//                        smoothnessWeight(p, n, data.image.template at<float>(p.row, p.col),
-//                                         data.image.template at<float>(n.row, n.col)) *
-//                        params_.ks),
-//                    nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
-//            }
-//        }
-//    }
-//
-//    LOG(INFO) << "Add depth limits";
-//    double ub, lb;
-//    if (params_.use_custom_depth_limits) {
-//        ub = params_.custom_depth_limit_max;
-//        lb = params_.custom_depth_limit_min;
-//        LOG(INFO) << "Use custom limits. Min: " << lb << ", Max: " << ub;
-//    } else {
-//        ub = pts_3d.colwise().norm().maxCoeff();
-//        lb = pts_3d.colwise().norm().minCoeff();
-//        LOG(INFO) << "Use adaptive limits. Min: " << lb << ", Max: " << ub;
-//    }
-//    for (int row = 0; row < rows; row++) {
-//        for (int col = 0; col < cols; col++) {
-//            problem.SetParameterLowerBound(&depth_est(row, col), 0, lb);
-//            problem.SetParameterUpperBound(&depth_est(row, col), 0, ub);
-//        }
-//    }
+    LOG(INFO) << "Add smoothness costs";
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+            const Pixel p(col, row);
+            for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
+                problem.AddResidualBlock(
+                    FunctorSmoothness::create(
+                        smoothnessWeight(p, n, data.image.template at<float>(p.row, p.col),
+                                         data.image.template at<float>(n.row, n.col)) *
+                        params_.ks),
+                    nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
+            }
+        }
+    }
+
+    LOG(INFO) << "Add depth limits";
+    double ub, lb;
+    if (params_.use_custom_depth_limits) {
+        ub = params_.custom_depth_limit_max;
+        lb = params_.custom_depth_limit_min;
+        LOG(INFO) << "Use custom limits. Min: " << lb << ", Max: " << ub;
+    } else {
+        ub = pts_3d.colwise().norm().maxCoeff();
+        lb = pts_3d.colwise().norm().minCoeff();
+        LOG(INFO) << "Use adaptive limits. Min: " << lb << ", Max: " << ub;
+    }
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+            problem.SetParameterLowerBound(&depth_est(row, col), 0, lb);
+            problem.SetParameterUpperBound(&depth_est(row, col), 0, ub);
+        }
+    }
 
     LOG(INFO) << "Set parameterization";
     problem.SetParameterBlockConstant(rotation.coeffs().data());
