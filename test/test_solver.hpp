@@ -14,8 +14,8 @@ TEST(Solver, Instantiation) {
     google::InitGoogleLogging("TestSolver");
 
     constexpr size_t rows = 50;
-    constexpr size_t cols = 50;
-    std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(rows, cols)};
+    constexpr size_t cols = 100;
+    std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;
     using DataT = Data<PointT>;
