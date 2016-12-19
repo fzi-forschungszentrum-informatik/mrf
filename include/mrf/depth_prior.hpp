@@ -10,10 +10,10 @@
 
 namespace mrf {
 
-using DistanceType = flann::L2_Simple<double>;
+using DataType = double;
+using DistanceType = flann::L2_Simple<DataType>;
 using mapT = std::map<Pixel, Eigen::Vector3d, PixelLess>;
 using treeT = std::unique_ptr<flann::Index<DistanceType>>;
-using DataType = int;
 using EigenT = Eigen::Matrix<DataType, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
 flann::Matrix<DataType> convertEigen2FlannRow(const EigenT& mEigen) {
@@ -82,8 +82,8 @@ std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT&
 
     const flann::Matrix<DistanceType::ElementType> query(queryData, 1, 2);
     std::vector<std::vector<int>> indices_vec;
-    std::vector<std::vector<double>> dist_vec;
-    tree->knnSearch(query, indices_vec, dist_vec, num_neigh, flann::SearchParams(8));
+    std::vector<std::vector<DataType>> dist_vec;
+    tree->knnSearch(query, indices_vec, dist_vec, num_neigh, flann::SearchParams(32));
 
     return indices_vec[0];
 
@@ -106,7 +106,7 @@ double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
     return p_int.norm();
 }
 
-void getNNDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
+void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
                    const std::shared_ptr<CameraModel> cam, const Initialization type) {
     if (type == Initialization::none)
         return;
@@ -117,8 +117,8 @@ void getNNDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
     Eigen::Matrix2Xi coordinates(2, projection.size());
     int i{0};
     for (mapT::iterator it = projection.begin(); it != projection.end(); ++it) {
-        coordinates.col(i).x = (it->first).col;
-        coordinates.col(i).y = (it->first).row;
+        coordinates.col(i).x() = (it->first).col;
+        coordinates.col(i).y() = (it->first).row;
         i++;
     }
 
@@ -135,7 +135,7 @@ void getNNDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
     }
 
     flann::Matrix<DistanceType::ElementType> flann_dataset{
-        convertEigen2FlannRow(coordinates)}; //>todo:: Check whether colum or row major
+        convertEigen2FlannRow(coordinates.cast<DataType>())}; //>todo:: Check whether colum or row major
     kd_index_ptr_ =
         std::make_unique<flann::Index<DistanceType>>(flann_dataset, flann::KDTreeIndexParams(8));
     kd_index_ptr_->buildIndex(flann_dataset);
@@ -145,7 +145,8 @@ void getNNDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
             for (size_t u = 0; u < cols; u++) {
 
                 std::vector<int> neighbours{getNeighbours(coordinates, kd_index_ptr_, Pixel(u,v), 1)};
-                depth_est(v*cols + u) = Eigen::Vector3d{projection.at(Pixel(coordinates.col(neighbours[0]).row,coordinates.col(neighbours[0]).col))}.norm();
+                Eigen::Vector3d p{projection.at(Pixel(coordinates.col(neighbours[0]).y(),coordinates.col(neighbours[0]).x()))};
+                depth_est(v*cols + u) = p.norm();
             }
         }
         return;
@@ -166,7 +167,7 @@ void getNNDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
                     Eigen::Vector2d image_coordinate{u, v};
                     Eigen::Matrix3Xd neighbours_points(3, 3);
                     for (size_t i = 0; i < 3; i++) {
-                        Pixel c{coordinates.col(triangle_neighbours[i]).y, coordinates.col(triangle_neighbours[i]).x};
+                        Pixel c{coordinates.col(triangle_neighbours[i]).y(), coordinates.col(triangle_neighbours[i]).x()};
                         neighbours_points.col(i) = projection.at(c);
                     }
                     cam->getViewingRay(image_coordinate, supportPoint, direction);

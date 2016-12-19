@@ -36,7 +36,7 @@ struct Parameters {
     double discontinuity_threshold{20};
     Neighborhood neighborhood{Neighborhood::four};
     int max_iterations{20};
-    Initialization initialization{Initialization::triangles};
+    Initialization initialization{Initialization::none};
     double radius_normal_estimation{0.5};
     bool use_custom_depth_limits{true};
     double custom_depth_limit_min{0};
