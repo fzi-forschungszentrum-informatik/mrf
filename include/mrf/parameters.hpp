@@ -13,7 +13,9 @@ struct Parameters {
 
     using Ptr = std::shared_ptr<Parameters>;
 
-    inline Parameters(){};
+    inline Parameters(){
+    	problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+    };
 
     inline static Ptr create() {
         return std::make_shared<Parameters>();
