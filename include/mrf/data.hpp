@@ -18,13 +18,12 @@ struct Data {
     inline Data(const typename Cloud::Ptr& cl, const Image& img, const Transform& tf)
             : cloud{cl}, image{img}, transform{tf} {};
 
-    inline static Ptr create(const typename Cloud::Ptr& cl, const cv::Mat& img,
-                             const Transform& tf) {
+    inline static Ptr create(const typename Cloud::Ptr& cl, const Image& img, const Transform& tf) {
         return std::make_shared<Data>(cl, img, tf);
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const Data& d) {
-        os << "Image size: " << d.image.rows << " x " << d.image.cols << std::endl
+        os << "Image size: " << d.image.cols << " x " << d.image.rows << std::endl
            << "Number of cloud points: " << d.cloud->size() << std::endl
            << "Transform: \n"
            << d.transform.matrix();
@@ -33,6 +32,6 @@ struct Data {
 
     const typename Cloud::Ptr cloud;
     Image image;
-    Transform transform; ///< Transform between camera to laser
+    Transform transform; ///< Transform between camera and laser
 };
 }

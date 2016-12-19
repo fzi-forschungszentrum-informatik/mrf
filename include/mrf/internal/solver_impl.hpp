@@ -6,7 +6,6 @@
 #include <util_ceres/eigen_quaternion_parameterization.h>
 
 #include "cloud_preprocessing.hpp"
-#include "eigen.hpp"
 #include "functor_distance.hpp"
 #include "functor_smoothness.hpp"
 #include "image_preprocessing.hpp"
@@ -23,10 +22,6 @@ bool Solver::solve(Data<T>& data) {
 
     LOG(INFO) << "Preprocess and transform cloud";
     using PointT = pcl::PointXYZINormal;
-
-    /**
-     * \todo Check if transform is correct or needs to be inverted
-     */
     const pcl::PointCloud<PointT>::Ptr cl{estimateNormals<T, PointT>(
         transform<T>(data.cloud, data.transform), params_.radius_normal_estimation)};
 
@@ -43,17 +38,16 @@ bool Solver::solve(Data<T>& data) {
     int cols, rows;
     camera_->getImageSize(cols, rows);
     LOG(INFO) << "Image size: " << cols << " x " << rows;
-    std::map<Eigen::Vector2d, Eigen::Vector3d, EigenLess> projection;
+    std::map<Pixel, Eigen::Vector3d, PixelLess> projection;
     for (size_t c = 0; c < in_img.size(); c++) {
-        const int col = img_pts_raw(0, c);
-        const int row = img_pts_raw(1, c);
-        LOG(INFO) << "row: " << row << ", col: " << col;
-        if (in_img[c] && (row > 0) && (row < rows) && (col > 0) && (col < cols)) {
-            projection.insert(std::make_pair(img_pts_raw.col(c), pts_3d.col(c)));
+        const Pixel p(img_pts_raw(1, c), img_pts_raw(0, c));
+        LOG(INFO) << "row: " << p.row << ", col: " << p.col;
+        if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
+            projection.insert(std::make_pair(p, pts_3d.col(c)));
         }
     }
     for (auto const& el : projection) {
-        LOG(INFO) << "Image coordinate: " << el.first.transpose()
+        LOG(INFO) << "Image coordinate: " << el.first
                   << ", 3D point coordinate: " << el.second.transpose();
     }
 
@@ -64,29 +58,28 @@ bool Solver::solve(Data<T>& data) {
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{data.transform.rotation()};
     Eigen::Vector3d translation{data.transform.translation()};
-    problem.AddParameterBlock(rotation.coeffs().data(), 4,
+    problem.AddParameterBlock(rotation.coeffs().data(), FunctorDistance::DimRotation,
                               new util_ceres::EigenQuaternionParameterization);
-    problem.AddParameterBlock(translation.data(), 3);
+    problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
     LOG(INFO) << "Add distance costs";
     for (auto const& el : projection) {
         functors_distance.emplace_back(FunctorDistance::create(el.second, params_.kd));
-        problem.AddResidualBlock(
-            functors_distance.back()->toCeres(), params_.loss_function.get(),
-            &depth_est(static_cast<int>(el.first[1]), static_cast<int>(el.first[0])),
-            rotation.coeffs().data(), translation.data());
+        problem.AddResidualBlock(functors_distance.back()->toCeres(), params_.loss_function.get(),
+                                 &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
+                                 translation.data());
     }
 
     LOG(INFO) << "Add smoothness costs and depth limits";
-    for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < cols; col++) {
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
             const Pixel p(row, col);
             for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
                 problem.AddResidualBlock(
-                    FunctorSmoothness::create(smoothnessWeight(p, n,
-                                                               data.image.template at<uchar>(p.col, p.row),
-                                                               data.image.template at<uchar>(n.col, n.row)) *
-                                              params_.ks),
+                    FunctorSmoothness::create(
+                        smoothnessWeight(p, n, data.image.template at<float>(p.col, p.row),
+                                         data.image.template at<float>(n.col, n.row)) *
+                        params_.ks),
                     nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
             }
         }
@@ -96,8 +89,8 @@ bool Solver::solve(Data<T>& data) {
     if (params_.use_custom_depth_limits) {
         LOG(INFO) << "Use custom limits. Min: " << params_.custom_depth_limit_min
                   << ", Max: " << params_.custom_depth_limit_max;
-        for (size_t row = 0; row < rows; row++) {
-            for (size_t col = 0; col < cols; col++) {
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
                 problem.SetParameterLowerBound(&depth_est(row, col), 0,
                                                params_.custom_depth_limit_min);
                 problem.SetParameterUpperBound(&depth_est(row, col), 0,
@@ -108,8 +101,8 @@ bool Solver::solve(Data<T>& data) {
         const double depth_max{pts_3d.colwise().norm().maxCoeff()};
         const double depth_min{pts_3d.colwise().norm().minCoeff()};
         LOG(INFO) << "Use adaptive limits. Min: " << depth_min << ", Max: " << depth_max;
-        for (size_t row = 0; row < rows; row++) {
-            for (size_t col = 0; col < cols; col++) {
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
                 problem.SetParameterLowerBound(&depth_est(row, col), 0, depth_min);
                 problem.SetParameterUpperBound(&depth_est(row, col), 0, depth_max);
             }

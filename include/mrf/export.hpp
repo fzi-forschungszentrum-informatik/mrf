@@ -4,6 +4,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
+#include <camera_models/camera_model.h>
 
 namespace mrf {
 
@@ -30,7 +31,7 @@ void exportData(const Data<T>& d, const std::string& p, const bool normalize = t
      */
     file_name = p + "cloud.pcd";
     LOG(INFO) << "Writing cloud to '" << file_name << "'.";
-    pcl::io::savePCDFile<T>(file_name, *(d.cloud), true);
+    pcl::io::savePCDFile<T>(file_name, *(d.cloud));
 }
 
 template <typename T>
