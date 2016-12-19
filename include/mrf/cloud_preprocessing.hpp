@@ -14,6 +14,7 @@ const typename pcl::PointCloud<U>::Ptr estimateNormals(const typename pcl::Point
     ne.setRadiusSearch(radius);
     ne.setInputCloud(in);
     ne.compute(*out);
+    pcl::concatenateFields(*out, *in, *out);
     return out;
 }
 

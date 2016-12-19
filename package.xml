@@ -16,7 +16,6 @@
   <depend>boost</depend>
   <depend>camera_models</depend>
   <depend>eigen</depend>
-  <depend>generic_logger</depend>
   <depend>mrt_ceres</depend>
   <depend>mrt_opencv</depend>
   <depend>mrt_pcl</depend>

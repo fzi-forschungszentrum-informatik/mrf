@@ -20,10 +20,11 @@ TEST(Solver, Instantiation) {
     DataT::Image img{cv::Mat::zeros(width, height, CV_32FC1)};
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     PointT p;
-    p.z = 1;
+    p.x = 1;
+    p.y = 1;
+    p.z = 10;
     cl->push_back(p);
-    const DataT::Transform tf{DataT::Transform::Identity()};
-    DataT d(cl, img, tf);
+    DataT d(cl, img, DataT::Transform::Identity());
 
     LOG(INFO) << "Construct";
     Solver solver{cam};
