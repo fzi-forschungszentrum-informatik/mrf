@@ -11,6 +11,7 @@
 #include "functor_smoothness.hpp"
 #include "image_preprocessing.hpp"
 #include "neighbors.hpp"
+#include "smoothness_weight.hpp"
 
 namespace mrf {
 
@@ -80,11 +81,14 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Add smoothness costs and depth limits";
     for (size_t row = 0; row < height; row++) {
         for (size_t col = 0; col < width; col++) {
-            for (auto const& n :
-                 getNeighbors(Pixel(row, col), height, width, params_.neighborhood)) {
+            const Pixel p(row, col);
+            for (auto const& n : getNeighbors(p, height, width, params_.neighborhood)) {
                 problem.AddResidualBlock(
-                    FunctorSmoothness::create(img.at<float>(col, row) * params_.ks), nullptr,
-                    &depth_est(row, col), &depth_est(n.row, n.col));
+                    FunctorSmoothness::create(smoothnessWeight(p, n,
+                                                               data.image.template at<uchar>(p.col, p.row),
+                                                               data.image.template at<uchar>(n.col, n.row)) *
+                                              params_.ks),
+                    nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
             }
         }
     }
@@ -135,7 +139,8 @@ bool Solver::solve(Data<T>& data) {
     data.cloud->reserve(height * width);
     for (size_t row = 0; row < height; row++) {
         for (size_t col = 0; col < width; col++) {
-        	LOG(INFO) << "Estimated depth for (" << col << "," << row << "): " << depth_est(row, col);
+            LOG(INFO) << "Estimated depth for (" << col << "," << row
+                      << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             T p;
