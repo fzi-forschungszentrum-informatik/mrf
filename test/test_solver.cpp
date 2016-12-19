@@ -1,20 +1,20 @@
-#pragma once
-
 #include <boost/filesystem.hpp>
+#include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <pcl/point_types.h>
 
 #include "camera_model_ortho.h"
-#include "solver.hpp"
 #include "export.hpp"
+#include "solver.hpp"
 
 TEST(Solver, Instantiation) {
     using namespace mrf;
 
-    google::InitGoogleLogging("TestSolver");
+    google::InitGoogleLogging("Solver");
+    google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 50;
-    constexpr size_t cols = 100;
+    constexpr size_t rows = 10;
+    constexpr size_t cols = 10;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;
@@ -24,7 +24,7 @@ TEST(Solver, Instantiation) {
     PointT p;
     p.x = 1;
     p.y = rows - 1;
-    p.z = 10;
+    p.z = 1;
     cl->push_back(p);
     p.x = cols - 1;
     p.y = 1;

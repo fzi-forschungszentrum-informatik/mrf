@@ -33,7 +33,7 @@ struct Parameters {
     double ks{1};
     double kd{1};
     double discontinuity_threshold{20};
-    Neighborhood neighborhood{Neighborhood::four};
+    Neighborhood neighborhood{Neighborhood::eight};
     int max_iterations{20};
     Initialization initialization{Initialization::triangles};
     double radius_normal_estimation{0.5};

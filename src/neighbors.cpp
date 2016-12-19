@@ -22,17 +22,17 @@ std::vector<Pixel> getNeighbors(const Pixel& p, const size_t& rows, const size_t
     }
 
     if (mode == Parameters::Neighborhood::eight) {
-        if (p.row > 0 && p.row < rows - 1) {
-            neighbors.emplace_back(p.row + 1, p.col - 1);
+        if (p.row > 0 && p.col < cols - 1) {
+            neighbors.emplace_back(p.row - 1, p.col + 1);
         }
-        if (p.row < rows - 1 && p.row < rows - 1) {
+        if (p.row < rows - 1 && p.col < cols - 1) {
             neighbors.emplace_back(p.row + 1, p.col + 1);
         }
-        if (p.col > 0 && p.row > 0) {
+        if (p.row > 0 && p.col > 0) {
             neighbors.emplace_back(p.row - 1, p.col - 1);
         }
-        if (p.col < cols - 1 && p.row > 0) {
-            neighbors.emplace_back(p.row - 1, p.col + 1);
+        if (p.row < rows - 1 && p.col > 0) {
+            neighbors.emplace_back(p.row + 1, p.col - 1);
         }
     }
 

@@ -5,22 +5,25 @@
 
 namespace mrf {
 struct Pixel {
-    inline Pixel(const size_t& r, const size_t& c) : row{r}, col{c} {};
-    size_t row;
-    size_t col;
+    inline Pixel(const double& x_, const double& y_)
+            : x{x_}, y{y_}, row{static_cast<int>(y)}, col{static_cast<int>(x)} {};
 
     inline friend std::ostream& operator<<(std::ostream& os, const Pixel& p) {
-        os << "row: " << p.row << ", col:" << p.col;
+        os << "x: " << p.x << ", y: " << p.y << ", row: " << p.row << ", col:" << p.col;
+        return os;
     }
+
+    const int row, col;
+    const double x, y;
 };
 
 struct PixelLess {
     inline bool operator()(const Pixel& lhs, const Pixel& rhs) {
-        if (lhs.row < rhs.row)
+        if (lhs.x < rhs.x)
             return true;
-        else if (lhs.row > rhs.row)
+        else if (lhs.x > rhs.x)
             return false;
-        else if (lhs.col < rhs.col)
+        else if (lhs.y < rhs.y)
             return true;
         return false;
     }
