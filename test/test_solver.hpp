@@ -24,9 +24,10 @@ TEST(Solver, Instantiation) {
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     PointT p;
     p.x = 1;
-    p.y = cols - 1;
+    p.y = rows - 1;
     p.z = 10;
-    p.x = rows - 1;
+    cl->push_back(p);
+    p.x = cols - 1;
     p.y = 1;
     p.z = 0;
     cl->push_back(p);
