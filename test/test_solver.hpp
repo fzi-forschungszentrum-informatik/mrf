@@ -35,16 +35,9 @@ TEST(Solver, Instantiation) {
     Solver solver{cam};
     solver.solve(d);
 
-    /**
-     * Write data to files
-     * 1. Raw image
-     * 2. Estimated depth image
-     * 3. Point cloud
-     */
     boost::filesystem::path path_name{"/tmp/test/solver/"};
     boost::filesystem::create_directories(path_name);
     std::string file_name;
-
     exportData(d, path_name.string());
-    exportDepthImage<PointT>(d.cloud, cam, path_name.string());
+    exportDepthImage<PointT>(d, cam, path_name.string());
 }

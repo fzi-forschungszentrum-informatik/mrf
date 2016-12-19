@@ -34,22 +34,19 @@ void exportData(const Data<T>& d, const std::string& p, const bool normalize = t
 }
 
 template <typename T>
-void exportDepthImage(const typename pcl::PointCloud<T>::ConstPtr& d,
-                      const std::shared_ptr<CameraModel>& cam, const std::string& p,
-                      const bool normalize = true) {
-
-    const std::string file_name{p + "depth_est.png"};
+void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
+                      const std::string& p, const bool normalize = true) {
 
     int rows, cols;
     cam->getImageSize(cols, rows);
     cv::Mat img_depth{cv::Mat::zeros(rows, cols, CV_32FC1)};
-    const Eigen::Matrix3Xd pts_3d{d.transform *
-                                  d.cloud->getMatrixXfMap().topRows<3>().cast<double>()};
+    const Eigen::Matrix3Xd pts_3d{
+        d.transform * d.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     const std::vector<bool> in_img{cam->getImagePoints(pts_3d, img_pts_raw)};
     for (size_t c = 0; c < in_img.size(); c++) {
-        const int row = img_pts_raw(0, c);
-        const int col = img_pts_raw(1, c);
+        const int row = img_pts_raw(1, c);
+        const int col = img_pts_raw(0, c);
         img_depth.at<float>(col, row) = pts_3d.col(c).norm();
     }
     cv::Mat out;
@@ -58,6 +55,7 @@ void exportDepthImage(const typename pcl::PointCloud<T>::ConstPtr& d,
     } else {
         out = img_depth;
     }
+    const std::string file_name{p + "depth_est.png"};
     LOG(INFO) << "Writing image to '" << file_name << "'.";
     cv::imwrite(file_name, out);
 }
