@@ -22,28 +22,39 @@ bool Solver::solve(Data<T>& data) {
 
     LOG(INFO) << "Preprocess and transform cloud";
     using PointT = pcl::PointXYZINormal;
-    const pcl::PointCloud<PointT>::Ptr cl{
-        estimateNormals<T, PointT>(transform<T>(data.cloud, data.transform),
-                                   params_.radius_normal_estimation)}; ///< \todo Check if
-                                                                       /// transform is correct or
-    /// needs to be inverted
+
+    /**
+     * \todo Check if transform is correct or needs to be inverted
+     */
+    const pcl::PointCloud<PointT>::Ptr cl{estimateNormals<T, PointT>(
+        transform<T>(data.cloud, data.transform), params_.radius_normal_estimation)};
 
     LOG(INFO) << "Compute point projection in camera image";
     const Eigen::Matrix3Xd pts_3d{cl->getMatrixXfMap().topRows<3>().cast<double>()};
     LOG(INFO) << "Rows: " << pts_3d.rows() << ", Cols: " << pts_3d.cols();
+    for (size_t col = 0; col < pts_3d.cols(); col++) {
+        LOG(INFO) << "Point :" << cl->points[col];
+        LOG(INFO) << "Col " << col << ": " << pts_3d.col(col).transpose();
+    }
 
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     std::vector<bool> in_img{camera_->getImagePoints(pts_3d, img_pts_raw)};
     int width, height;
     camera_->getImageSize(width, height);
-    const size_t dim{width * height};
+    LOG(INFO) << "Image size: " << width << " x " << height;
     std::map<Eigen::Vector2d, Eigen::Vector3d, EigenLess> projection;
     for (size_t c = 0; c < in_img.size(); c++) {
         const int row = img_pts_raw(0, c);
         const int col = img_pts_raw(1, c);
+        LOG(INFO) << "row: " << row << ", col: " << col;
+
         if (in_img[c] && (row > 0) && (row < height) && (col > 0) && (col < width)) {
             projection.insert(std::make_pair(img_pts_raw.col(c), pts_3d.col(c)));
         }
+    }
+    for (auto const& el : projection) {
+        LOG(INFO) << "Image coordinate: " << el.first.transpose()
+                  << ", 3D point coordinate: " << el.second.transpose();
     }
 
     LOG(INFO) << "Create optimization problem";
@@ -80,6 +91,8 @@ bool Solver::solve(Data<T>& data) {
 
     LOG(INFO) << "Add depth limits";
     if (params_.use_custom_depth_limits) {
+        LOG(INFO) << "Use custom limits. Min: " << params_.custom_depth_limit_min
+                  << ", Max: " << params_.custom_depth_limit_max;
         for (size_t row = 0; row < height; row++) {
             for (size_t col = 0; col < width; col++) {
                 problem.SetParameterLowerBound(&depth_est(row, col), 0,
@@ -117,6 +130,22 @@ bool Solver::solve(Data<T>& data) {
     ceres::Solver::Summary summary;
     ceres::Solve(params_.solver, &problem, &summary);
     LOG(INFO) << summary.FullReport();
+
+    data.cloud->clear();
+    data.cloud->reserve(height * width);
+    for (size_t row = 0; row < height; row++) {
+        for (size_t col = 0; col < width; col++) {
+        	LOG(INFO) << "Estimated depth for (" << col << "," << row << "): " << depth_est(row, col);
+            Eigen::Vector3d support, direction;
+            camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
+            T p;
+            p.getVector3fMap() =
+                (data.transform.inverse() * (support + direction * depth_est(row, col)))
+                    .template cast<float>();
+            data.cloud->push_back(p);
+        }
+    }
+
     return summary.IsSolutionUsable();
 }
 }

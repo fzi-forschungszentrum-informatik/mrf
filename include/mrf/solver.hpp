@@ -10,8 +10,6 @@ namespace mrf {
 
 class Solver {
 
-    enum class NeighbourCase { top_bottom, left_right, top_left_right, bottom_left_right };
-
 public:
     using Ptr = std::shared_ptr<Solver>;
 
