@@ -15,6 +15,7 @@ struct Parameters {
 
     inline Parameters(){
     	problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+    	problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
     };
 
     inline static Ptr create() {
@@ -42,5 +43,6 @@ struct Parameters {
 
     ceres::Solver::Options solver;
     ceres::Problem::Options problem;
+    std::shared_ptr<ceres::LossFunction> loss_function{nullptr};
 };
 }

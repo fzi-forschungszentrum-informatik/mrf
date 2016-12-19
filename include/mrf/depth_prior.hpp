@@ -34,22 +34,20 @@ bool insideTriangle(const double& x, const double& y, const Eigen::Vector2d& fir
     const Eigen::Vector2d& PB{P - second};
     const Eigen::Vector2d& PC{P - third};
 
-    const double u{(BA.x() * PA.y() - (BA.y() * PA.x()))};
-    const double v{(BA.x() * (-1 * AC.y())) - (BA.y() * (-1 * AC.x()))};
+    const double u{(BA[0] * PA[1] - (BA[1] * PA[0]))};
+    const double v{(BA[0] * (-1 * AC[1])) - (BA[1] * (-1 * AC[0]))};
     if (u * v >= 0) {
-        const double u2{(AC.x() * PC.y() - (AC.y() * PC.x()))};
-        const double v2{(AC.x() * (-1 * CB.y())) - (AC.y() * (-1 * CB.x()))};
+        const double u2{(AC[0] * PC[1] - (AC[1] * PC[0]))};
+        const double v2{(AC[0] * (-1 * CB[1])) - (AC[1] * (-1 * CB[0]))};
         if (u2 * v2 >= 0) {
-            const double u3{(CB.x() * PB.y() - (CB.y() * PB.x()))};
-            const double v3{(CB.x() * (-1 * BA.y())) - (CB.y() * (-1 * BA.x()))};
+            const double u3{(CB[0] * PB[1] - (CB[1] * PB[0]))};
+            const double v3{(CB[0] * (-1 * BA[1])) - (CB[1] * (-1 * BA[0]))};
             if (u3 * v3 >= 0) {
                 return true;
-            } else
-                return false;
-        } else
-            return false;
-    } else
-        return false;
+            }
+        }
+    }
+    return false;
 }
 
 std::vector<int> getNeighbours(Eigen::Matrix2Xd& coordinates, const treeT& tree, const int u,
@@ -119,10 +117,6 @@ void getNNDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
         std::make_unique<flann::Index<DistanceType>>(flann_dataset, flann::KDTreeIndexParams(8));
     kd_index_ptr_->buildIndex(flann_dataset);
 
-    /*
-     * Iterate through all points
-     *
-     */
     for (size_t v = 0; v < height; v++) {
         for (size_t u = 0; u < width; u++) {
             std::vector<int> neighbours{getNeighbours(coordinates, kd_index_ptr_, u, v, 15)};

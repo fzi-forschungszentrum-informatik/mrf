@@ -40,16 +40,15 @@ bool Solver::solve(Data<T>& data) {
 
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     std::vector<bool> in_img{camera_->getImagePoints(pts_3d, img_pts_raw)};
-    int width, height;
-    camera_->getImageSize(width, height);
-    LOG(INFO) << "Image size: " << width << " x " << height;
+    int cols, rows;
+    camera_->getImageSize(cols, rows);
+    LOG(INFO) << "Image size: " << cols << " x " << rows;
     std::map<Eigen::Vector2d, Eigen::Vector3d, EigenLess> projection;
     for (size_t c = 0; c < in_img.size(); c++) {
-        const int row = img_pts_raw(0, c);
-        const int col = img_pts_raw(1, c);
+        const int col = img_pts_raw(0, c);
+        const int row = img_pts_raw(1, c);
         LOG(INFO) << "row: " << row << ", col: " << col;
-
-        if (in_img[c] && (row > 0) && (row < height) && (col > 0) && (col < width)) {
+        if (in_img[c] && (row > 0) && (row < rows) && (col > 0) && (col < cols)) {
             projection.insert(std::make_pair(img_pts_raw.col(c), pts_3d.col(c)));
         }
     }
@@ -60,7 +59,7 @@ bool Solver::solve(Data<T>& data) {
 
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
-    Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(height, width)};
+    Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{data.transform.rotation()};
@@ -73,16 +72,16 @@ bool Solver::solve(Data<T>& data) {
     for (auto const& el : projection) {
         functors_distance.emplace_back(FunctorDistance::create(el.second, params_.kd));
         problem.AddResidualBlock(
-            functors_distance.back()->toCeres(), new ceres::HuberLoss(1),
-            &depth_est(static_cast<int>(el.first[0]), static_cast<int>(el.first[1])),
+            functors_distance.back()->toCeres(), params_.loss_function.get(),
+            &depth_est(static_cast<int>(el.first[1]), static_cast<int>(el.first[0])),
             rotation.coeffs().data(), translation.data());
     }
 
     LOG(INFO) << "Add smoothness costs and depth limits";
-    for (size_t row = 0; row < height; row++) {
-        for (size_t col = 0; col < width; col++) {
+    for (size_t row = 0; row < rows; row++) {
+        for (size_t col = 0; col < cols; col++) {
             const Pixel p(row, col);
-            for (auto const& n : getNeighbors(p, height, width, params_.neighborhood)) {
+            for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
                 problem.AddResidualBlock(
                     FunctorSmoothness::create(smoothnessWeight(p, n,
                                                                data.image.template at<uchar>(p.col, p.row),
@@ -97,8 +96,8 @@ bool Solver::solve(Data<T>& data) {
     if (params_.use_custom_depth_limits) {
         LOG(INFO) << "Use custom limits. Min: " << params_.custom_depth_limit_min
                   << ", Max: " << params_.custom_depth_limit_max;
-        for (size_t row = 0; row < height; row++) {
-            for (size_t col = 0; col < width; col++) {
+        for (size_t row = 0; row < rows; row++) {
+            for (size_t col = 0; col < cols; col++) {
                 problem.SetParameterLowerBound(&depth_est(row, col), 0,
                                                params_.custom_depth_limit_min);
                 problem.SetParameterUpperBound(&depth_est(row, col), 0,
@@ -109,8 +108,8 @@ bool Solver::solve(Data<T>& data) {
         const double depth_max{pts_3d.colwise().norm().maxCoeff()};
         const double depth_min{pts_3d.colwise().norm().minCoeff()};
         LOG(INFO) << "Use adaptive limits. Min: " << depth_min << ", Max: " << depth_max;
-        for (size_t row = 0; row < height; row++) {
-            for (size_t col = 0; col < width; col++) {
+        for (size_t row = 0; row < rows; row++) {
+            for (size_t col = 0; col < cols; col++) {
                 problem.SetParameterLowerBound(&depth_est(row, col), 0, depth_min);
                 problem.SetParameterUpperBound(&depth_est(row, col), 0, depth_max);
             }
@@ -136,9 +135,9 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << summary.FullReport();
 
     data.cloud->clear();
-    data.cloud->reserve(height * width);
-    for (size_t row = 0; row < height; row++) {
-        for (size_t col = 0; col < width; col++) {
+    data.cloud->reserve(rows * cols);
+    for (size_t row = 0; row < rows; row++) {
+        for (size_t col = 0; col < cols; col++) {
             LOG(INFO) << "Estimated depth for (" << col << "," << row
                       << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
