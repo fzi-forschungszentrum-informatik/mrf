@@ -47,7 +47,7 @@ void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
     for (size_t c = 0; c < in_img.size(); c++) {
         const int row = img_pts_raw(1, c);
         const int col = img_pts_raw(0, c);
-        img_depth.at<float>(col, row) = pts_3d.col(c).norm();
+        img_depth.at<float>(row, col) = pts_3d.col(c).norm();
     }
     cv::Mat out;
     if (normalize) {
