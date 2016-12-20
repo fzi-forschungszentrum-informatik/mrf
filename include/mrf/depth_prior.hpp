@@ -134,28 +134,20 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
         i++;
     }
 
-    if (type == Parameters::Initialization::mean) {
-        LOG(INFO) << "in Mean Depth";
+    if (type == Initialization::meanDepth) {
         Eigen::Matrix3Xd points(2, projection.size());
         int i{0};
         for (mapT::iterator it = projection.begin(); it != projection.end(); ++it) {
             points.col(i) = (it->second);
             i++;
         }
-
         double mean_depth{points.colwise().norm().mean()};
-        LOG(INFO) << "meandepth: " << mean_depth;
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
         return;
     }
 
-    flann::Matrix<DistanceType::ElementType> flann_dataset{convertEigen2FlannRow(
-        coordinates.transpose().cast<DataType>())}; //>todo:: Check whether colum or row major
-    LOG(INFO) << "Coordinates dataset: ";
-    for (size_t c = 0; c < coordinates.cols(); c++) {
-        LOG(INFO) << "coorindates: " << coordinates(0, c) << ", " << coordinates(1, c);
-    }
-
+   flann::Matrix<DistanceType::ElementType> flann_dataset{convertEigen2FlannRow(
+        coordinates.transpose().cast<DataType>())};
     kd_index_ptr_ =
         std::make_unique<flann::Index<DistanceType>>(flann_dataset, flann::KDTreeIndexParams(8));
     kd_index_ptr_->buildIndex(flann_dataset);
@@ -194,11 +186,8 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
         for (size_t v = 0; v < rows; v++) {
             for (size_t u = 0; u < cols; u++) {
 
-                std::vector<int> all_neighbours{
-                    getNeighbours(coordinates, kd_index_ptr_, Pixel(u, v),
-                                  6)}; //> todo:: 15 to variable parameter value
-                std::vector<int> triangle_neighbours{
-                    getTriangleNeighbours(all_neighbours, coordinates, Pixel(u, v))};
+                std::vector<int> all_neighbours{getNeighbours(coordinates, kd_index_ptr_, Pixel(u,v), 15)};  //> todo:: 15 to variable parameter value
+                std::vector<int> triangle_neighbours{getTriangleNeighbours(all_neighbours,coordinates,Pixel(u,v))};
                 if (triangle_neighbours[0] == -1) {
                     depth_est(v, u) = -1;
                 } else {
@@ -207,8 +196,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
                     Eigen::Vector2d image_coordinate{u, v};
                     Eigen::Matrix3Xd neighbours_points(3, 3);
                     for (size_t i = 0; i < 3; i++) {
-                        Pixel c{coordinates.col(triangle_neighbours[i]).y(),
-                                coordinates.col(triangle_neighbours[i]).x()};
+                        Pixel c{coordinates.col(triangle_neighbours[i]).y(), coordinates.col(triangle_neighbours[i]).x()};
                         neighbours_points.col(i) = projection.at(c);
                     }
                     cam->getViewingRay(image_coordinate, supportPoint, direction);

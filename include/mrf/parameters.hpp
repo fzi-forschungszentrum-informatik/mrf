@@ -9,9 +9,9 @@
 namespace mrf {
 
 struct Parameters {
-    enum class Initialization { nearest_neighbor, triangles, mean, none };
+
     enum class Neighborhood { four = 4, eight = 8 };
-    // enum class Initialization { nearest_neighbor, triangles };
+    enum class Initialization { none, nearest_neighbor, triangles, mean_depth };
     enum class Limits { none, custom, adaptive };
 
     using Ptr = std::shared_ptr<Parameters>;
@@ -45,7 +45,7 @@ struct Parameters {
     double custom_depth_limit_min{0};
     double custom_depth_limit_max{100};
 
-    Initialization initialization{Initialization::triangles};
+    Initialization initialization{Initialization::none};
     Neighborhood neighborhood{Neighborhood::four};
 
     ceres::Solver::Options solver;
@@ -53,56 +53,7 @@ struct Parameters {
     std::shared_ptr<ceres::LossFunction> loss_function{nullptr};
 
 private:
-    inline void fromConfig(const std::string& file_name) {
-        const YAML::Node cfg{YAML::LoadFile(file_name)};
-
-        std::string tmp;
-
-        getParam(cfg, "ks", ks);
-        getParam(cfg, "kd", kd);
-        getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
-        getParam(cfg, "max_iterations", max_iterations);
-        getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
-
-        if (getParam(cfg, "limits", tmp)) {
-            if (tmp == "none") {
-                limits = Limits::none;
-            } else if (tmp == "custom") {
-                limits = Limits::custom;
-            } else if (tmp == "adaptive") {
-                limits = Limits::adaptive;
-            } else {
-                LOG(WARNING) << "No parameter " << tmp << " available.";
-            }
-        }
-
-        getParam(cfg, "custom_depth_limit_min", custom_depth_limit_min);
-        getParam(cfg, "custom_depth_limit_max", custom_depth_limit_max);
-
-        if (getParam(cfg, "initialization", tmp)) {
-            if (tmp == "nearest_neighbor") {
-                initialization = Initialization::nearest_neighbor;
-            } else if (tmp == "triangles") {
-                initialization = Initialization::triangles;
-            } else if (tmp == "none") {
-                initialization = Initialization::none;
-            } else if (tmp == "mean") {
-                initialization = Initialization::mean;
-            } else {
-                LOG(WARNING) << "No parameter " << tmp << " available.";
-            }
-        }
-
-        if (getParam(cfg, "neighborhood", tmp)) {
-            if (tmp == "four") {
-                neighborhood = Neighborhood::four;
-            } else if (tmp == "eight") {
-                neighborhood = Neighborhood::eight;
-            } else {
-                LOG(WARNING) << "No parameter " << tmp << " available.";
-            }
-        }
-    }
+    void fromConfig(const std::string& file_name);
 
     template <typename T>
     inline bool getParam(const YAML::Node& cfg, const std::string& name, T& val) {
@@ -112,8 +63,5 @@ private:
         }
         return false;
     }
-
-    //    std::map<Neighborhood, std::string> fromNeighborhood{{Neighborhood::four, "four"},
-    //    {Neighborhood::eight, "eight"}};
 };
 }

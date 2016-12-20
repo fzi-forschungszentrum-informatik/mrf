@@ -20,10 +20,8 @@ template <typename T>
 bool Solver::solve(Data<T>& data) {
 
     LOG(INFO) << "Preprocess image";
-
-    imwrite("datain.png",255*data.image);
     const cv::Mat img{gradientSobel(data.image)};
-    imwrite("img.png",255*img);
+
     LOG(INFO) << "Preprocess and transform cloud";
     using PointT = pcl::PointXYZINormal;
     const pcl::PointCloud<PointT>::Ptr cl{estimateNormals<T, PointT>(
@@ -44,9 +42,10 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Image size: " << cols << " x " << rows;
     std::map<Pixel, Eigen::Vector3d, PixelLess> projection;
     for (size_t c = 0; c < in_img.size(); c++) {
-        const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
+        Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         LOG(INFO) << "Pixel: " << p;
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
+            p.val = img.at<float>(p.row, p.col);
             projection.insert(std::make_pair(p, pts_3d.col(c)));
         }
     }
@@ -106,13 +105,11 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Add smoothness costs";
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
-            LOG(INFO) << "smooth cost at " << col << ", " << row << ": ";
-            const Pixel p(col, row);
-            for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
+            const Pixel p(col, row, img.at<float>(row, col));
+            const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
+            for (auto const& n : neighbors) {
                 problem.AddResidualBlock(
-                    FunctorSmoothness::create(smoothnessWeight(p, n, img.at<float>(p.row, p.col),
-                                                               img.at<float>(n.row, n.col)) *
-                                              params_.ks),
+                    FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
                     nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
             }
         }
