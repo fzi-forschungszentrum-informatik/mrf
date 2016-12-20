@@ -5,8 +5,8 @@
 
 TEST(ImagePreprocessing, Instantiation) {
 
-	google::InitGoogleLogging("ImagePreprocessing");
-	google::InstallFailureSignalHandler();
+    google::InitGoogleLogging("ImagePreprocessing");
+    google::InstallFailureSignalHandler();
 
     using namespace mrf;
     constexpr size_t width = 20;
@@ -14,6 +14,8 @@ TEST(ImagePreprocessing, Instantiation) {
     cv::Mat in{cv::Mat::eye(height, width, CV_32FC1)};
     cv::Mat out{gradientSobel(in)};
 
-
-
+    double min, max;
+    cv::minMaxLoc(out, &min, &max);
+    ASSERT_GE(min, 0);
+    ASSERT_LE(max, 1);
 }
