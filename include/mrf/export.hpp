@@ -8,6 +8,7 @@
 #include <pcl/io/pcd_io.h>
 
 #include "data.hpp"
+#include "image_preprocessing.hpp"
 
 namespace mrf {
 
@@ -67,6 +68,19 @@ void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
         out = img_depth;
     }
     const std::string file_name{p + "depth_est.png"};
+    LOG(INFO) << "Writing image to '" << file_name << "'.";
+    cv::imwrite(file_name, out);
+}
+
+inline void exportGradientImage(const cv::Mat& img, const std::string& p,
+                                const bool normalize = true) {
+    cv::Mat out;
+    if (normalize) {
+        cv::normalize(gradientSobel(img), out, 0, 255, cv::NORM_MINMAX);
+    } else {
+        out = gradientSobel(img, false);
+    }
+    const std::string file_name{p + "gradient.png"};
     LOG(INFO) << "Writing image to '" << file_name << "'.";
     cv::imwrite(file_name, out);
 }
