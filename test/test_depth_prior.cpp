@@ -9,7 +9,7 @@
 #include "export.hpp"
 #include "solver.hpp"
 
-TEST(DepthPrior, Mean) {
+TEST(DepthPrior, initialisation) {
     using namespace mrf;
 
     google::InitGoogleLogging("DepthPrior");
@@ -25,39 +25,43 @@ TEST(DepthPrior, Mean) {
     DataT::Image img{cv::Mat::eye(rows, cols, CV_32FC1)};
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     PointT p;
-    p.x = 1;
-    p.y = rows - 1;
-    p.z = 1;
-    cl->push_back(p);
-    p.x = cols - 1;
-    p.y = 1;
+    //    p.x = 1;
+    //    p.y = rows - 1;
+    //    p.z = 1;
+    //    cl->push_back(p);
+    //    p.x = cols - 1;
+    //    p.y = 1;
+    //    p.z = 10;
+    //    cl->push_back(p);
+    p.x = 2;
+    p.y = 4;
     p.z = 10;
     cl->push_back(p);
-    p.x = 2;
-    p.y = rows - 1;
-    p.z = 1;
+    p.x = 6;
+    p.y = 4;
+    p.z = 10;
     cl->push_back(p);
-    p.x = 1;
-    p.y = rows - 1;
-    p.z = 1;
+    p.x = 4;
+    p.y = 4;
+    p.z = 10;
     cl->push_back(p);
-    p.x = 1;
-    p.y = rows - 1;
-    p.z = 1;
+    p.x = 4;
+    p.y = 6;
+    p.z = 5;
     cl->push_back(p);
-    p.x = 1;
-    p.y = rows - 1;
-    p.z = 1;
+    p.x = 8;
+    p.y = 4;
+    p.z = 5;
     cl->push_back(p);
-    p.x = 1;
-    p.y = rows - 1;
-    p.z = 1;
-
+    p.x = 8;
+    p.y = 6;
+    p.z = 5;
+    cl->push_back(p);
     DataT d(cl, img, DataT::Transform::Identity());
     Parameters params;
-    params.initialization = Initialization::triangles;
+    params.initialization = Initialization::nearestNeighbor;
     params.ks = 0;
-    params.kd = 0;
+    params.kd = 1;
     LOG(INFO) << "params set to";
     LOG(INFO) << params;
     Solver solver{cam, params};

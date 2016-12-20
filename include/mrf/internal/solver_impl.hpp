@@ -57,7 +57,12 @@ bool Solver::solve(Data<T>& data) {
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     getDepthEst(depth_est,projection,camera_,params_.initialization);
-
+    for (size_t row = 0; row < rows; row++) {
+            for (size_t col = 0; col < cols; col++) {
+                LOG(INFO) << "Initial depth for: (" << col << "," << row
+                          << "): " << depth_est(row, col);
+            }
+        }
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{data.transform.rotation()};
