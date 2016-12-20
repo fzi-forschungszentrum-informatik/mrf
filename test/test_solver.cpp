@@ -13,13 +13,14 @@ TEST(Solver, Instantiation) {
     google::InitGoogleLogging("Solver");
     google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 25;
-    constexpr size_t cols = 25;
+    constexpr size_t rows = 20;
+    constexpr size_t cols = 20;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;
     using DataT = Data<PointT>;
     DataT::Image img{cv::Mat::eye(rows, cols, CV_32FC1)};
+
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     cl->push_back(PointT(1, rows - 1, 1));
     cl->push_back(PointT(cols - 1, 1, 0));
@@ -32,4 +33,5 @@ TEST(Solver, Instantiation) {
     boost::filesystem::create_directories(path_name);
     exportData(d, path_name.string());
     exportDepthImage<PointT>(d, cam, path_name.string());
+    exportGradientImage(d.image, path_name.string());
 }
