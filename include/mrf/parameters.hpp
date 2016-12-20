@@ -11,7 +11,7 @@ namespace mrf {
 struct Parameters {
 
     enum class Neighborhood { four = 4, eight = 8 };
-    enum class Initialization { none, nearest_neighbor, triangles };
+    enum class Initialization { none, nearest_neighbor, triangles, mean_depth };
     enum class Limits { none, custom, adaptive };
 
     using Ptr = std::shared_ptr<Parameters>;

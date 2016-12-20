@@ -12,6 +12,7 @@
 #include "image_preprocessing.hpp"
 #include "neighbors.hpp"
 #include "smoothness_weight.hpp"
+#include "depth_prior.hpp"
 
 namespace mrf {
 
@@ -55,6 +56,8 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
+    getDepthEst(depth_est,projection,camera_,params_.initialization);
+
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{data.transform.rotation()};
