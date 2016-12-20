@@ -29,11 +29,6 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
 
     LOG(INFO) << "Compute point projection in camera image";
     const Eigen::Matrix3Xd pts_3d{cl->getMatrixXfMap().topRows<3>().cast<double>()};
-    LOG(INFO) << "Rows: " << pts_3d.rows() << ", Cols: " << pts_3d.cols();
-    for (size_t col = 0; col < pts_3d.cols(); col++) {
-        LOG(INFO) << "Point :" << cl->points[col];
-        LOG(INFO) << "Col " << col << ": " << pts_3d.col(col).transpose();
-    }
 
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     std::vector<bool> in_img{camera_->getImagePoints(pts_3d, img_pts_raw)};
@@ -43,28 +38,24 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     std::map<Pixel, Eigen::Vector3d, PixelLess> projection;
     for (size_t c = 0; c < in_img.size(); c++) {
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
-        LOG(INFO) << "Pixel: " << p;
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
             p.val = img.at<float>(p.row, p.col);
             projection.insert(std::make_pair(p, pts_3d.col(c)));
         }
-    }
-    for (auto const& el : projection) {
-        LOG(INFO) << "Image coordinate: " << el.first
-                  << ", 3D point coordinate: " << el.second.transpose();
     }
 
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Ones(rows, cols)};
-    getDepthEst(depth_est, certainty,projection, camera_, params_.initialization);
-    for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < cols; col++) {
-            LOG(INFO) << "Initial depth for: (" << col << "," << row
-                      << "): " << depth_est(row, col);
-        }
-    }
+    getDepthEst(depth_est, certainty,projection, camera_, params_.initialization,params_.neighborsearch);
+    LOG(INFO) << "Depth est loaded";
+//    for (size_t row = 0; row < rows; row++) {
+//        for (size_t col = 0; col < cols; col++) {
+//            LOG(INFO) << "Initial depth for: (" << col << "," << row
+//                      << "): " << depth_est(row, col);
+//        }
+//    }
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{data.transform.rotation()};
@@ -77,24 +68,12 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     for (auto const& el : projection) {
         Eigen::Vector3d support, direction;
         camera_->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-        LOG(INFO) << "Pixel: " << el.first << ", support: " << support.transpose()
-                  << ", direction: " << direction.transpose();
         functors_distance.emplace_back(
             FunctorDistance::create(el.second, params_.kd, support, direction));
         problem.AddResidualBlock(functors_distance.back()->toCeres(), params_.loss_function.get(),
                                  &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
                                  translation.data());
     }
-
-    double minVal;
-    double maxVal;
-    cv::Point minLoc;
-    cv::Point maxLoc;
-
-    cv::minMaxLoc(img, &minVal, &maxVal, &minLoc, &maxLoc);
-
-    LOG(INFO) << "img min val : " << minVal << " at: " << minLoc;
-    LOG(INFO) << "max val: " << maxVal << " at: " << maxLoc;
 
     LOG(INFO) << "Add smoothness costs";
     for (int row = 0; row < rows; row++) {
@@ -104,8 +83,8 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
             const double certainty_sum = neighbors.size();
             for (auto const& n : neighbors) {
                 problem.AddResidualBlock(
-                    FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
-                    new ceres::ScaledLoss(new ceres::TrivialLoss, certainty(row,col) / certainty_sum,
+                    FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks* certainty(row,col)),
+                    new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / certainty_sum,
                                           ceres::TAKE_OWNERSHIP),
                     &depth_est(row, col), &depth_est(n.row, n.col));
             }
@@ -155,8 +134,8 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     data.cloud->reserve(rows * cols);
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < cols; col++) {
-            LOG(INFO) << "Estimated depth for (" << col << "," << row
-                      << "): " << depth_est(row, col);
+//            LOG(INFO) << "Estimated depth for (" << col << "," << row
+//                      << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             T p;

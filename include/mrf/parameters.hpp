@@ -40,6 +40,7 @@ struct Parameters {
     Limits limits{Limits::none};
     double custom_depth_limit_min{0};
     double custom_depth_limit_max{100};
+    int neighborsearch{6};
 
     double loss_function_scale{1};
 

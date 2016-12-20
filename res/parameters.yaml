@@ -2,6 +2,7 @@ ks: 1
 kd: 1
 discontinuity_threshold: 0.2
 radius_normal_estimation: 0.5
+neighborsearch: 4
 
 # Available options: none, custom, adaptive
 limits: custom
@@ -9,7 +10,7 @@ custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
 # Available options: none, nearest_neighbor, triangles, mean_depth
-initialization: none
+initialization: nearest_neighbor
 
 # Available options: four, eight
 neighborhood: four

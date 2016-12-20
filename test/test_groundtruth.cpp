@@ -116,14 +116,15 @@ TEST(Groundtruth, loadGT) {
     loadCloudSparse(cloud_dense, cloud_sparse, cols, rows, params_gt);
     LOG(INFO) << "\n cloud_sparse points:\n" << cloud_sparse->points.size() << std::endl;
 
+
     /**
     * Solver
     */
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
     DataT d(cloud_sparse, img, DataT::Transform::Identity());
 
-    Solver solver{cam, Parameters("parameters.yaml")};
-    solver.solve(d);
+//    Solver solver{cam, Parameters("parameters.yaml")};
+//    solver.solve(d);
     boost::filesystem::path path_name{"/tmp/test/gt/solver/"};
     boost::filesystem::create_directories(path_name);
     exportData(d, path_name.string());
