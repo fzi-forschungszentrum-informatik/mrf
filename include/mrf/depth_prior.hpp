@@ -115,7 +115,7 @@ double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
     const Eigen::ParametrizedLine<double, 3> pline(sp, dir);
     Eigen::Hyperplane<double, 3> plane(normal, q0_world);
     Eigen::Vector3d p_int{pline.intersectionPoint(plane)};
-    return (p_int-sp).norm();
+    return (p_int - sp).norm();
 }
 
 void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,

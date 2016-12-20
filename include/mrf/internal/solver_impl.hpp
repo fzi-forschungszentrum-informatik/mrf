@@ -25,46 +25,32 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
 
     LOG(INFO) << "Preprocess and transform cloud";
     using PointT = pcl::PointXYZINormal;
-    const pcl::PointCloud<PointT>::Ptr cl{estimateNormals<T, PointT>(
+    const pcl::PointCloud<PointT>::Ptr cl{
+        estimateNormals<T, PointT>(in.cloud, params_.radius_normal_estimation)};
+    const pcl::PointCloud<PointT>::Ptr cl_tf{estimateNormals<T, PointT>(
         transform<T>(in.cloud, in.transform), params_.radius_normal_estimation)};
 
     LOG(INFO) << "Compute point projection in camera image";
-    const Eigen::Matrix3Xd pts_3d{cl->getMatrixXfMap().topRows<3>().cast<double>()};
-    LOG(INFO) << "Rows: " << pts_3d.rows() << ", Cols: " << pts_3d.cols();
-    for (size_t col = 0; col < pts_3d.cols(); col++) {
-        LOG(INFO) << "Point :" << cl->points[col];
-        LOG(INFO) << "Col " << col << ": " << pts_3d.col(col).transpose();
-    }
-
-    Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
-    std::vector<bool> in_img{camera_->getImagePoints(pts_3d, img_pts_raw)};
+    const Eigen::Matrix3Xd pts_3d_tf{cl_tf->getMatrixXfMap().topRows<3>().cast<double>()};
+    Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, cl->size())};
+    std::vector<bool> in_img{camera_->getImagePoints(pts_3d_tf, img_pts_raw)};
     int cols, rows;
     camera_->getImageSize(cols, rows);
     LOG(INFO) << "Image size: " << cols << " x " << rows;
-    std::map<Pixel, Eigen::Vector3d, PixelLess> projection;
+    std::map<Pixel, Eigen::Vector3d, PixelLess> projection, projection_tf;
     for (size_t c = 0; c < in_img.size(); c++) {
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
-        LOG(INFO) << "Pixel: " << p;
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
             p.val = img.at<float>(p.row, p.col);
-            projection.insert(std::make_pair(p, pts_3d.col(c)));
+            projection.insert(std::make_pair(p, cl->at(c).getVector3fMap().cast<double>()));
+            projection_tf.insert(std::make_pair(p, cl_tf->at(c).getVector3fMap().cast<double>()));
         }
-    }
-    for (auto const& el : projection) {
-        LOG(INFO) << "Image coordinate: " << el.first
-                  << ", 3D point coordinate: " << el.second.transpose();
     }
 
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(depth_est, projection, camera_, params_.initialization);
-    for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < cols; col++) {
-            LOG(INFO) << "Initial depth for: (" << col << "," << row
-                      << "): " << depth_est(row, col);
-        }
-    }
+    getDepthEst(depth_est, projection_tf, camera_, params_.initialization);
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -77,7 +63,8 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
     for (auto const& el : projection) {
         Eigen::Vector3d support, direction;
         camera_->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-        LOG(INFO) << "Pixel: " << el.first << ", support: " << support.transpose()
+        LOG(INFO) << "Pixel: " << el.first << ", point: " << el.second.transpose()
+                  << ", support: " << support.transpose()
                   << ", direction: " << direction.transpose();
         functors_distance.emplace_back(
             FunctorDistance::create(el.second, params_.kd, support, direction));
@@ -108,8 +95,8 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
             lb = params_.custom_depth_limit_min;
             LOG(INFO) << "Use custom limits. Min: " << lb << ", Max: " << ub;
         } else if (params_.limits == Parameters::Limits::adaptive) {
-            ub = pts_3d.colwise().norm().maxCoeff();
-            lb = pts_3d.colwise().norm().minCoeff();
+            ub = pts_3d_tf.colwise().norm().maxCoeff();
+            lb = pts_3d_tf.colwise().norm().minCoeff();
             LOG(INFO) << "Use adaptive limits. Min: " << lb << ", Max: " << ub;
         }
         for (int row = 0; row < rows; row++) {
@@ -141,6 +128,7 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
     LOG(INFO) << summary.FullReport();
 
     LOG(INFO) << "Writing output data";
+    out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
     cv::eigen2cv(depth_est, out.image);
     out.cloud->reserve(rows * cols);
     for (size_t row = 0; row < rows; row++) {
@@ -150,17 +138,12 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             T p;
-            p.getVector3fMap() =
-                (in.transform.inverse() * (support + direction * depth_est(row, col)))
-                    .template cast<float>();
-            out.cloud->push_back(p);
+            p.getVector3fMap() = (support + direction * depth_est(row, col)).cast<float>();
+            out.cloud->push_back(pcl::transformPoint(p, out.transform.inverse().template cast<float>()));
         }
     }
     out.cloud->width = cols;
     out.cloud->height = rows;
-    Eigen::Affine3d tf_new(rotation);
-    tf_new.translation() = translation;
-    out.transform = tf_new;
 
     return summary.IsSolutionUsable();
 }

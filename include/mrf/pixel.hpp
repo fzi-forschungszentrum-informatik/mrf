@@ -6,7 +6,7 @@
 namespace mrf {
 struct Pixel {
     inline Pixel(const double& x_, const double& y_, const double& val_ = 0)
-            : x{x_}, y{y_}, val{val_}, row{static_cast<int>(y_)}, col{static_cast<int>(x_)} {};
+            : x{x_}, y{y_}, val{val_}, row{round(y_)}, col{round(x_)} {};
 
     inline friend std::ostream& operator<<(std::ostream& os, const Pixel& p) {
         os << "x: " << p.x << ", y: " << p.y << ", val: " << p.val << ", row: " << p.row
