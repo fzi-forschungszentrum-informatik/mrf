@@ -13,9 +13,12 @@ TEST(ImagePreprocessing, Instantiation) {
     constexpr size_t height = 10;
     cv::Mat in{cv::Mat::eye(height, width, CV_32FC1)};
     cv::Mat out{gradientSobel(in)};
+<<<<<<< HEAD
+=======
 
     double min, max;
     cv::minMaxLoc(out, &min, &max);
     ASSERT_GE(min, 0);
     ASSERT_LE(max, 1);
+>>>>>>> devel_sascha
 }
