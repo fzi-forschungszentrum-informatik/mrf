@@ -17,9 +17,10 @@ public:
             : camera_(cam), params_(p){};
 
     template <typename T>
-    bool solve(Data<T>&, const bool pin_transform = true);
+    bool solve(const Data<T>&, Data<T>&, const bool pin_transform = true);
 
-    inline static Ptr create(const std::shared_ptr<CameraModel>& cam, const Parameters& p = Parameters()) {
+    inline static Ptr create(const std::shared_ptr<CameraModel>& cam,
+                             const Parameters& p = Parameters()) {
         return std::make_shared<Solver>(cam, p);
     }
 

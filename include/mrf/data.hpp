@@ -15,6 +15,7 @@ struct Data {
     using Image = cv::Mat;
     using Transform = Eigen::Affine3d;
 
+    inline Data() : cloud{new Cloud}, transform{Transform::Identity()} {};
     inline Data(const typename Cloud::Ptr& cl, const Image& img, const Transform& tf)
             : cloud{cl}, image{img}, transform{tf} {};
 

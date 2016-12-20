@@ -20,24 +20,24 @@ TEST(Solver, Instantiation) {
     using PointT = pcl::PointXYZ;
     using DataT = Data<PointT>;
     cv::Mat img;
-//    cv::hconcat(cv::Mat::zeros(rows, cols / 2, CV_32FC1), cv::Mat::ones(rows, cols / 2, CV_32FC1), img);
     img = cv::Mat::eye(rows, cols, CV_32FC1);
 
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     cl->push_back(PointT(1, rows - 1, 1));
     cl->push_back(PointT(cols - 1, 1, 0));
-    DataT d(cl, img, DataT::Transform::Identity());
+    const DataT in(cl, img, DataT::Transform::Identity());
+    DataT out;
 
     Solver solver{cam, Parameters("parameters.yaml")};
-    solver.solve(d);
+    solver.solve(in, out);
 
     boost::filesystem::path path_name{"/tmp/test/solver/"};
     boost::filesystem::create_directories(path_name);
-    exportData(d, path_name.string());
-    exportDepthImage<PointT>(d, cam, path_name.string());
-    exportGradientImage(d.image, path_name.string());
+    exportData(in, path_name.string() + "in_");
+    exportData(out, path_name.string() + "out_");
+    exportGradientImage(in.image, path_name.string());
 
-    ASSERT_NEAR(d.cloud->at(cols - 1, 1).z, 0, 1e-4);
-    ASSERT_NEAR(d.cloud->at(1, rows - 1).z, 1, 1e-4);
-    ASSERT_NEAR(d.cloud->at(cols - 1, rows / 2).z, 0, 1e-4);
+    ASSERT_NEAR(out.cloud->at(cols - 1, 1).z, 0, 1e-4);
+    ASSERT_NEAR(out.cloud->at(1, rows - 1).z, 1, 1e-4);
+    ASSERT_NEAR(out.cloud->at(cols - 1, rows / 2).z, 0, 1e-4);
 }

@@ -4,6 +4,7 @@
 #include <ceres/ceres.h>
 #include <glog/logging.h>
 #include <util_ceres/eigen_quaternion_parameterization.h>
+#include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include "cloud_preprocessing.hpp"
@@ -17,15 +18,15 @@
 namespace mrf {
 
 template <typename T>
-bool Solver::solve(Data<T>& data, const bool pin_transform) {
+bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
 
     LOG(INFO) << "Preprocess image";
-    const cv::Mat img{gradientSobel(data.image)};
+    const cv::Mat img{gradientSobel(in.image)};
 
     LOG(INFO) << "Preprocess and transform cloud";
     using PointT = pcl::PointXYZINormal;
     const pcl::PointCloud<PointT>::Ptr cl{estimateNormals<T, PointT>(
-        transform<T>(data.cloud, data.transform), params_.radius_normal_estimation)};
+        transform<T>(in.cloud, in.transform), params_.radius_normal_estimation)};
 
     LOG(INFO) << "Compute point projection in camera image";
     const Eigen::Matrix3Xd pts_3d{cl->getMatrixXfMap().topRows<3>().cast<double>()};
@@ -66,8 +67,8 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     }
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
-    Eigen::Quaterniond rotation{data.transform.rotation()};
-    Eigen::Vector3d translation{data.transform.translation()};
+    Eigen::Quaterniond rotation{in.transform.rotation()};
+    Eigen::Vector3d translation{in.transform.translation()};
     problem.AddParameterBlock(rotation.coeffs().data(), FunctorDistance::DimRotation,
                               new util_ceres::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
@@ -85,16 +86,6 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
                                  translation.data());
     }
 
-    double minVal;
-    double maxVal;
-    cv::Point minLoc;
-    cv::Point maxLoc;
-
-    cv::minMaxLoc(img, &minVal, &maxVal, &minLoc, &maxLoc);
-
-    LOG(INFO) << "img min val : " << minVal << " at: " << minLoc;
-    LOG(INFO) << "max val: " << maxVal << " at: " << maxLoc;
-
     LOG(INFO) << "Add smoothness costs";
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
@@ -111,7 +102,7 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     }
 
     if (params_.limits != Parameters::Limits::none) {
-        double ub, lb;
+        double ub{0}, lb{0};
         if (params_.limits == Parameters::Limits::custom) {
             ub = params_.custom_depth_limit_max;
             lb = params_.custom_depth_limit_min;
@@ -149,8 +140,9 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     ceres::Solve(params_.solver, &problem, &summary);
     LOG(INFO) << summary.FullReport();
 
-    data.cloud->clear();
-    data.cloud->reserve(rows * cols);
+    LOG(INFO) << "Writing output data";
+    cv::eigen2cv(depth_est, out.image);
+    out.cloud->reserve(rows * cols);
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < cols; col++) {
             LOG(INFO) << "Estimated depth for (" << col << "," << row
@@ -159,17 +151,16 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             T p;
             p.getVector3fMap() =
-                (data.transform.inverse() * (support + direction * depth_est(row, col)))
+                (in.transform.inverse() * (support + direction * depth_est(row, col)))
                     .template cast<float>();
-            data.cloud->push_back(p);
+            out.cloud->push_back(p);
         }
     }
-    data.cloud->width = cols;
-    data.cloud->height = rows;
-
+    out.cloud->width = cols;
+    out.cloud->height = rows;
     Eigen::Affine3d tf_new(rotation);
     tf_new.translation() = translation;
-    data.transform = tf_new;
+    out.transform = tf_new;
 
     return summary.IsSolutionUsable();
 }
