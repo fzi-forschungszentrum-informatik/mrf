@@ -97,21 +97,22 @@ bool Solver::solve(Data<T>& data) {
         }
     }
 
-    LOG(INFO) << "Add depth limits";
-    double ub, lb;
-    if (params_.use_custom_depth_limits) {
-        ub = params_.custom_depth_limit_max;
-        lb = params_.custom_depth_limit_min;
-        LOG(INFO) << "Use custom limits. Min: " << lb << ", Max: " << ub;
-    } else {
-        ub = pts_3d.colwise().norm().maxCoeff();
-        lb = pts_3d.colwise().norm().minCoeff();
-        LOG(INFO) << "Use adaptive limits. Min: " << lb << ", Max: " << ub;
-    }
-    for (int row = 0; row < rows; row++) {
-        for (int col = 0; col < cols; col++) {
-            problem.SetParameterLowerBound(&depth_est(row, col), 0, lb);
-            problem.SetParameterUpperBound(&depth_est(row, col), 0, ub);
+    if (params_.limits != Parameters::Limits::none) {
+        double ub, lb;
+        if (params_.limits == Parameters::Limits::custom) {
+            ub = params_.custom_depth_limit_max;
+            lb = params_.custom_depth_limit_min;
+            LOG(INFO) << "Use custom limits. Min: " << lb << ", Max: " << ub;
+        } else if (params_.limits == Parameters::Limits::adaptive) {
+            ub = pts_3d.colwise().norm().maxCoeff();
+            lb = pts_3d.colwise().norm().minCoeff();
+            LOG(INFO) << "Use adaptive limits. Min: " << lb << ", Max: " << ub;
+        }
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                problem.SetParameterLowerBound(&depth_est(row, col), 0, lb);
+                problem.SetParameterUpperBound(&depth_est(row, col), 0, ub);
+            }
         }
     }
 
