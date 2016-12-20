@@ -20,6 +20,7 @@
   <depend>mrt_opencv</depend>
   <depend>mrt_pcl</depend>
   <depend>util_ceres</depend>
+  <depend>yaml-cpp</depend>
 
   <export>
   </export>

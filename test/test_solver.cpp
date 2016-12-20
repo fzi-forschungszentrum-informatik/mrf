@@ -26,7 +26,7 @@ TEST(Solver, Instantiation) {
     cl->push_back(PointT(cols - 1, 1, 0));
     DataT d(cl, img, DataT::Transform::Identity());
 
-    Solver solver{cam};
+    Solver solver{cam, Parameters("parameters.yaml")};
     solver.solve(d);
 
     boost::filesystem::path path_name{"/tmp/test/solver/"};

@@ -9,6 +9,6 @@ TEST(Parameters, Instantiation) {
     google::InstallFailureSignalHandler();
 
     using namespace mrf;
-    const Parameters::Ptr p{Parameters::create()};
+    const Parameters::Ptr p{Parameters::create("parameters.yaml")};
     std::cout << "\nTest parameters:\n" << *p;
 }
