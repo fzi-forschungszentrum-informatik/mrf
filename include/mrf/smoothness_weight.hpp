@@ -1,14 +1,13 @@
 #pragma once
 
-#include "pixel.hpp"
 #include "parameters.hpp"
+#include "pixel.hpp"
 
 namespace mrf {
 
-inline double smoothnessWeight(const Pixel& p, const Pixel& neighbor, const double& val_p,
-                               const double& val_neighbor, const Parameters& params) {
-//    return exp(-abs(val_p - val_neighbor));
+inline double smoothnessWeight(const Pixel& p, const Pixel& neighbor, const Parameters& params) {
+    //    return exp(-abs(val_p - val_neighbor));
 
-    return val_p < params.discontinuity_threshold;
+    return std::abs(p.val - neighbor.val) < params.discontinuity_threshold;
 }
 }

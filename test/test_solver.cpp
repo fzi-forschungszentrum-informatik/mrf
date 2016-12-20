@@ -13,8 +13,8 @@ TEST(Solver, Instantiation) {
     google::InitGoogleLogging("Solver");
     google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 10;
-    constexpr size_t cols = 40;
+    constexpr size_t rows = 2;
+    constexpr size_t cols = 10;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;

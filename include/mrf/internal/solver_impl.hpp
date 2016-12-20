@@ -7,12 +7,12 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include "cloud_preprocessing.hpp"
+#include "depth_prior.hpp"
 #include "functor_distance.hpp"
 #include "functor_smoothness.hpp"
 #include "image_preprocessing.hpp"
 #include "neighbors.hpp"
 #include "smoothness_weight.hpp"
-#include "depth_prior.hpp"
 
 namespace mrf {
 
@@ -42,9 +42,10 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Image size: " << cols << " x " << rows;
     std::map<Pixel, Eigen::Vector3d, PixelLess> projection;
     for (size_t c = 0; c < in_img.size(); c++) {
-        const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
+        Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         LOG(INFO) << "Pixel: " << p;
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
+            p.val = img.at<float>(p.row, p.col);
             projection.insert(std::make_pair(p, pts_3d.col(c)));
         }
     }
@@ -56,7 +57,7 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(depth_est,projection,camera_,params_.initialization);
+    getDepthEst(depth_est, projection, camera_, params_.initialization);
 
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
@@ -89,12 +90,11 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Add smoothness costs";
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
-            const Pixel p(col, row);
-            for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
+            const Pixel p(col, row, img.at<float>(row, col));
+            const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
+            for (auto const& n : neighbors) {
                 problem.AddResidualBlock(
-                    FunctorSmoothness::create(smoothnessWeight(p, n, img.at<float>(p.row, p.col),
-                                                               img.at<float>(n.row, n.col), params_) *
-                                              params_.ks),
+                    FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
                     nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
             }
         }
