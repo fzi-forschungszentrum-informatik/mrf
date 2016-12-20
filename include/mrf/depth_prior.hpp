@@ -134,7 +134,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
         i++;
     }
 
-    if (type == Initialization::meanDepth) {
+    if (type == Parameters::Initialization::mean_depth) {
         Eigen::Matrix3Xd points(2, projection.size());
         int i{0};
         for (mapT::iterator it = projection.begin(); it != projection.end(); ++it) {
