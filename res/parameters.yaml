@@ -8,8 +8,8 @@ limits: none
 custom_depth_limit_min: 0
 custom_depth_limit_max: 100
 
-# Available methods: nearest_neighbor, triangles
-initialization: triangles
+# Available methods: none, nearest_neighbor, triangles
+initialization: none
 
 # Available methods: four, eight
 neighborhood: four

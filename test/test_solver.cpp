@@ -13,13 +13,15 @@ TEST(Solver, Instantiation) {
     google::InitGoogleLogging("Solver");
     google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 20;
-    constexpr size_t cols = 20;
+    constexpr size_t rows = 10;
+    constexpr size_t cols = 40;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;
     using DataT = Data<PointT>;
-    DataT::Image img{cv::Mat::eye(rows, cols, CV_32FC1)};
+    cv::Mat img;
+    cv::hconcat(cv::Mat::zeros(rows, cols / 2, CV_32FC1), cv::Mat::ones(rows, cols / 2, CV_32FC1), img);
+//    img = cv::Mat::eye(rows, cols, CV_32FC1);
 
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     cl->push_back(PointT(1, rows - 1, 1));

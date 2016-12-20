@@ -90,7 +90,7 @@ bool Solver::solve(Data<T>& data) {
             for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
                 problem.AddResidualBlock(
                     FunctorSmoothness::create(smoothnessWeight(p, n, img.at<float>(p.row, p.col),
-                                                               img.at<float>(n.row, n.col)) *
+                                                               img.at<float>(n.row, n.col), params_) *
                                               params_.ks),
                     nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
             }
