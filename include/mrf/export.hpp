@@ -2,6 +2,8 @@
 
 #include <camera_models/camera_model.h>
 #include <glog/logging.h>
+#include <Eigen/src/Geometry/Hyperplane.h>
+#include <Eigen/src/Geometry/ParametrizedLine.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
 
@@ -49,7 +51,14 @@ void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
     for (size_t c = 0; c < in_img.size(); c++) {
         const int row = img_pts_raw(1, c);
         const int col = img_pts_raw(0, c);
-        img_depth.at<float>(row, col) = pts_3d.col(c).norm();
+        Eigen::Vector3d support, direction;
+        cam->getViewingRay(Eigen::Vector2d(img_pts_raw(0, c), img_pts_raw(1, c)), support,
+                           direction);
+        const Eigen::Hyperplane<double, 3> plane(direction, pts_3d.col(c));
+        img_depth.at<float>(row, col) =
+            (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
+             support)
+                .norm();
     }
     cv::Mat out;
     if (normalize) {
