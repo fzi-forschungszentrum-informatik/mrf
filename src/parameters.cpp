@@ -51,5 +51,16 @@ void Parameters::fromConfig(const std::string& file_name) {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
+
+    getParam(cfg, "loss_function_scale", loss_function_scale);
+    if (getParam(cfg, "loss_function", tmp)) {
+        if (tmp == "trivial") {
+            loss_function = std::make_shared<ceres::TrivialLoss>();
+        } else if (tmp == "huber") {
+            loss_function = std::make_shared<ceres::HuberLoss>(loss_function_scale);
+        } else {
+            LOG(WARNING) << "No parameter " << tmp << " available.";
+        }
+    }
 }
 }

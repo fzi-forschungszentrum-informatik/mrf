@@ -1,6 +1,8 @@
 #pragma once
+
 #include <memory>
 #include <ostream>
+#include <ceres/loss_function.h>
 #include <ceres/problem.h>
 #include <ceres/solver.h>
 #include <glog/logging.h>
@@ -14,18 +16,12 @@ struct Parameters {
     enum class Initialization { none, nearest_neighbor, triangles, mean_depth };
     enum class Limits { none, custom, adaptive };
 
-    using Ptr = std::shared_ptr<Parameters>;
-
     inline Parameters(const std::string& file_name = std::string()) {
         problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         if (file_name.size()) {
             fromConfig(file_name);
         }
-    }
-
-    inline static Ptr create(const std::string& file_name = std::string()) {
-        return std::make_shared<Parameters>(file_name);
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const Parameters& p) {
@@ -45,12 +41,14 @@ struct Parameters {
     double custom_depth_limit_min{0};
     double custom_depth_limit_max{100};
 
+    double loss_function_scale{1};
+
     Initialization initialization{Initialization::none};
     Neighborhood neighborhood{Neighborhood::four};
 
     ceres::Solver::Options solver;
     ceres::Problem::Options problem;
-    std::shared_ptr<ceres::LossFunction> loss_function{nullptr};
+    std::shared_ptr<ceres::LossFunction> loss_function{new ceres::TrivialLoss};
 
 private:
     void fromConfig(const std::string& file_name);

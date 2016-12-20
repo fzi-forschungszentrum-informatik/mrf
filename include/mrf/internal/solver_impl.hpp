@@ -17,7 +17,7 @@
 namespace mrf {
 
 template <typename T>
-bool Solver::solve(Data<T>& data) {
+bool Solver::solve(Data<T>& data, const bool pin_transform) {
 
     LOG(INFO) << "Preprocess image";
     const cv::Mat img{gradientSobel(data.image)};
@@ -75,13 +75,6 @@ bool Solver::solve(Data<T>& data) {
                   << ", direction: " << direction.transpose();
         functors_distance.emplace_back(
             FunctorDistance::create(el.second, params_.kd, support, direction));
-
-        Eigen::Vector3d res;
-        functors_distance.back()->operator()(&depth_est(el.first.row, el.first.col),
-                                             rotation.coeffs().data(), translation.data(),
-                                             res.data());
-        LOG(INFO) << "Initial residual: " << res.transpose();
-
         problem.AddResidualBlock(functors_distance.back()->toCeres(), params_.loss_function.get(),
                                  &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
                                  translation.data());
@@ -95,7 +88,9 @@ bool Solver::solve(Data<T>& data) {
             for (auto const& n : neighbors) {
                 problem.AddResidualBlock(
                     FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
-                    nullptr, &depth_est(row, col), &depth_est(n.row, n.col));
+                    new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
+                                          ceres::TAKE_OWNERSHIP),
+                    &depth_est(row, col), &depth_est(n.row, n.col));
             }
         }
     }
@@ -119,9 +114,11 @@ bool Solver::solve(Data<T>& data) {
         }
     }
 
-    LOG(INFO) << "Set parameterization";
-    problem.SetParameterBlockConstant(rotation.coeffs().data());
-    problem.SetParameterBlockConstant(translation.data());
+    if (pin_transform) {
+        LOG(INFO) << "Set parameterization";
+        problem.SetParameterBlockConstant(rotation.coeffs().data());
+        problem.SetParameterBlockConstant(translation.data());
+    }
 
     LOG(INFO) << "Check parameters";
     std::string err_str;
@@ -152,6 +149,8 @@ bool Solver::solve(Data<T>& data) {
             data.cloud->push_back(p);
         }
     }
+    data.cloud->width = cols;
+    data.cloud->height = rows;
 
     Eigen::Affine3d tf_new(rotation);
     tf_new.translation() = translation;

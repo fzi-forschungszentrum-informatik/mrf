@@ -13,8 +13,8 @@ TEST(Solver, Instantiation) {
     google::InitGoogleLogging("Solver");
     google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 300;
-    constexpr size_t cols = 500;
+    constexpr size_t rows = 200;
+    constexpr size_t cols = 300;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;
@@ -36,4 +36,8 @@ TEST(Solver, Instantiation) {
     exportData(d, path_name.string());
     exportDepthImage<PointT>(d, cam, path_name.string());
     exportGradientImage(d.image, path_name.string());
+
+    ASSERT_NEAR(d.cloud->at(cols - 1, 1).z, 0, 1e-4);
+    ASSERT_NEAR(d.cloud->at(1, rows - 1).z, 1, 1e-4);
+    ASSERT_NEAR(d.cloud->at(cols - 1, rows / 2).z, 0, 1e-4);
 }
