@@ -115,10 +115,10 @@ double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
     const Eigen::ParametrizedLine<double, 3> pline(sp, dir);
     Eigen::Hyperplane<double, 3> plane(normal, q0_world);
     Eigen::Vector3d p_int{pline.intersectionPoint(plane)};
-    return (p_int-sp).norm();
+    return (p_int - sp).norm();
 }
 
-void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
+void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT projection,
                  const std::shared_ptr<CameraModel> cam, const Parameters::Initialization type) {
     if (type == Parameters::Initialization::none)
         return;
@@ -143,6 +143,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
         }
         double mean_depth{points.colwise().norm().mean()};
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
+        certainty = Eigen::MatrixXd::Ones(rows, cols);
         return;
     }
 
@@ -170,6 +171,11 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
                                            .intersectionPoint(plane) -
                                        support)
                                           .norm();
+                if (coor(0) == row && coor(1) == col) {
+                    certainty(row, col) = 1;
+                } else {
+                    certainty(row, col) = 1;
+                }
             }
         }
         return;
@@ -187,6 +193,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
                     getTriangleNeighbours(all_neighbours, coordinates, Pixel(col, row))};
                 if (triangle_neighbours[0] == -1) {
                     depth_est(row, col) = -1;
+                    certainty(row, col) = 0;
                 } else {
                     Eigen::Vector3d supportPoint(3, 1);
                     Eigen::Vector3d direction(3, 1);
@@ -200,6 +207,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
                     cam->getViewingRay(image_coordinate, supportPoint, direction);
                     depth_est(row, col) =
                         pointIntersection(supportPoint, direction, neighbours_points);
+                    certainty(row,col) = 1;
                 }
             }
         }

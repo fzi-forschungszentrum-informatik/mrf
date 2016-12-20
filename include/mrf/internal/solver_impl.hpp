@@ -57,7 +57,8 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(depth_est, projection, camera_, params_.initialization);
+    Eigen::MatrixXd certainty{Eigen::MatrixXd::Ones(rows, cols)};
+    getDepthEst(depth_est, certainty,projection, camera_, params_.initialization);
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < cols; col++) {
             LOG(INFO) << "Initial depth for: (" << col << "," << row
@@ -100,10 +101,11 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
         for (int col = 0; col < cols; col++) {
             const Pixel p(col, row, img.at<float>(row, col));
             const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
+            const double certainty_sum = neighbors.size();
             for (auto const& n : neighbors) {
                 problem.AddResidualBlock(
                     FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
-                    new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
+                    new ceres::ScaledLoss(new ceres::TrivialLoss, certainty(row,col) / certainty_sum,
                                           ceres::TAKE_OWNERSHIP),
                     &depth_est(row, col), &depth_est(n.row, n.col));
             }
