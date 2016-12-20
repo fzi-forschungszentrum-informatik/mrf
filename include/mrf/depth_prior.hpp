@@ -123,13 +123,16 @@ void getDepthEst(Eigen::MatrixXd& depth_est, mapT projection,
     }
 
     if (type == Initialization::meanDepth) {
+    	LOG(INFO) << "in Mean Depth";
         Eigen::Matrix3Xd points(2, projection.size());
         int i{0};
         for (mapT::iterator it = projection.begin(); it != projection.end(); ++it) {
             points.col(i) = (it->second);
             i++;
         }
+
         double mean_depth{points.colwise().norm().mean()};
+        LOG(INFO) << "meandepth: "<< mean_depth;
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
         return;
     }
