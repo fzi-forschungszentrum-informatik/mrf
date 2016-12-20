@@ -9,9 +9,9 @@
 namespace mrf {
 
 struct Parameters {
-
+    enum class Initialization { nearest_neighbor, triangles, mean, none };
     enum class Neighborhood { four = 4, eight = 8 };
-    enum class Initialization { nearest_neighbor, triangles };
+    // enum class Initialization { nearest_neighbor, triangles };
     enum class Limits { none, custom, adaptive };
 
     using Ptr = std::shared_ptr<Parameters>;
@@ -84,6 +84,10 @@ private:
                 initialization = Initialization::nearest_neighbor;
             } else if (tmp == "triangles") {
                 initialization = Initialization::triangles;
+            } else if (tmp == "none") {
+                initialization = Initialization::none;
+            } else if (tmp == "mean") {
+                initialization = Initialization::mean;
             } else {
                 LOG(WARNING) << "No parameter " << tmp << " available.";
             }

@@ -7,12 +7,12 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include "cloud_preprocessing.hpp"
+#include "depth_prior.hpp"
 #include "functor_distance.hpp"
 #include "functor_smoothness.hpp"
 #include "image_preprocessing.hpp"
 #include "neighbors.hpp"
 #include "smoothness_weight.hpp"
-#include "depth_prior.hpp"
 
 namespace mrf {
 
@@ -20,8 +20,10 @@ template <typename T>
 bool Solver::solve(Data<T>& data) {
 
     LOG(INFO) << "Preprocess image";
-    const cv::Mat img{gradientSobel(data.image)};
 
+    imwrite("datain.png",255*data.image);
+    const cv::Mat img{gradientSobel(data.image)};
+    imwrite("img.png",255*img);
     LOG(INFO) << "Preprocess and transform cloud";
     using PointT = pcl::PointXYZINormal;
     const pcl::PointCloud<PointT>::Ptr cl{estimateNormals<T, PointT>(
@@ -56,13 +58,13 @@ bool Solver::solve(Data<T>& data) {
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(depth_est,projection,camera_,params_.initialization);
+    getDepthEst(depth_est, projection, camera_, params_.initialization);
     for (size_t row = 0; row < rows; row++) {
-            for (size_t col = 0; col < cols; col++) {
-                LOG(INFO) << "Initial depth for: (" << col << "," << row
-                          << "): " << depth_est(row, col);
-            }
+        for (size_t col = 0; col < cols; col++) {
+            LOG(INFO) << "Initial depth for: (" << col << "," << row
+                      << "): " << depth_est(row, col);
         }
+    }
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{data.transform.rotation()};
@@ -91,9 +93,20 @@ bool Solver::solve(Data<T>& data) {
                                  translation.data());
     }
 
+    double minVal;
+    double maxVal;
+    cv::Point minLoc;
+    cv::Point maxLoc;
+
+    cv::minMaxLoc(img, &minVal, &maxVal, &minLoc, &maxLoc);
+
+    LOG(INFO) << "img min val : " << minVal << " at: " << minLoc;
+    LOG(INFO) << "max val: " << maxVal << " at: " << maxLoc;
+
     LOG(INFO) << "Add smoothness costs";
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
+            LOG(INFO) << "smooth cost at " << col << ", " << row << ": ";
             const Pixel p(col, row);
             for (auto const& n : getNeighbors(p, rows, cols, params_.neighborhood)) {
                 problem.AddResidualBlock(

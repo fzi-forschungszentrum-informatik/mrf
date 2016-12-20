@@ -14,7 +14,7 @@ TEST(Solver, Instantiation) {
     google::InstallFailureSignalHandler();
 
     constexpr size_t rows = 20;
-    constexpr size_t cols = 20;
+    constexpr size_t cols = 25;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;
@@ -23,7 +23,7 @@ TEST(Solver, Instantiation) {
 
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     cl->push_back(PointT(1, rows - 1, 1));
-    cl->push_back(PointT(cols - 1, 1, 0));
+    cl->push_back(PointT(cols - 1, 1, 10));
     DataT d(cl, img, DataT::Transform::Identity());
 
     Solver solver{cam, Parameters("parameters.yaml")};

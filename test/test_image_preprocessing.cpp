@@ -10,7 +10,7 @@ TEST(ImagePreprocessing, Instantiation) {
 
     using namespace mrf;
     constexpr size_t width = 100;
-    constexpr size_t height = 100;
-    cv::Mat in{cv::Mat::zeros(height, width, CV_32FC1)};
+    constexpr size_t height = 50;
+    cv::Mat in{cv::Mat::eye(height, width, CV_32FC1)};
     cv::Mat out{gradientSobel(in)};
 }
