@@ -1,20 +1,27 @@
-#include <fstream>
-#include <Eigen/Eigen>
+#include <boost/filesystem.hpp>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <opencv/cxcore.h>
+#include <pcl/point_types.h>
+
+#include "camera_model_ortho.h"
+#include "export.hpp"
+#include "solver.hpp"
+#include "export.hpp"
+//
+//#include <fstream>
+//#include <Eigen/Eigen>
+
+//#include <opencv/cxcore.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
 
-#include "camera_model_ortho.h"
-#include "solver.hpp"
-
 using namespace mrf;
-using Point = pcl::PointXYZI;
-using Cloud = pcl::PointCloud<Point>;
 
+using PointT = pcl::PointXYZI;
+using Cloud = pcl::PointCloud<PointT>;
+using DataT = Data<PointT>;
 struct GroundTruthParams {
     bool equidistant;
     int rows_inbetween;
@@ -86,39 +93,41 @@ void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_spar
     }
 }
 
-TEST(MRF, loadGT) {
-
+TEST(Groundtruth, loadGT) {
+	   google::InitGoogleLogging("Groundtruth");
+	    google::InstallFailureSignalHandler();
     /** load Data
-     *
-     */
+         *
+         */
     const Cloud::Ptr cloud_dense{new Cloud};
     const Cloud::Ptr cloud_sparse{new Cloud};
 
     /**
      * Load GT Data
      */
-    pcl::io::loadPCDFile<Point>("gt_dense.pcd", *cloud_dense);
-    cv::Mat image{cv::imread("gt_image.png")};
-    const int width{image.cols};
-    const int height{image.rows};
-    const int dim{width * height};
-    std::cout << "\n Image width,height:\n" << width << "," << height;
+    pcl::io::loadPCDFile<PointT>("gt_dense.pcd", *cloud_dense);
+    cv::Mat img{cv::imread("gt_image.png")};
+    const int cols{img.cols};
+    const int rows{img.rows};
+    LOG(INFO) << "\n Image width,height:\n" << cols << "," << rows;
     GroundTruthParams params_gt;
-    std::cout << "\nTest GroundTruthParams:\n" << params_gt;
+    LOG(INFO)  << "\nTest GroundTruthParams:\n" << params_gt;
 
-    loadCloudSparse(cloud_dense, cloud_sparse, width, height, params_gt);
-    std::cout << "\n cloud_sparse points:\n" << cloud_sparse->points.size() << std::endl;
+    loadCloudSparse(cloud_dense, cloud_sparse, cols, rows, params_gt);
+    LOG(INFO) << "\n cloud_sparse points:\n" << cloud_sparse->points.size() << std::endl;
+
 
     /**
     * Solver
     */
-    std::shared_ptr<CameraModelOrtho> cam_ptr{std::make_shared<CameraModelOrtho>(width, height)};
-    const Parameters::Ptr p{Parameters::create()};
-    const Data<Point>::Transform tf{Data<Point>::Transform::Identity()};
-    Data<Point>::Ptr d{Data<Point>::create(cloud_sparse, image, tf)};
-    Solver solver(cam_ptr, *p);
+    std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
+    DataT d(cloud_sparse, img, DataT::Transform::Identity());
 
-    bool success;
-    std::cout << "\n solve start :\n";
-    success = solver.solve(*d);
+//    Solver solver{cam, Parameters("parameters.yaml")};
+//    solver.solve(d);
+    boost::filesystem::path path_name{"/tmp/test/gt/solver/"};
+    boost::filesystem::create_directories(path_name);
+    exportData(d, path_name.string());
+    exportDepthImage<PointT>(d, cam, path_name.string());
+    exportGradientImage(d.image, path_name.string());
 }

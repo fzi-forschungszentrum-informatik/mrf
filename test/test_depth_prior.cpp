@@ -41,3 +41,6 @@ TEST(DepthPrior, initialisation) {
     exportData(out, path_name.string() + "out_");
 //    exportDepthImage<PointT>(in, cam, path_name.string());
 }
+
+
+
