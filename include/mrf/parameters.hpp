@@ -25,7 +25,7 @@ struct Parameters {
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const Parameters& p) {
-        os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
+        return os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
            << "ks: " << p.ks << std::endl
            << "kd: " << p.kd << std::endl
            << "max_iterations: " << p.max_iterations << std::endl
@@ -40,7 +40,7 @@ struct Parameters {
     Limits limits{Limits::none};
     double custom_depth_limit_min{0};
     double custom_depth_limit_max{100};
-    int neighborsearch{6};
+    int neighbor_search{6};
 
     double loss_function_scale{1};
 

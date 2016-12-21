@@ -1,3 +1,4 @@
+#include <io.hpp>
 #include <boost/filesystem.hpp>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
@@ -105,9 +106,8 @@ Eigen::MatrixXf readMatrix(const std::string& filename) {
 }
 
 TEST(Groundtruth, loadGT) {
-    google::InitGoogleLogging("Groundtruth");
-    google::InstallFailureSignalHandler();
-
+	   google::InitGoogleLogging("Groundtruth");
+	    google::InstallFailureSignalHandler();
     /** load Data
          *
          */

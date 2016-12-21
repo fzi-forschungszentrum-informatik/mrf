@@ -2,7 +2,7 @@ ks: 1
 kd: 1
 discontinuity_threshold: 0.2
 radius_normal_estimation: 0.5
-neighborsearch: 10
+neighbor_search: 4
 
 # Available options: none, custom, adaptive
 limits: none

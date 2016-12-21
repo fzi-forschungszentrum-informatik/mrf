@@ -1,12 +1,11 @@
-
 #include <boost/filesystem.hpp>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <io.hpp>
 #include <pcl/point_types.h>
 
 #include "camera_model_ortho.h"
 #include "depth_prior.hpp"
-#include "export.hpp"
 #include "solver.hpp"
 
 TEST(DepthPrior, initialisation) {
@@ -14,7 +13,6 @@ TEST(DepthPrior, initialisation) {
 
     google::InitGoogleLogging("DepthPrior");
     google::InstallFailureSignalHandler();
-    LOG(INFO) << "Depth prior Testing";
 
     constexpr size_t rows = 50;
     constexpr size_t cols = 100;
@@ -22,35 +20,26 @@ TEST(DepthPrior, initialisation) {
 
     using PointT = pcl::PointXYZ;
     using DataT = Data<PointT>;
-    DataT::Image img{cv::Mat::eye(rows, cols, CV_32FC1)};
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
-    PointT p;
-    p.x = 20;
-    p.y = 40;
-    p.z = 10;
-    cl->push_back(p);
-    p.x = 30;
-    p.y = 40;
-    p.z = 10;
-    cl->push_back(p);
-    p.x = 25;
-    p.y = 45;
-    p.z = 10;
-    cl->push_back(p);
-    DataT d(cl, img, DataT::Transform::Identity());
+    cl->push_back(PointT(20, 40, 10));
+    cl->push_back(PointT(30, 40, 10));
+    cl->push_back(PointT(25, 45, 10));
+    const DataT in(cl, cv::Mat::eye(rows, cols, CV_32FC1), DataT::Transform::Identity());
     Parameters params;
     params.initialization = Parameters::Initialization::triangles;
     params.ks = 0;
     params.kd = 0;
-    LOG(INFO) << "params set to";
-    LOG(INFO) << params;
+    LOG(INFO) << "Params: " << params;
     Solver solver{cam, params};
-    solver.solve(d);
+
+    DataT out;
+    solver.solve(in, out);
 
     boost::filesystem::path path_name{"/tmp/test/depthPrior/"};
     boost::filesystem::create_directories(path_name);
-    exportData(d, path_name.string());
-    exportDepthImage<PointT>(d, cam, path_name.string());
+    exportData(in, path_name.string() + "in_");
+    exportData(out, path_name.string() + "out_");
+//    exportDepthImage<PointT>(in, cam, path_name.string());
 }
 
 

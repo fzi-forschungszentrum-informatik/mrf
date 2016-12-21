@@ -14,7 +14,7 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
     getParam(cfg, "max_iterations", max_iterations);
     getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
-    getParam(cfg, "neighborsearch", neighborsearch);
+    getParam(cfg, "neighbor_search",neighbor_search);
 
     if (getParam(cfg, "limits", tmp)) {
         if (tmp == "none") {
