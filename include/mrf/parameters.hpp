@@ -25,7 +25,7 @@ struct Parameters {
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const Parameters& p) {
-        os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
+        return os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
            << "ks: " << p.ks << std::endl
            << "kd: " << p.kd << std::endl
            << "max_iterations: " << p.max_iterations << std::endl

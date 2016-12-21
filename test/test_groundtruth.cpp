@@ -1,21 +1,14 @@
+#include <io.hpp>
 #include <boost/filesystem.hpp>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <pcl/point_types.h>
-
-#include "camera_model_ortho.h"
-#include "export.hpp"
-#include "solver.hpp"
-#include "export.hpp"
-//
-//#include <fstream>
-//#include <Eigen/Eigen>
-
-//#include <opencv/cxcore.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
+
+#include "camera_model_ortho.h"
+#include "solver.hpp"
 
 using namespace mrf;
 
@@ -94,8 +87,8 @@ void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_spar
 }
 
 TEST(Groundtruth, loadGT) {
-	   google::InitGoogleLogging("Groundtruth");
-	    google::InstallFailureSignalHandler();
+    google::InitGoogleLogging("Groundtruth");
+    google::InstallFailureSignalHandler();
     /** load Data
          *
          */
@@ -111,11 +104,10 @@ TEST(Groundtruth, loadGT) {
     const int rows{img.rows};
     LOG(INFO) << "\n Image width,height:\n" << cols << "," << rows;
     GroundTruthParams params_gt;
-    LOG(INFO)  << "\nTest GroundTruthParams:\n" << params_gt;
+    LOG(INFO) << "\nTest GroundTruthParams:\n" << params_gt;
 
     loadCloudSparse(cloud_dense, cloud_sparse, cols, rows, params_gt);
     LOG(INFO) << "\n cloud_sparse points:\n" << cloud_sparse->points.size() << std::endl;
-
 
     /**
     * Solver
@@ -123,8 +115,8 @@ TEST(Groundtruth, loadGT) {
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
     DataT d(cloud_sparse, img, DataT::Transform::Identity());
 
-//    Solver solver{cam, Parameters("parameters.yaml")};
-//    solver.solve(d);
+    //    Solver solver{cam, Parameters("parameters.yaml")};
+    //    solver.solve(d);
     boost::filesystem::path path_name{"/tmp/test/gt/solver/"};
     boost::filesystem::create_directories(path_name);
     exportData(d, path_name.string());

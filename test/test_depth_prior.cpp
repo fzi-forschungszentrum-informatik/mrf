@@ -1,11 +1,11 @@
 #include <boost/filesystem.hpp>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <io.hpp>
 #include <pcl/point_types.h>
 
 #include "camera_model_ortho.h"
 #include "depth_prior.hpp"
-#include "export.hpp"
 #include "solver.hpp"
 
 TEST(DepthPrior, initialisation) {

@@ -1,10 +1,10 @@
 #include <boost/filesystem.hpp>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <io.hpp>
 #include <pcl/point_types.h>
 
 #include "data.hpp"
-#include "export.hpp"
 
 TEST(Data, Instantiation) {
 

@@ -7,18 +7,18 @@
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "cloud_preprocessing.hpp"
-#include "depth_prior.hpp"
-#include "functor_distance.hpp"
-#include "functor_smoothness.hpp"
-#include "image_preprocessing.hpp"
-#include "neighbors.hpp"
-#include "smoothness_weight.hpp"
+#include "../cloud_preprocessing.hpp"
+#include "../depth_prior.hpp"
+#include "../functor_distance.hpp"
+#include "../functor_smoothness.hpp"
+#include "../image_preprocessing.hpp"
+#include "../neighbors.hpp"
+#include "../smoothness_weight.hpp"
 
 namespace mrf {
 
 template <typename T>
-bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
+ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
 
     LOG(INFO) << "Preprocess image";
     const cv::Mat img{gradientSobel(in.image)};
@@ -128,7 +128,7 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
     ceres::Solve(params_.solver, &problem, &summary);
     LOG(INFO) << summary.FullReport();
 
-    LOG(INFO) << "Writing output data";
+    LOG(INFO) << "Write output data";
     out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
     cv::eigen2cv(depth_est, out.image);
     out.cloud->reserve(rows * cols);
@@ -146,6 +146,11 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
     out.cloud->width = cols;
     out.cloud->height = rows;
 
-    return summary.IsSolutionUsable();
+    LOG(INFO) << "Write info";
+    ResultInfo info;
+    info.optimization_successful = summary.IsSolutionUsable();
+    info.number_of_3d_points = projection.size();
+    info.number_of_image_points = rows * cols;
+    return info;
 }
 }
