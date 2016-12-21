@@ -30,6 +30,7 @@ struct ResultInfo {
     size_t number_of_image_points{0};
 
     Eigen::MatrixXd covariance_depth;
+    Eigen::MatrixXd smoothness_costs;
     Eigen::Matrix<double, 7, 7> covariance_transform;
 };
 }

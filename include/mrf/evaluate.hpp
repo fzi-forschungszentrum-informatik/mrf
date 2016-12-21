@@ -4,6 +4,7 @@
 
 #include "quality.hpp"
 
+
 namespace mrf {
 
 inline Quality evaluate(const cv::Mat& est, const cv::Mat& ref) {

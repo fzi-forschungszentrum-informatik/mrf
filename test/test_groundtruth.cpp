@@ -8,7 +8,6 @@
 #include <pcl/io/pcd_io.h>
 
 #include "camera_model_ortho.h"
-#include "export.hpp"
 #include "solver.hpp"
 
 using namespace mrf;
@@ -21,7 +20,6 @@ struct GroundTruthParams {
     int rows_inbetween;
     int cols_inbetween;
     int seedpoint_number;
-
     bool addCloudNoise;
     bool addImageNoise;
     bool addImageBlur;
@@ -29,7 +27,7 @@ struct GroundTruthParams {
     double noise_sigma;
 
     GroundTruthParams()
-            : equidistant{false}, rows_inbetween{20}, cols_inbetween{10}, seedpoint_number{10000},
+            : equidistant{false}, rows_inbetween{20}, cols_inbetween{10}, seedpoint_number{100},
               addCloudNoise{false}, addImageNoise{false}, addImageBlur{false}, blur_size{3},
               noise_sigma{2} {};
 
@@ -87,80 +85,66 @@ void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_spar
     }
 }
 
-Eigen::MatrixXf readMatrix(const std::string& filename) {
-    std::ifstream indata;
-    indata.open(filename);
-    std::string line;
-    std::vector<float> values;
-    uint rows = 0;
-    while (getline(indata, line)) {
-        std::stringstream lineStream(line);
-        std::string cell;
-        while (std::getline(lineStream, cell, ',')) {
-            values.push_back(std::stod(cell));
-        }
-        ++rows;
-    }
-    return Eigen::Map<const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
-        values.data(), rows, values.size() / rows);
-}
-
 TEST(Groundtruth, loadGT) {
-	   google::InitGoogleLogging("Groundtruth");
-	    google::InstallFailureSignalHandler();
+    google::InitGoogleLogging("Groundtruth");
+    google::InstallFailureSignalHandler();
     /** load Data
          *
          */
+    const int cols{1384};
+    const int rows{1032};
+    cv::Mat img{cv::Mat::zeros(rows, cols, CV_32FC1)};
+    for (size_t row = 0; row < rows; row++) {
+        for (size_t col = 0; col < 0.3 * cols; col++) {
+            img.at<float>(row, col) = 1;
+        }
+    }
+    for (size_t row = 0; row < 0.7 * rows; row++) {
+        for (size_t col = 0.3 * cols; col < cols; col++) {
+            img.at<float>(row, col) = row / (0.7 * rows);
+        }
+    }
+    for (size_t row = 0.7 * rows; row < rows; row++) {
+        for (size_t col = 0.3 * cols; col < cols; col++) {
+            img.at<float>(row, col) = 0;
+        }
+    }
+
     const Cloud::Ptr cloud_dense{new Cloud};
     const Cloud::Ptr cloud_sparse{new Cloud};
-    cv::Mat img{cv::imread("image.png")};
-//    img.convertTo(img,CV_32FC1);
-   // cv::Mat img{cv::Mat::eye(1032, 1384, CV_32FC1)};
-  //  cv::normalize(img, img, 0, 1, cv::NORM_MINMAX);
 
-    const int cols{img.cols};
-    const int rows{img.rows};
-    cloud_dense->points.resize(cols * rows);
-    cloud_dense->width = cols;
-    cloud_dense->height = rows;
-    const Eigen::MatrixXf all_coordinates_data{readMatrix("coordinates_data.csv").transpose()};
-    LOG(INFO) << "all coordinates cols " << all_coordinates_data.cols()
-              << ", rows: " << all_coordinates_data.rows();
+    pcl::io::loadPCDFile<PointT>("gt_dense.pcd", *cloud_dense);
 
-    for (int i = 0; i < all_coordinates_data.cols(); i++) {
-        PointT p;
-        p.x = all_coordinates_data(0, i);
-        p.y = all_coordinates_data(1, i);
-        p.z = all_coordinates_data(2, i);
-        cloud_dense->points[i] = p;
-    }
-    pcl::io::savePCDFile<PointT>("dense_gt_cloud.pcd", *(cloud_dense));
     /**
      * Load GT Data
      */
-    // pcl::io::loadPCDFile<PointT>("gt_dense.pcd", *cloud_dense);
 
-    LOG(INFO) << "Image width,height: " << cols << "," << rows;
     GroundTruthParams params_gt;
     LOG(INFO) << "Test GroundTruthParams: " << params_gt;
 
     loadCloudSparse(cloud_dense, cloud_sparse, cols, rows, params_gt);
     LOG(INFO) << "cloud_sparse points: " << cloud_sparse->points.size() << std::endl;
+    const DataT gt_data(cloud_dense, img, DataT::Transform::Identity());
 
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
-       cl->push_back(PointT(1,1,500));
-       cl->push_back(PointT(1382,1031,50));
-       cl->push_back(PointT(845,354,271));
+    cl->push_back(PointT(1, 1, 500));
+    cl->push_back(PointT(1382, 1031, 50));
+    cl->push_back(PointT(845, 354, 271));
     /**
     * Solver
-    */
+//    */
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
-    DataT d(cloud_sparse, img, DataT::Transform::Identity());
+    DataT in(cloud_sparse, img, DataT::Transform::Identity());
+    DataT out;
     Solver solver{cam, Parameters("parameters.yaml")};
-    solver.solve(d);
+    solver.solve(in, out);
     boost::filesystem::path path_name{"/tmp/test/gt/solver/"};
     boost::filesystem::create_directories(path_name);
-    exportData(d, path_name.string());
-    exportDepthImage<PointT>(d, cam, path_name.string());
-    exportGradientImage(d.image, path_name.string());
+    exportData(in, path_name.string() + "in_");
+    exportData(out, path_name.string() + "out_");
+    exportDepthImage<PointT>(in, cam, path_name.string());
+    exportGradientImage(in.image, path_name.string());
+
+
+
 }

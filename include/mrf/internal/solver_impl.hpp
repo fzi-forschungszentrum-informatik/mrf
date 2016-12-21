@@ -51,7 +51,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(depth_est, certainty, projection_tf, camera_, params_.initialization, params_.neighbor_search);
+    getDepthEst(depth_est, certainty, projection_tf, camera_, params_.initialization,
+                params_.neighbor_search);
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -61,31 +62,37 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
     LOG(INFO) << "Add distance costs";
+    std::vector<ceres::ResidualBlockId> dists_res_blocks;
     for (auto const& el : projection) {
         Eigen::Vector3d support, direction;
         camera_->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-        LOG(INFO) << "Pixel: " << el.first << ", point: " << el.second.transpose()
-                  << ", support: " << support.transpose()
-                  << ", direction: " << direction.transpose();
+//        LOG(INFO) << "Pixel: " << el.first << ", point: " << el.second.transpose()
+//                  << ", support: " << support.transpose()
+//                  << ", direction: " << direction.transpose();
         functors_distance.emplace_back(
             FunctorDistance::create(el.second, params_.kd, support, direction));
-        problem.AddResidualBlock(functors_distance.back()->toCeres(), params_.loss_function.get(),
-                                 &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
-                                 translation.data());
+        ceres::ResidualBlockId block_id{problem.AddResidualBlock(
+            functors_distance.back()->toCeres(), params_.loss_function.get(),
+            &depth_est(el.first.row, el.first.col), rotation.coeffs().data(), translation.data())};
+        dists_res_blocks.push_back(block_id);
     }
 
     LOG(INFO) << "Add smoothness costs";
+    std::vector<std::vector<ceres::ResidualBlockId>> smoothness_blocks;
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
             const Pixel p(col, row, img.at<float>(row, col));
             const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
+            std::vector<ceres::ResidualBlockId> res_blocks;
             for (auto const& n : neighbors) {
-                problem.AddResidualBlock(
+                ceres::ResidualBlockId block_id{problem.AddResidualBlock(
                     FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
                     new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
                                           ceres::TAKE_OWNERSHIP),
-                    &depth_est(row, col), &depth_est(n.row, n.col));
+                    &depth_est(row, col), &depth_est(n.row, n.col))};
+                res_blocks.push_back(block_id);
             }
+            smoothness_blocks.push_back(res_blocks);
         }
     }
 
@@ -125,8 +132,28 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     LOG(INFO) << "Solve problem";
     ceres::Solver solver;
     ceres::Solver::Summary summary;
+    ceres::Solver::Options opt;
+
+    params_.solver.max_num_iterations = params_.max_iterations;
+    params_.solver.max_solver_time_in_seconds = 120;
     ceres::Solve(params_.solver, &problem, &summary);
     LOG(INFO) << summary.FullReport();
+
+//> Slowing tests down!
+//    Eigen::MatrixXd heatmap(rows,cols);
+//    for (int row = 0; row < rows; row++) {
+//        for (int col = 0; col < cols; col++) {
+//            ceres::Problem::EvaluateOptions options;
+//            options.residual_blocks = smoothness_blocks[row*cols +col];
+//
+//            double total_cost = 0.0;
+//            std::vector<double> residuals;
+//            problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
+//           // LOG(INFO) << "Cost at ("<< col<< ","<< row<<") is "<< total_cost;
+//            heatmap(row,col) = total_cost;
+//        }
+//    }
+
 
     LOG(INFO) << "Write output data";
     out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
@@ -134,13 +161,14 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     out.cloud->reserve(rows * cols);
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < cols; col++) {
-//            LOG(INFO) << "Estimated depth for (" << col << "," << row
-//                      << "): " << depth_est(row, col);
+            //            LOG(INFO) << "Estimated depth for (" << col << "," << row
+            //                      << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             T p;
             p.getVector3fMap() = (support + direction * depth_est(row, col)).cast<float>();
-            out.cloud->push_back(pcl::transformPoint(p, out.transform.inverse().template cast<float>()));
+            out.cloud->push_back(
+                pcl::transformPoint(p, out.transform.inverse().template cast<float>()));
         }
     }
     out.cloud->width = cols;
@@ -151,6 +179,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rows * cols;
+    //info.smoothness_costs = heatmap;
     return info;
 }
 }

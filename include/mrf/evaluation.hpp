@@ -49,7 +49,7 @@ cv::Mat heatmap(Eigen::MatrixXd& depth_gt, Eigen::MatrixXd& depth_est){
 }
 
 
-void evaluate(Eigen::MatrixXd& depth_gt, Eigen::MatrixXd& depth_est, std::stringstream& stream) {
+void evaluate_old(Eigen::MatrixXd& depth_gt, Eigen::MatrixXd& depth_est, std::stringstream& stream) {
     stream << "Evaluation: " << std::endl;
     stream << "absolute_difference: " << absoluteDifference(depth_gt, depth_est) << std::endl;
     stream << "mean_square_error: " << meanSquareError(depth_gt, depth_est) << std::endl;
