@@ -11,9 +11,12 @@
 #include "../depth_prior.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_smoothness.hpp"
+#include "../functor_normal_smoothness.hpp"
+//#include "../functor_normal.hpp"
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../smoothness_weight.hpp"
+
 
 namespace mrf {
 
