@@ -118,7 +118,6 @@ TEST(Groundtruth, loadGT) {
     /**
      * Load GT Data
      */
-
     GroundTruthParams params_gt;
     LOG(INFO) << "Test GroundTruthParams: " << params_gt;
 
@@ -144,7 +143,4 @@ TEST(Groundtruth, loadGT) {
     exportData(out, path_name.string() + "out_");
     exportDepthImage<PointT>(in, cam, path_name.string());
     exportGradientImage(in.image, path_name.string());
-
-
-
 }
