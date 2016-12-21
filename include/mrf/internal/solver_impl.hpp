@@ -50,7 +50,8 @@ bool Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(depth_est, projection_tf, camera_, params_.initialization);
+    Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
+    getDepthEst(depth_est, certainty, projection_tf, camera_, params_.initialization, params_.neighbor_search);
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
     Eigen::Quaterniond rotation{in.transform.rotation()};
