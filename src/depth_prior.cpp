@@ -45,10 +45,12 @@ bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::V
 
 std::vector<int> getTriangleNeighbours(std::vector<int>& neighbours_in,
                                        const Eigen::Matrix2Xi& coordinates, const Pixel& p) {
-
+    if (neighbours_in.size() < 3) {
+        return std::vector<int>{-1, -1, -1};
+    }
     std::vector<int> neighbours{-1, -1, -1};
     int i{0};
-    while (i < 3) { //(neighbours_in.size() - 2)
+    while (i < (neighbours_in.size() - 2)) {
         const Eigen::Vector2i& first_coorinate{coordinates(0, neighbours_in[i]),
                                                coordinates(1, neighbours_in[i])};
         neighbours[0] = neighbours_in[i];
@@ -83,7 +85,6 @@ std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT&
     std::vector<std::vector<int>> indices_vec;
     std::vector<std::vector<DataType>> dist_vec;
     tree->knnSearch(query, indices_vec, dist_vec, num_neigh, flann::SearchParams(32));
-
     return indices_vec[0];
 }
 
@@ -104,11 +105,29 @@ double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
     return (p_int - sp).norm();
 }
 
-void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT projection,
+void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
+                   const std::shared_ptr<CameraModel> cam) {
+    LOG(INFO) << "projection size: " << projection.size();
+    for (auto const& el : projection) {
+        certainty(el.first.row, el.first.col) = 1;
+        Eigen::Vector3d support, direction;
+        cam->getViewingRay(Eigen::Vector2d(el.first.row, el.first.col), support, direction);
+        const Eigen::Hyperplane<double, 3> plane(direction, el.second);
+        depth_est(el.first.row, el.first.col) =
+            (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
+             support)
+                .norm();
+    }
+}
+
+void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
                  const std::shared_ptr<CameraModel> cam, const Parameters::Initialization type,
                  const int neighborsearch) {
-    if (type == Parameters::Initialization::none)
+    if (type == Parameters::Initialization::none) {
+        addSeedPoints(depth_est, certainty, projection, cam);
         return;
+    }
+
     int rows, cols;
     cam->getImageSize(cols, rows);
     std::unique_ptr<flann::Index<DistanceType>> kd_index_ptr_;
@@ -122,15 +141,24 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT pr
     }
 
     if (type == Parameters::Initialization::mean_depth) {
+        LOG(INFO) << "Mean Depth";
         Eigen::Matrix3Xd points(2, projection.size());
-        int i{0};
-        for (mapT::iterator it = projection.begin(); it != projection.end(); ++it) {
-            points.col(i) = (it->second);
-            i++;
+        double sum{0};
+        for (auto const& el : projection) {
+            Eigen::Vector3d support, direction;
+            cam->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
+            const Eigen::Hyperplane<double, 3> plane(direction, el.second);
+            sum +=
+                (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
+                 support)
+                    .norm();
         }
-        double mean_depth{points.colwise().norm().mean()};
+
+        double mean_depth{sum / projection.size()};
+        LOG(INFO) << "mean depth is " << mean_depth;
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
-        certainty = Eigen::MatrixXd::Ones(rows, cols);
+        certainty = 0 * Eigen::MatrixXd::Ones(rows, cols);
+        addSeedPoints(depth_est, certainty, projection, cam);
         return;
     }
 
@@ -141,6 +169,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT pr
     kd_index_ptr_->buildIndex(flann_dataset);
 
     if (type == Parameters::Initialization::nearest_neighbor) {
+        LOG(INFO) << "nearest_neighbor Depth";
         for (size_t row = 0; row < rows; row++) {
             for (size_t col = 0; col < cols; col++) {
 
@@ -159,25 +188,26 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT pr
                                        support)
                                           .norm();
                 if (coor(0) == row && coor(1) == col) {
-                    certainty(row, col) = 1;
+                    certainty(row, col) = 0.1;
                 } else {
-                    certainty(row, col) = 1;
+                    certainty(row, col) = 0.1;
                 }
             }
         }
+        addSeedPoints(depth_est, certainty, projection, cam);
         return;
     }
 
     if (type == Parameters::Initialization::triangles) {
-
+        LOG(INFO) << "triangles Depth";
         for (size_t row = 0; row < rows; row++) {
             for (size_t col = 0; col < cols; col++) {
 
                 std::vector<int> all_neighbours{
-                    getNeighbours(coordinates, kd_index_ptr_, Pixel(col, row),
-                                  neighborsearch)}; //> todo:: 15 to variable parameter value
+                    getNeighbours(coordinates, kd_index_ptr_, Pixel(col, row), neighborsearch)};
                 std::vector<int> triangle_neighbours{
                     getTriangleNeighbours(all_neighbours, coordinates, Pixel(col, row))};
+
                 if (triangle_neighbours[0] == -1) {
                     depth_est(row, col) = 0;
                     certainty(row, col) = 0;
@@ -194,11 +224,11 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT pr
                     cam->getViewingRay(image_coordinate, supportPoint, direction);
                     depth_est(row, col) =
                         pointIntersection(supportPoint, direction, neighbours_points);
-                    certainty(row, col) = 1;
+                    certainty(row, col) = 0.2;
                 }
             }
         }
+        addSeedPoints(depth_est, certainty, projection, cam);
     }
 }
-
 }

@@ -47,13 +47,14 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
-    Eigen::MatrixXd certainty{Eigen::MatrixXd::Ones(rows, cols)};
-    getDepthEst(depth_est, certainty,projection, camera_, params_.initialization,params_.neighborsearch);
+    Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
+    getDepthEst(depth_est, certainty, projection, camera_, params_.initialization,
+                params_.neighborsearch);
     LOG(INFO) << "Depth est loaded";
-//    for (size_t row = 0; row < rows; row++) {
-//        for (size_t col = 0; col < cols; col++) {
-//            LOG(INFO) << "Initial depth for: (" << col << "," << row
-//                      << "): " << depth_est(row, col);
+//    for (size_t row = rows/2; row < rows/2+10; row++) {
+//        for (size_t col = cols/2; col < cols/2+10; col++) {
+//            LOG(INFO) << "Initial depth for: (" << col << "," << row << "): " << depth_est(row, col)
+//                      << ", certainty: " << certainty(row, col);
 //        }
 //    }
     std::vector<FunctorDistance::Ptr> functors_distance;
@@ -68,8 +69,8 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     for (auto const& el : projection) {
         Eigen::Vector3d support, direction;
         camera_->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-        functors_distance.emplace_back(
-            FunctorDistance::create(el.second, params_.kd, support, direction));
+        functors_distance.emplace_back(FunctorDistance::create(
+            el.second, params_.kd, support, direction));
         problem.AddResidualBlock(functors_distance.back()->toCeres(), params_.loss_function.get(),
                                  &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
                                  translation.data());
@@ -80,11 +81,10 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
         for (int col = 0; col < cols; col++) {
             const Pixel p(col, row, img.at<float>(row, col));
             const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
-            const double certainty_sum = neighbors.size();
             for (auto const& n : neighbors) {
                 problem.AddResidualBlock(
-                    FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks* certainty(row,col)),
-                    new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / certainty_sum,
+                    FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
+                    new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
                                           ceres::TAKE_OWNERSHIP),
                     &depth_est(row, col), &depth_est(n.row, n.col));
             }
@@ -112,6 +112,7 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
 
     if (pin_transform) {
         LOG(INFO) << "Set parameterization";
+
         problem.SetParameterBlockConstant(rotation.coeffs().data());
         problem.SetParameterBlockConstant(translation.data());
     }
@@ -134,8 +135,8 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
     data.cloud->reserve(rows * cols);
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < cols; col++) {
-//            LOG(INFO) << "Estimated depth for (" << col << "," << row
-//                      << "): " << depth_est(row, col);
+            //            LOG(INFO) << "Estimated depth for (" << col << "," << row
+            //                      << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             T p;
@@ -145,6 +146,13 @@ bool Solver::solve(Data<T>& data, const bool pin_transform) {
             data.cloud->push_back(p);
         }
     }
+    for (size_t row = rows/2; row < rows/2+10; row++) {
+        for (size_t col = cols/2; col < cols/2+10; col++) {
+            LOG(INFO) << "Estimated depth for (" << col << "," << row
+                      << "): " << depth_est(row, col);
+        }
+    }
+
     data.cloud->width = cols;
     data.cloud->height = rows;
 

@@ -26,6 +26,9 @@ TEST(Solver, Instantiation) {
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     cl->push_back(PointT(1, rows - 1, 1));
     cl->push_back(PointT(cols - 1, 1, 0));
+//    cl->push_back(PointT(50, 40, 50));
+//    cl->push_back(PointT(60, 50, 50));
+//    cl->push_back(PointT(60, 40, 50));
     DataT d(cl, img, DataT::Transform::Identity());
 
     Solver solver{cam, Parameters("parameters.yaml")};
