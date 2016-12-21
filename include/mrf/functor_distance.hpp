@@ -40,8 +40,7 @@ struct FunctorDistance {
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const FunctorDistance& f) {
-        os << "Vector: " << f.p_ << std::endl << "Weight: " << f.w_ << std::endl;
-        return os;
+        return os << "Vector: " << f.p_ << std::endl << "Weight: " << f.w_ << std::endl;
     }
 
     inline void setPoint(const Eigen::Vector3d& p) {

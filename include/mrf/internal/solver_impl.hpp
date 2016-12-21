@@ -10,13 +10,13 @@
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
 #include "../functor_distance.hpp"
-#include "../functor_smoothness.hpp"
+#include "../functor_normal.hpp"
+#include "../functor_normal_distance.hpp"
 #include "../functor_normal_smoothness.hpp"
-//#include "../functor_normal.hpp"
+#include "../functor_smoothness.hpp"
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../smoothness_weight.hpp"
-
 
 namespace mrf {
 
@@ -69,9 +69,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     for (auto const& el : projection) {
         Eigen::Vector3d support, direction;
         camera_->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-//        LOG(INFO) << "Pixel: " << el.first << ", point: " << el.second.transpose()
-//                  << ", support: " << support.transpose()
-//                  << ", direction: " << direction.transpose();
+        //        LOG(INFO) << "Pixel: " << el.first << ", point: " << el.second.transpose()
+        //                  << ", support: " << support.transpose()
+        //                  << ", direction: " << direction.transpose();
         functors_distance.emplace_back(
             FunctorDistance::create(el.second, params_.kd, support, direction));
         ceres::ResidualBlockId block_id{problem.AddResidualBlock(
@@ -142,21 +142,20 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     ceres::Solve(params_.solver, &problem, &summary);
     LOG(INFO) << summary.FullReport();
 
-//> Slowing tests down!
-//    Eigen::MatrixXd heatmap(rows,cols);
-//    for (int row = 0; row < rows; row++) {
-//        for (int col = 0; col < cols; col++) {
-//            ceres::Problem::EvaluateOptions options;
-//            options.residual_blocks = smoothness_blocks[row*cols +col];
-//
-//            double total_cost = 0.0;
-//            std::vector<double> residuals;
-//            problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
-//           // LOG(INFO) << "Cost at ("<< col<< ","<< row<<") is "<< total_cost;
-//            heatmap(row,col) = total_cost;
-//        }
-//    }
-
+    //> Slowing tests down!
+    //    Eigen::MatrixXd heatmap(rows,cols);
+    //    for (int row = 0; row < rows; row++) {
+    //        for (int col = 0; col < cols; col++) {
+    //            ceres::Problem::EvaluateOptions options;
+    //            options.residual_blocks = smoothness_blocks[row*cols +col];
+    //
+    //            double total_cost = 0.0;
+    //            std::vector<double> residuals;
+    //            problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
+    //           // LOG(INFO) << "Cost at ("<< col<< ","<< row<<") is "<< total_cost;
+    //            heatmap(row,col) = total_cost;
+    //        }
+    //    }
 
     LOG(INFO) << "Write output data";
     out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
@@ -182,7 +181,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rows * cols;
-    //info.smoothness_costs = heatmap;
+    // info.smoothness_costs = heatmap;
     return info;
 }
 }

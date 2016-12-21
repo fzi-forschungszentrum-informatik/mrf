@@ -19,9 +19,11 @@ struct FunctorNormal {
 
     template <typename T>
     inline bool operator()(const T* const normal, const T* const rotation, T* res) const {
-        const Eigen::Affine3<T> tf{
-            util_ceres::fromQuaternionTranslation(rotation, Eigen::Vector3<T>::Zero(3))};
-        Eigen::Map<Eigen::Vector3<T>>(res, DimResidual) = T(w_) * (normal - tf * n_.cast<T>());
+        using namespace Eigen;
+
+        const Affine3<T> tf{util_ceres::fromQuaternion(rotation)};
+        Map<Vector3<T>>(res, DimResidual) =
+            T(w_) * (Map<const Vector3<T>>(normal, DimNormal) - tf * n_.cast<T>());
         return true;
     }
 
@@ -30,16 +32,15 @@ struct FunctorNormal {
     }
 
     inline ceres::CostFunction* toCeres() {
-        return new ceres::AutoDiffCostFunction<
-            FunctorNormal, DimResidual, DimNormal, DimRotation>(this);
+        return new ceres::AutoDiffCostFunction<FunctorNormal, DimResidual, DimNormal, DimRotation>(
+            this);
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const FunctorNormal& f) {
-        os << "Vector: " << f.n_ << std::endl << "Weight: " << f.w_ << std::endl;
-        return os;
+        return os << "Vector: " << f.n_ << std::endl << "Weight: " << f.w_ << std::endl;
     }
 
-    inline void setPoint(const Eigen::Vector3d& p) {
+    inline void setNormal(const Eigen::Vector3d& p) {
         n_ = p;
     }
     inline void setWeight(const double w) {

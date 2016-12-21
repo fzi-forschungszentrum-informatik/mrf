@@ -7,7 +7,7 @@ namespace mrf {
 
 struct FunctorNormalSmoothness {
 
-    static constexpr size_t DimDepth = 3;
+    static constexpr size_t DimNormal = 3;
     static constexpr size_t DimResidual = 3;
 
     inline FunctorNormalSmoothness(const double& w) : w_{w} {};
@@ -21,13 +21,12 @@ struct FunctorNormalSmoothness {
     }
 
     inline static ceres::CostFunction* create(const double& e) {
-        return new ceres::AutoDiffCostFunction<FunctorNormalSmoothness, DimResidual, DimDepth, DimDepth>(
+        return new ceres::AutoDiffCostFunction<FunctorNormalSmoothness, DimResidual, DimNormal, DimNormal>(
             new FunctorNormalSmoothness(e));
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const FunctorNormalSmoothness& f) {
-        os << "Weight: " << f.w_ << std::endl;
-        return os;
+        return os << "Weight: " << f.w_ << std::endl;
     }
 
 private:
