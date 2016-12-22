@@ -12,7 +12,7 @@ TEST(ImagePreprocessing, Instantiation) {
     constexpr size_t width = 20;
     constexpr size_t height = 10;
     cv::Mat in{cv::Mat::eye(height, width, CV_32FC1)};
-    cv::Mat out{gradientSobel(in)};
+    cv::Mat out{edge(in)};
 
     double min, max;
     cv::minMaxLoc(out, &min, &max);
