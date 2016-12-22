@@ -24,7 +24,7 @@ template <typename T>
 ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
 
     LOG(INFO) << "Preprocess image";
-    const cv::Mat img{gradientSobel(in.image)};
+    const cv::Mat img{edge(in.image)};
 
     LOG(INFO) << "Preprocess and transform cloud";
     using PointT = pcl::PointXYZINormal;
@@ -45,8 +45,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
             p.val = img.at<float>(p.row, p.col);
-            projection.insert(std::make_pair(p, cl->at(c).getVector3fMap().cast<double>()));
-            projection_tf.insert(std::make_pair(p, cl_tf->at(c).getVector3fMap().cast<double>()));
+            projection.insert(std::make_pair(p, cl->points[c].getVector3fMap().cast<double>()));
+            projection_tf.insert(std::make_pair(p, cl_tf->points[c].getVector3fMap().cast<double>()));
         }
     }
 

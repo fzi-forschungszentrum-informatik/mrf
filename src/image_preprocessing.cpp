@@ -4,7 +4,7 @@
 
 namespace mrf {
 
-cv::Mat gradientSobel(const cv::Mat& in, const bool normalize) {
+cv::Mat edge(const cv::Mat& in, const bool normalize) {
     using namespace cv;
 
     Mat grad_x, grad_y;
@@ -18,4 +18,11 @@ cv::Mat gradientSobel(const cv::Mat& in, const bool normalize) {
     }
     return out;
 }
+
+cv::Mat blur(const cv::Mat& in, const size_t& kernel_size) {
+	cv::Mat out;
+	cv::GaussianBlur(in, out, cv::Size(kernel_size, kernel_size), 0);
+	return out;
+}
+
 }

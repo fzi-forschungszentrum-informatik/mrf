@@ -76,9 +76,9 @@ inline void exportGradientImage(const cv::Mat& img, const std::string& p,
                                 const bool normalize = true) {
     cv::Mat out;
     if (normalize) {
-        cv::normalize(gradientSobel(img), out, 0, 255, cv::NORM_MINMAX);
+        cv::normalize(edge(img), out, 0, 255, cv::NORM_MINMAX);
     } else {
-        out = gradientSobel(img, false);
+        out = edge(img, false);
     }
     const std::string file_name{p + "gradient.png"};
     LOG(INFO) << "Writing image to '" << file_name << "'.";

@@ -88,11 +88,12 @@ void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_spar
 TEST(Groundtruth, loadGT) {
     google::InitGoogleLogging("Groundtruth");
     google::InstallFailureSignalHandler();
-    /** load Data
-         *
-         */
-    const int cols{1384};
-    const int rows{1032};
+
+    /**
+     * Create Data
+     */
+    constexpr size_t cols = 1384;
+    constexpr size_t rows = 1032;
     cv::Mat img{cv::Mat::zeros(rows, cols, CV_32FC1)};
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < 0.3 * cols; col++) {
@@ -127,16 +128,21 @@ TEST(Groundtruth, loadGT) {
 
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     cl->push_back(PointT(1, 1, 500));
-    cl->push_back(PointT(1382, 1031, 50));
+    cl->push_back(PointT(cols - 1, rows - 1, 50));
     cl->push_back(PointT(845, 354, 271));
+
     /**
     * Solver
-//    */
+    */
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
     DataT in(cloud_sparse, img, DataT::Transform::Identity());
     DataT out;
     Solver solver{cam, Parameters("parameters.yaml")};
     solver.solve(in, out);
+
+    /**
+     * Write output data
+     */
     boost::filesystem::path path_name{"/tmp/test/gt/solver/"};
     boost::filesystem::create_directories(path_name);
     exportData(in, path_name.string() + "in_");
