@@ -12,6 +12,17 @@
 
 namespace mrf {
 
+inline cv::Mat createOutput(const cv::Mat& in, const bool normalize = true) {
+    cv::Mat out;
+    if (normalize) {
+        cv::normalize(in, out, 0, std::numeric_limits<uint16_t>::max(), cv::NORM_MINMAX);
+        out.convertTo(out, cv::DataType<uint16_t>::type);
+    } else {
+        in.convertTo(out, cv::DataType<uint16_t>::type);
+    }
+    return out;
+}
+
 template <typename T>
 void exportData(const Data<T>& d, const std::string& p, const bool normalize = true) {
 
@@ -22,13 +33,7 @@ void exportData(const Data<T>& d, const std::string& p, const bool normalize = t
      */
     file_name = p + "image.png";
     LOG(INFO) << "Writing image to '" << file_name << "'.";
-    cv::Mat out;
-    if (normalize) {
-        cv::normalize(d.image, out, 0, 255, cv::NORM_MINMAX);
-    } else {
-        out = d.image;
-    }
-    cv::imwrite(file_name, out);
+    cv::imwrite(file_name, createOutput(d.image, normalize));
 
     /**
      * Cloud
@@ -44,7 +49,7 @@ void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
 
     int rows, cols;
     cam->getImageSize(cols, rows);
-    cv::Mat img_depth{cv::Mat::zeros(rows, cols, CV_32FC1)};
+    cv::Mat img_depth{cv::Mat::zeros(rows, cols, cv::DataType<double>::type)};
     const Eigen::Matrix3Xd pts_3d{
         d.transform * d.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
@@ -56,32 +61,27 @@ void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
         cam->getViewingRay(Eigen::Vector2d(img_pts_raw(0, c), img_pts_raw(1, c)), support,
                            direction);
         const Eigen::Hyperplane<double, 3> plane(direction, pts_3d.col(c));
-        img_depth.at<float>(row, col) =
+        img_depth.at<double>(row, col) =
             (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
              support)
                 .norm();
     }
-    cv::Mat out;
-    if (normalize) {
-        cv::normalize(img_depth, out, 0, 255, cv::NORM_MINMAX);
-    } else {
-        out = img_depth;
-    }
-    const std::string file_name{p + "depth_est.png"};
+
+    const std::string file_name{p + "depth.png"};
     LOG(INFO) << "Writing image to '" << file_name << "'.";
-    cv::imwrite(file_name, out);
+    cv::imwrite(file_name, createOutput(img_depth, normalize));
+}
+
+inline void exportImage(const cv::Mat& img, const std::string& p, const bool normalize = true) {
+    const std::string file_name{p + "image.png"};
+    LOG(INFO) << "Writing image to '" << file_name << "'.";
+    cv::imwrite(file_name, createOutput(img, normalize));
 }
 
 inline void exportGradientImage(const cv::Mat& img, const std::string& p,
                                 const bool normalize = true) {
-    cv::Mat out;
-    if (normalize) {
-        cv::normalize(edge(img), out, 0, 255, cv::NORM_MINMAX);
-    } else {
-        out = edge(img, false);
-    }
     const std::string file_name{p + "gradient.png"};
     LOG(INFO) << "Writing image to '" << file_name << "'.";
-    cv::imwrite(file_name, out);
+    cv::imwrite(file_name, createOutput(edge(img), normalize));
 }
 }

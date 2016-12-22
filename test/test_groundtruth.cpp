@@ -8,6 +8,8 @@
 #include <pcl/io/pcd_io.h>
 
 #include "camera_model_ortho.h"
+#include "downsample.hpp"
+#include "noise.hpp"
 #include "solver.hpp"
 
 using namespace mrf;
@@ -46,43 +48,20 @@ struct GroundTruthParams {
     }
 };
 
-void addNoiseToCloud(const Cloud::Ptr& cloud_sparse, const GroundTruthParams params) {
-    std::default_random_engine generator;
-    std::normal_distribution<float> distribution(0, params.noise_sigma);
+const Cloud::Ptr loadCloudSparse(const Cloud::Ptr& cloud_dense, const int width, const int height,
+                                 const GroundTruthParams params) {
 
-    for (int i = 0; i < cloud_sparse->points.size(); i++) {
-        cloud_sparse->points[i].x += distribution(generator);
-        cloud_sparse->points[i].y += distribution(generator);
-        cloud_sparse->points[i].z += distribution(generator);
-    }
-}
-
-void loadCloudSparse(const Cloud::Ptr& cloud_dense, const Cloud::Ptr& cloud_sparse, const int width,
-                     const int height, const GroundTruthParams params) {
-
-    cloud_sparse->points.reserve(width * height);
-
-    if (params.equidistant) { //> equidistant randomiser
-        for (int i = 1; i < height; i += params.rows_inbetween) {
-            for (int j = 1; j < width; j += params.cols_inbetween) {
-                cloud_sparse->points.emplace_back(cloud_dense->points.at(i * width + j));
-            }
-        }
-
+    Cloud::Ptr out;
+    if (params.equidistant) {
+        out = downsampleEquidistant<PointT>(cloud_dense, params.rows_inbetween,
+                                            params.cols_inbetween);
     } else {
-
-        std::srand(std::time(0));
-        for (int i = 0; i < params.seedpoint_number; i++) {
-            cloud_sparse->points.emplace_back(
-                cloud_dense->points[(std::rand() % (int)(width * height + 1))]);
-        }
+        out = downsampleRandom<PointT>(cloud_dense, params.seedpoint_number);
     }
-    cloud_sparse->width = cloud_sparse->points.size();
-    cloud_sparse->height = 1;
-
     if (params.addCloudNoise) {
-        addNoiseToCloud(cloud_sparse, params);
+        out = addNoise<PointT>(out, params.noise_sigma, params.noise_sigma, params.noise_sigma);
     }
+    return out;
 }
 
 TEST(Groundtruth, loadGT) {
@@ -112,7 +91,6 @@ TEST(Groundtruth, loadGT) {
     }
 
     const Cloud::Ptr cloud_dense{new Cloud};
-    const Cloud::Ptr cloud_sparse{new Cloud};
 
     pcl::io::loadPCDFile<PointT>("gt_dense.pcd", *cloud_dense);
 
@@ -121,8 +99,8 @@ TEST(Groundtruth, loadGT) {
      */
     GroundTruthParams params_gt;
     LOG(INFO) << "Test GroundTruthParams: " << params_gt;
+    const Cloud::Ptr cloud_sparse{loadCloudSparse(cloud_dense, cols, rows, params_gt)};
 
-    loadCloudSparse(cloud_dense, cloud_sparse, cols, rows, params_gt);
     LOG(INFO) << "cloud_sparse points: " << cloud_sparse->points.size() << std::endl;
     const DataT gt_data(cloud_dense, img, DataT::Transform::Identity());
 

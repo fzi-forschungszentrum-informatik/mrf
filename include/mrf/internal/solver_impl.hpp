@@ -44,9 +44,10 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     for (size_t c = 0; c < in_img.size(); c++) {
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
-            p.val = img.at<float>(p.row, p.col);
+            p.val = img.at<double>(p.row, p.col);
             projection.insert(std::make_pair(p, cl->points[c].getVector3fMap().cast<double>()));
-            projection_tf.insert(std::make_pair(p, cl_tf->points[c].getVector3fMap().cast<double>()));
+            projection_tf.insert(
+                std::make_pair(p, cl_tf->points[c].getVector3fMap().cast<double>()));
         }
     }
 
@@ -84,7 +85,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     std::vector<std::vector<ceres::ResidualBlockId>> smoothness_blocks;
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
-            const Pixel p(col, row, img.at<float>(row, col));
+            const Pixel p(col, row, img.at<double>(row, col));
             const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
             std::vector<ceres::ResidualBlockId> res_blocks;
             for (auto const& n : neighbors) {
@@ -142,27 +143,12 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     ceres::Solve(params_.solver, &problem, &summary);
     LOG(INFO) << summary.FullReport();
 
-    //> Slowing tests down!
-    //    Eigen::MatrixXd heatmap(rows,cols);
-    //    for (int row = 0; row < rows; row++) {
-    //        for (int col = 0; col < cols; col++) {
-    //            ceres::Problem::EvaluateOptions options;
-    //            options.residual_blocks = smoothness_blocks[row*cols +col];
-    //
-    //            double total_cost = 0.0;
-    //            std::vector<double> residuals;
-    //            problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
-    //           // LOG(INFO) << "Cost at ("<< col<< ","<< row<<") is "<< total_cost;
-    //            heatmap(row,col) = total_cost;
-    //        }
-    //    }
-
     LOG(INFO) << "Write output data";
     out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
     cv::eigen2cv(depth_est, out.image);
     out.cloud->reserve(rows * cols);
-    for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < cols; col++) {
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
             //            LOG(INFO) << "Estimated depth for (" << col << "," << row
             //                      << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
@@ -181,7 +167,6 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rows * cols;
-    // info.smoothness_costs = heatmap;
     return info;
 }
 }
