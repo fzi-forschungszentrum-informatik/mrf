@@ -4,14 +4,17 @@
 #include <Eigen/Eigen>
 #include <camera_models/camera_model.h>
 #include <flann/flann.h>
+#include <pcl/point_types.h>
+
 #include "eigen.hpp"
 #include "parameters.hpp"
 #include "pixel.hpp"
 
 namespace mrf {
 
+using PointT = pcl::PointXYZINormal;
 using DataType = double;
-using mapT = std::map<Pixel, Eigen::Vector3d, PixelLess>;
+using mapT = std::map<Pixel, PointT, PixelLess>;
 using treeT = std::unique_ptr<flann::Index<flann::L2_Simple<DataType>>>;
 using EigenT = Eigen::Matrix<DataType, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 

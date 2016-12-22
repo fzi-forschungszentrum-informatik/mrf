@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <camera_models/camera_model.h>
+#include <pcl/point_types.h>
 
 #include "data.hpp"
 #include "parameters.hpp"
@@ -13,12 +14,13 @@ class Solver {
 
 public:
     using Ptr = std::shared_ptr<Solver>;
+    using PointT = pcl::PointXYZINormal;
 
     inline Solver(const std::shared_ptr<CameraModel>& cam, const Parameters& p = Parameters())
             : camera_(cam), params_(p){};
 
     template <typename T>
-    ResultInfo solve(const Data<T>&, Data<T>&, const bool pin_transform = true);
+    ResultInfo solve(const Data<T>&, Data<PointT>&, const bool pin_transform = true);
 
     inline static Ptr create(const std::shared_ptr<CameraModel>& cam,
                              const Parameters& p = Parameters()) {

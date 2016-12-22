@@ -6,6 +6,7 @@
 #include <util_ceres/eigen_quaternion_parameterization.h>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <pcl/filters/filter.h>
 
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
@@ -17,21 +18,27 @@
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../smoothness_weight.hpp"
-
 namespace mrf {
 
 template <typename T>
-ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transform) {
+ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_transform) {
 
     LOG(INFO) << "Preprocess image";
     const cv::Mat img{gradientSobel(in.image)};
 
     LOG(INFO) << "Preprocess and transform cloud";
-    using PointT = pcl::PointXYZINormal;
-    const pcl::PointCloud<PointT>::Ptr cl{
-        estimateNormals<T, PointT>(in.cloud, params_.radius_normal_estimation)};
-    const pcl::PointCloud<PointT>::Ptr cl_tf{estimateNormals<T, PointT>(
-        transform<T>(in.cloud, in.transform), params_.radius_normal_estimation)};
+    typename pcl::PointCloud<PointT>::Ptr cl, cl_tf;
+    if (!pcl::traits::has_normal<T>::value) {
+        cl = estimateNormals<T, PointT>(in.cloud, params_.radius_normal_estimation);
+        cl_tf = transformWithNormals(
+            estimateNormals<T, PointT>(in.cloud, params_.radius_normal_estimation), in.transform);
+        std::vector<int> indices;
+        pcl::removeNaNNormalsFromPointCloud(*cl, *cl, indices);
+        pcl::removeNaNNormalsFromPointCloud(*cl_tf, *cl_tf, indices);
+    } else {
+        pcl::copyPointCloud<T, PointT>(*in.cloud, *cl);
+        pcl::copyPointCloud<T, PointT>(*(transform<T>(in.cloud, in.transform)), *cl_tf);
+    }
 
     LOG(INFO) << "Compute point projection in camera image";
     const Eigen::Matrix3Xd pts_3d_tf{cl_tf->getMatrixXfMap().topRows<3>().cast<double>()};
@@ -40,13 +47,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     int cols, rows;
     camera_->getImageSize(cols, rows);
     LOG(INFO) << "Image size: " << cols << " x " << rows;
-    std::map<Pixel, Eigen::Vector3d, PixelLess> projection, projection_tf;
+    std::map<Pixel, PointT, PixelLess> projection, projection_tf;
     for (size_t c = 0; c < in_img.size(); c++) {
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
             p.val = img.at<float>(p.row, p.col);
-            projection.insert(std::make_pair(p, cl->at(c).getVector3fMap().cast<double>()));
-            projection_tf.insert(std::make_pair(p, cl_tf->at(c).getVector3fMap().cast<double>()));
+            projection.insert(std::make_pair(p, cl->at(c)));
+            projection_tf.insert(std::make_pair(p, cl_tf->at(c)));
         }
     }
 
@@ -56,15 +63,28 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
     getDepthEst(depth_est, certainty, projection_tf, camera_, params_.initialization,
                 params_.neighbor_search);
+
+    LOG(INFO) << "Create Normals Eigen Vectors";
+    Eigen::MatrixXd normal_x_est{Eigen::MatrixXd::Zero(rows, cols)};
+    Eigen::MatrixXd normal_y_est{Eigen::MatrixXd::Zero(rows, cols)};
+    Eigen::MatrixXd normal_z_est{Eigen::MatrixXd::Zero(rows, cols)};
+    for (auto const& el : projection) {
+        normal_x_est(el.first.row, el.first.col) = static_cast<double>(el.second.normal_x);
+        normal_y_est(el.first.row, el.first.col) = static_cast<double>(el.second.normal_y);
+        normal_z_est(el.first.row, el.first.col) = static_cast<double>(el.second.normal_z);
+    }
+
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());
+    std::vector<FunctorNormal::Ptr> functor_normal;
+    functor_normal.reserve(projection.size());
     Eigen::Quaterniond rotation{in.transform.rotation()};
     Eigen::Vector3d translation{in.transform.translation()};
     problem.AddParameterBlock(rotation.coeffs().data(), FunctorDistance::DimRotation,
                               new util_ceres::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
-    LOG(INFO) << "Add distance costs";
+    LOG(INFO) << "Add distance and normal costs";
     std::vector<ceres::ResidualBlockId> dists_res_blocks;
     for (auto const& el : projection) {
         Eigen::Vector3d support, direction;
@@ -72,16 +92,28 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
         //        LOG(INFO) << "Pixel: " << el.first << ", point: " << el.second.transpose()
         //                  << ", support: " << support.transpose()
         //                  << ", direction: " << direction.transpose();
-        functors_distance.emplace_back(
-            FunctorDistance::create(el.second, params_.kd, support, direction));
+        /**
+         * Add Distance Costs
+         */
+        functors_distance.emplace_back(FunctorDistance::create(
+            el.second.getVector3fMap().cast<double>(), params_.kd, support, direction));
         ceres::ResidualBlockId block_id{problem.AddResidualBlock(
             functors_distance.back()->toCeres(), params_.loss_function.get(),
             &depth_est(el.first.row, el.first.col), rotation.coeffs().data(), translation.data())};
+        /**
+         * Add Normal Costs
+         */
+        functor_normal.emplace_back(
+            FunctorNormal::create(el.second.getNormalVector3fMap().cast<double>(), params_.kd));
+        ceres::ResidualBlockId block_id_n{problem.AddResidualBlock(
+            functor_normal.back()->toCeres(), params_.loss_function.get(),
+            &normal_x_est(el.first.row, el.first.col), &normal_y_est(el.first.row, el.first.col),
+            &normal_z_est(el.first.row, el.first.col), rotation.coeffs().data())};
         dists_res_blocks.push_back(block_id);
     }
 
-    LOG(INFO) << "Add smoothness costs";
-    std::vector<std::vector<ceres::ResidualBlockId>> smoothness_blocks;
+    LOG(INFO) << "Add Normal Smoothness Costs";
+    std::vector<std::vector<ceres::ResidualBlockId>> normal_smoothness_blocks;
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
             const Pixel p(col, row, img.at<float>(row, col));
@@ -89,13 +121,41 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
             std::vector<ceres::ResidualBlockId> res_blocks;
             for (auto const& n : neighbors) {
                 ceres::ResidualBlockId block_id{problem.AddResidualBlock(
-                    FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
+                    FunctorNormalSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
                     new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
                                           ceres::TAKE_OWNERSHIP),
-                    &depth_est(row, col), &depth_est(n.row, n.col))};
+                    &normal_x_est(row, col), &normal_y_est(row, col), &normal_z_est(row, col),
+                    &normal_x_est(n.row, n.col), &normal_y_est(n.row, n.col),
+                    &normal_z_est(n.row, n.col))};
                 res_blocks.push_back(block_id);
             }
-            smoothness_blocks.push_back(res_blocks);
+            normal_smoothness_blocks.push_back(res_blocks);
+        }
+    }
+
+    LOG(INFO) << "Add Normal distance cost";
+    std::vector<std::vector<ceres::ResidualBlockId>> normal_distance_blocks;
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+            const Pixel p(col, row, img.at<float>(row, col));
+            Eigen::Vector3d support_this, direction_this;
+            camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support_this, direction_this);
+            const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
+            std::vector<ceres::ResidualBlockId> res_blocks;
+            for (auto const& n : neighbors) {
+                Eigen::Vector3d support_nn, direction_nn;
+                camera_->getViewingRay(Eigen::Vector2d(n.x, n.y), support_nn, direction_nn);
+                ceres::ResidualBlockId block_id{problem.AddResidualBlock(
+                    FunctorNormalDistance::create(smoothnessWeight(p, n, params_) * params_.ks,
+                                                  support_this, direction_this, support_nn,
+                                                  direction_nn),
+                    new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
+                                          ceres::TAKE_OWNERSHIP),
+                    &depth_est(row, col), &depth_est(n.row, n.col), &normal_x_est(row, col),
+                    &normal_y_est(row, col), &normal_z_est(row, col))};
+                res_blocks.push_back(block_id);
+            }
+            normal_distance_blocks.push_back(res_blocks);
         }
     }
 
@@ -142,24 +202,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     ceres::Solve(params_.solver, &problem, &summary);
     LOG(INFO) << summary.FullReport();
 
-    //> Slowing tests down!
-    //    Eigen::MatrixXd heatmap(rows,cols);
-    //    for (int row = 0; row < rows; row++) {
-    //        for (int col = 0; col < cols; col++) {
-    //            ceres::Problem::EvaluateOptions options;
-    //            options.residual_blocks = smoothness_blocks[row*cols +col];
-    //
-    //            double total_cost = 0.0;
-    //            std::vector<double> residuals;
-    //            problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
-    //           // LOG(INFO) << "Cost at ("<< col<< ","<< row<<") is "<< total_cost;
-    //            heatmap(row,col) = total_cost;
-    //        }
-    //    }
-
     LOG(INFO) << "Write output data";
-    out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
-    cv::eigen2cv(depth_est, out.image);
     out.cloud->reserve(rows * cols);
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < cols; col++) {
@@ -167,8 +210,12 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
             //                      << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
-            T p;
+            PointT p;
             p.getVector3fMap() = (support + direction * depth_est(row, col)).cast<float>();
+            p.getNormalVector3fMap() =
+                Eigen::Vector3f(normal_x_est(row, col), normal_y_est(row, col),
+                                normal_z_est(row, col))
+                    .cast<float>();
             out.cloud->push_back(
                 pcl::transformPoint(p, out.transform.inverse().template cast<float>()));
         }
@@ -176,12 +223,14 @@ ResultInfo Solver::solve(const Data<T>& in, Data<T>& out, const bool pin_transfo
     out.cloud->width = cols;
     out.cloud->height = rows;
 
+    out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
+    cv::eigen2cv(depth_est, out.image);
+
     LOG(INFO) << "Write info";
     ResultInfo info;
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rows * cols;
-    // info.smoothness_costs = heatmap;
     return info;
 }
 }

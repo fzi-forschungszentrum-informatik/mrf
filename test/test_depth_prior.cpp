@@ -1,7 +1,7 @@
+#include <io.hpp>
 #include <boost/filesystem.hpp>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <io.hpp>
 #include <pcl/point_types.h>
 
 #include "camera_model_ortho.h"
@@ -32,15 +32,11 @@ TEST(DepthPrior, initialisation) {
     LOG(INFO) << "Params: " << params;
     Solver solver{cam, params};
 
-    DataT out;
+    Data<pcl::PointXYZINormal> out;
     solver.solve(in, out);
 
     boost::filesystem::path path_name{"/tmp/test/depthPrior/"};
     boost::filesystem::create_directories(path_name);
     exportData(in, path_name.string() + "in_");
     exportData(out, path_name.string() + "out_");
-//    exportDepthImage<PointT>(in, cam, path_name.string());
 }
-
-
-

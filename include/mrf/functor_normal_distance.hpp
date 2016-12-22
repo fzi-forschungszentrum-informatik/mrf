@@ -14,7 +14,7 @@ struct FunctorNormalDistance {
 
     static constexpr size_t DimDepth = 1;
     static constexpr size_t DimResidual = 1;
-    static constexpr size_t DimNormal = 3;
+    static constexpr size_t DimNormal = 1;
 
     inline FunctorNormalDistance(const double& w, const Eigen::Vector3d& support_this,
                                  const Eigen::Vector3d& direction_this,
@@ -25,10 +25,10 @@ struct FunctorNormalDistance {
 
     template <typename T>
     inline bool operator()(const T* const depth_this, const T* const depth_nn,
-                           const T* const normal, T* res) const {
+                           const T* const normal_x, const T* const normal_y,const T* const normal_z,T* res) const {
         using namespace Eigen;
         const ParametrizedLine<T, 3> ray_nn(support_nn_.cast<T>(), direction_nn_.cast<T>());
-        Hyperplane<T, 3> plane_this(Map<const Vector3<T>>(normal, DimNormal),
+        Hyperplane<T, 3> plane_this(Eigen::Vector3<T>(normal_x[0],normal_y[0],normal_z[0]),
                                     support_this_.cast<T>() +
                                         direction_this_.cast<T>() * depth_this[0]);
         res[0] =
@@ -41,7 +41,7 @@ struct FunctorNormalDistance {
                                               const Eigen::Vector3d& support_nn,
                                               const Eigen::Vector3d& direction_nn) {
         return new ceres::AutoDiffCostFunction<FunctorNormalDistance, DimResidual, DimDepth,
-                                               DimDepth, DimNormal>(
+                                               DimDepth, DimNormal,DimNormal,DimNormal>(
             new FunctorNormalDistance(w, support_this, direction_this, support_nn, direction_nn));
     }
 

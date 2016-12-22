@@ -11,19 +11,20 @@ struct FunctorNormal {
 
     using Ptr = std::shared_ptr<FunctorNormal>;
 
-    static constexpr size_t DimNormal = 3;
+    static constexpr size_t DimNormal = 1;
     static constexpr size_t DimResidual = 3;
     static constexpr size_t DimRotation = 4;
 
     inline FunctorNormal(const Eigen::Vector3d& n, const double& w) : n_{n}, w_{w} {};
 
     template <typename T>
-    inline bool operator()(const T* const normal, const T* const rotation, T* res) const {
+    inline bool operator()(const T* const normal_x, const T* const normal_y,
+                           const T* const normal_z, const T* const rotation, T* res) const {
         using namespace Eigen;
-
         const Affine3<T> tf{util_ceres::fromQuaternion(rotation)};
         Map<Vector3<T>>(res, DimResidual) =
-            T(w_) * (Map<const Vector3<T>>(normal, DimNormal) - tf * n_.cast<T>());
+            T(w_) *
+            (Eigen::Vector3<T>(normal_x[0], normal_y[0], normal_z[0]) - tf * n_.cast<T>());
         return true;
     }
 
@@ -32,8 +33,8 @@ struct FunctorNormal {
     }
 
     inline ceres::CostFunction* toCeres() {
-        return new ceres::AutoDiffCostFunction<FunctorNormal, DimResidual, DimNormal, DimRotation>(
-            this);
+        return new ceres::AutoDiffCostFunction<FunctorNormal, DimResidual, DimNormal, DimNormal,
+                                               DimNormal, DimRotation>(this);
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const FunctorNormal& f) {
