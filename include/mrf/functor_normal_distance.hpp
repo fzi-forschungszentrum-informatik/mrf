@@ -21,11 +21,11 @@ struct FunctorNormalDistance {
                                  const Eigen::Vector3d& support_nn,
                                  const Eigen::Vector3d& direction_nn)
             : w_{w}, support_this_{support_this}, direction_this_{direction_this},
-              support_nn_{support_this}, direction_nn_{direction_this} {};
+              support_nn_{support_nn}, direction_nn_{direction_nn} {};
 
     template <typename T>
     inline bool operator()(const T* const depth_this, const T* const depth_nn,
-                           const T* const normal_x, const T* const normal_y,const T* const normal_z,T* res) const {
+                           const T* const normal_x, const T* const normal_y, const T* const normal_z, T* res) const {
         using namespace Eigen;
         const ParametrizedLine<T, 3> ray_nn(support_nn_.cast<T>(), direction_nn_.cast<T>());
         Hyperplane<T, 3> plane_this(Eigen::Vector3<T>(normal_x[0],normal_y[0],normal_z[0]),

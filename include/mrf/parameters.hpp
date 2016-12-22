@@ -42,6 +42,8 @@ struct Parameters {
     double custom_depth_limit_max{100};
     int neighbor_search{6};
 
+    bool estimate_normals{true};
+
     double loss_function_scale{1};
 
     Initialization initialization{Initialization::none};
