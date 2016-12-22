@@ -24,7 +24,7 @@ template <typename T>
 ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_transform) {
 
     LOG(INFO) << "Preprocess image";
-    const cv::Mat img{gradientSobel(in.image)};
+    const cv::Mat img{edge(in.image)};
 
     LOG(INFO) << "Preprocess and transform cloud";
     typename pcl::PointCloud<PointT>::Ptr cl, cl_tf;
