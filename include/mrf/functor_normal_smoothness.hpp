@@ -15,8 +15,8 @@ struct FunctorNormalSmoothness {
     template <typename T>
     inline bool operator()(const T* const ni, const T* const nj, T* res) const {
         res[0] = T(w_) * (ni[0] - nj[0]);
-        res[1] = T(w_) * (ni[1] - nj[2]);
-        res[2] = T(w_) * (ni[1] - nj[2]);
+        res[1] = T(w_) * (ni[1] - nj[1]);
+        res[2] = T(w_) * (ni[2] - nj[2]);
         return true;
     }
 
