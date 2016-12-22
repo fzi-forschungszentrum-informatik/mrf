@@ -15,6 +15,14 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "max_iterations", max_iterations);
     getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
     getParam(cfg, "neighbor_search",neighbor_search);
+    getParam(cfg, "use_cost_functor_normal_distance",use_cost_functor_normal_distance);
+    getParam(cfg, "use_cost_functor_normal_smoothness",use_cost_functor_normal_smoothness);
+    getParam(cfg, "use_cost_functor_normal",use_cost_functor_normal);
+    getParam(cfg, "use_cost_functor_depth",use_cost_functor_depth);
+    getParam(cfg, "use_cost_functor_depth_smoothness",use_cost_functor_depth_smoothness);
+
+
+
 
     if (getParam(cfg, "limits", tmp)) {
         if (tmp == "none") {

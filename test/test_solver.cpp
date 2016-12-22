@@ -35,13 +35,13 @@ TEST(Solver, SolveScew) {
     p.x = 1;
     p.y = rows - 1;
     p.z = 10;
-    p.normal_x = 1;
-    p.normal_y = 1;
+    p.normal_x = 0;
+    p.normal_y = 0;
     p.normal_z = 1;
     cl->push_back(p);
     p.x = cols - 1;
     p.y = 1;
-    p.z = 0;
+    p.z = 2;
     p.normal_x = 0;
     p.normal_y = 0;
     p.normal_z = 1;

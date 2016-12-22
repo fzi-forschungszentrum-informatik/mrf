@@ -43,6 +43,11 @@ struct Parameters {
     int neighbor_search{6};
 
     bool estimate_normals{true};
+    bool use_cost_functor_normal_distance{true};
+    bool use_cost_functor_normal_smoothness{true};
+    bool use_cost_functor_normal{true};
+    bool use_cost_functor_depth{true};
+    bool use_cost_functor_depth_smoothness{true};
 
     double loss_function_scale{1};
 

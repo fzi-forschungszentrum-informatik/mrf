@@ -18,3 +18,9 @@ neighborhood: four
 # Available options: trivial, huber
 loss_function: trivial
 loss_function_scale: 1
+
+use_cost_functor_normal_distance: true
+use_cost_functor_normal_smoothness: true
+use_cost_functor_normal: true
+use_cost_functor_depth: true
+use_cost_functor_depth_smoothness: true
