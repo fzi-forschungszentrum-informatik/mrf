@@ -6,8 +6,11 @@
 namespace mrf {
 
 inline double smoothnessWeight(const Pixel& p, const Pixel& neighbor, const Parameters& params) {
-    //    return exp(-abs(val_p - val_neighbor));
-
-    return std::abs(p.val - neighbor.val) < params.discontinuity_threshold;
+	const double abs_diff{std::abs(p.val - neighbor.val)};
+	if (abs_diff < params.discontinuity_threshold) {
+		return 1;
+	} else {
+		return exp(-abs(abs_diff - params.discontinuity_threshold));
+	}
 }
 }

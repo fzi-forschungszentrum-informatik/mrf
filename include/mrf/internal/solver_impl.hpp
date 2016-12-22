@@ -4,12 +4,8 @@
 #include <ceres/ceres.h>
 #include <glog/logging.h>
 #include <util_ceres/eigen_quaternion_parameterization.h>
-#include <Eigen/src/Geometry/Hyperplane.h>
-#include <Eigen/src/Geometry/ParametrizedLine.h>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <pcl/common/transforms.h>
-#include <pcl/filters/filter.h>
 
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
@@ -21,6 +17,7 @@
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../smoothness_weight.hpp"
+
 namespace mrf {
 
 template <typename T>
@@ -52,11 +49,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (size_t c = 0; c < in_img.size(); c++) {
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
-            p.val = img.at<float>(p.row, p.col);
-            LOG(INFO) << "Normal at:  point (" << p.row << ", " << p.col
-                      << ") is : " << cl->at(c).getNormalVector3fMap().transpose();
-            projection.insert(std::make_pair(p, cl->at(c)));
-            projection_tf.insert(std::make_pair(p, cl_tf->at(c)));
+            p.val = img.at<double>(p.row, p.col);
+            projection.insert(std::make_pair(p, cl->points[c].getVector3fMap().cast<double>()));
+            projection_tf.insert(std::make_pair(p, cl_tf->points[c].getVector3fMap().cast<double>()));
         }
     }
     LOG(INFO) << "projection size is: " << projection.size();
@@ -122,7 +117,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         }
     }
 
-    if (params_.use_cost_functor_normal_smoothness) {
+  if (params_.use_cost_functor_normal_smoothness) {
         LOG(INFO) << "Add Normal Smoothness Costs";
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
@@ -268,9 +263,11 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << summary.FullReport();
 
     LOG(INFO) << "Write output data";
+    out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
+    cv::eigen2cv(depth_est, out.image);
     out.cloud->reserve(rows * cols);
-    for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < cols; col++) {
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
             //            LOG(INFO) << "Estimated depth for (" << col << "," << row
             //                      << "): " << depth_est(row, col);
             Eigen::Vector3d support, direction;
@@ -287,9 +284,6 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
     out.cloud->width = cols;
     out.cloud->height = rows;
-
-    out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
-    cv::eigen2cv(depth_est, out.image);
 
     LOG(INFO) << "Write info";
     ResultInfo info;

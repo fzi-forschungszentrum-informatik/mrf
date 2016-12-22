@@ -32,7 +32,7 @@ struct Parameters {
            << "limits: " << static_cast<int>(p.limits) << std::endl;
     }
 
-    double ks{1};
+    double ks{2};
     double kd{1};
     double discontinuity_threshold{0.2};
     int max_iterations{20};

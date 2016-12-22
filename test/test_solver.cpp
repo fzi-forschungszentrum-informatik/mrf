@@ -8,7 +8,7 @@
 #include "solver.hpp"
 
 template <typename T>
-mrf::Data<T> create(const size_t rows, const size_t cols) {
+mrf::Data<T> create(const size_t& rows, const size_t& cols) {
     using namespace mrf;
 
     Eigen::Affine3d tf{
