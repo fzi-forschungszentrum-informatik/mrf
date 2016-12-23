@@ -3,17 +3,20 @@
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
 #include <glog/logging.h>
+#include <util_ceres/constant_length_parameterization.h>
 #include <util_ceres/eigen_quaternion_parameterization.h>
 #include <opencv2/core/eigen.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <pcl/common/transforms.h>
+#include <pcl/filters/filter.h>
 
+#include "../cloud.hpp"
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
 #include "../functor_normal_distance.hpp"
-#include "../functor_normal_smoothness.hpp"
-#include "../functor_smoothness.hpp"
+#include "../functor_smoothness_distance.hpp"
+#include "../functor_smoothness_normal.hpp"
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../smoothness_weight.hpp"
@@ -50,11 +53,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
             p.val = img.at<double>(p.row, p.col);
-            projection.insert(std::make_pair(p, cl->points[c].getVector3fMap().cast<double>()));
-            projection_tf.insert(std::make_pair(p, cl_tf->points[c].getVector3fMap().cast<double>()));
+            projection.insert(std::make_pair(p, cl->points[c]));
+            projection_tf.insert(std::make_pair(p, cl_tf->points[c]));
         }
     }
     LOG(INFO) << "projection size is: " << projection.size();
+
+    Cloud<double> cloud(rows, cols);
 
     LOG(INFO) << "Create optimization problem";
     ceres::Problem problem(params_.problem);
@@ -63,16 +68,12 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     getDepthEst(depth_est, certainty, projection_tf, camera_, params_.initialization,
                 params_.neighbor_search);
 
-    LOG(INFO) << "Create Normals Eigen Vectors";
-    Eigen::MatrixXd normal_x_est{Eigen::MatrixXd::Zero(rows, cols)};
-    Eigen::MatrixXd normal_y_est{Eigen::MatrixXd::Zero(rows, cols)};
-    Eigen::MatrixXd normal_z_est{Eigen::MatrixXd::Ones(rows, cols)};
+    LOG(INFO) << "Initialise Cloud with given normals";
     for (auto const& el : projection) {
         LOG(INFO) << "el: normals: (" << el.second.normal_x << ", " << el.second.normal_y << ", "
                   << el.second.normal_z << ")";
-        normal_x_est(el.first.row, el.first.col) = el.second.normal_x;
-        normal_y_est(el.first.row, el.first.col) = el.second.normal_y;
-        normal_z_est(el.first.row, el.first.col) = el.second.normal_z;
+        cloud.at(el.first.col, el.first.row).normal =
+            el.second.getNormalVector3fMap().cast<double>();
     }
 
     std::vector<FunctorDistance::Ptr> functors_distance;
@@ -95,7 +96,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         /**
          * Add Distance Costs
          */
-        if (params_.use_cost_functor_depth) {
+        if (params_.use_functor_distance) {
             functors_distance.emplace_back(FunctorDistance::create(
                 el.second.getVector3fMap().cast<double>(), params_.kd, support, direction));
             problem.AddResidualBlock(functors_distance.back()->toCeres(),
@@ -106,22 +107,20 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         /**
          * Add Normal Costs
          */
-        if (params_.use_cost_functor_normal) {
+        if (params_.use_functor_normal) {
             functor_normal.emplace_back(
                 FunctorNormal::create(el.second.getNormalVector3fMap().cast<double>(), params_.kd));
             problem.AddResidualBlock(functor_normal.back()->toCeres(), params_.loss_function.get(),
-                                     &normal_x_est(el.first.row, el.first.col),
-                                     &normal_y_est(el.first.row, el.first.col),
-                                     &normal_z_est(el.first.row, el.first.col),
+                                     cloud.at(el.first.col, el.first.row).normal.data(),
                                      rotation.coeffs().data());
         }
     }
 
-  if (params_.use_cost_functor_normal_smoothness) {
+    if (params_.use_functor_smoothness_normal) {
         LOG(INFO) << "Add Normal Smoothness Costs";
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
-                const Pixel p(col, row, img.at<float>(row, col));
+                const Pixel p(col, row, img.at<double>(row, col));
                 // LOG(INFO) << "px: "<< normal_x_est(row, col) << ", py: "<<normal_y_est(row,
                 // col)<<",
                 // nz: "<< normal_z_est(row, col);
@@ -131,30 +130,29 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                     // "<<normal_y_est(n.row,
                     // n.col)<<", nz: "<< normal_z_est(n.row, n.col);
                     problem.AddResidualBlock(
-                        FunctorNormalSmoothness::create(smoothnessWeight(p, n, params_) *
+                        FunctorSmoothnessNormal::create(smoothnessWeight(p, n, params_) *
                                                         params_.ks),
                         new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
                                               ceres::TAKE_OWNERSHIP),
-                        &normal_x_est(row, col), &normal_y_est(row, col), &normal_z_est(row, col),
-                        &normal_x_est(n.row, n.col), &normal_y_est(n.row, n.col),
-                        &normal_z_est(n.row, n.col));
+                        cloud.at(col, row).normal.data(), cloud.at(n.col, n.row).normal.data());
                 }
             }
         }
     }
 
-    if (params_.use_cost_functor_depth_smoothness) {
+    if (params_.use_functor_smoothness_distance) {
 
         LOG(INFO) << "Add smoothness costs";
         std::vector<std::vector<ceres::ResidualBlockId>> smoothness_blocks;
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
-                const Pixel p(col, row, img.at<float>(row, col));
+                const Pixel p(col, row, img.at<double>(row, col));
                 const std::vector<Pixel> neighbors{getNeighbors(p, img, params_.neighborhood)};
                 std::vector<ceres::ResidualBlockId> res_blocks;
                 for (auto const& n : neighbors) {
                     ceres::ResidualBlockId block_id{problem.AddResidualBlock(
-                        FunctorSmoothness::create(smoothnessWeight(p, n, params_) * params_.ks),
+                        FunctorSmoothnessDistance::create(smoothnessWeight(p, n, params_) *
+                                                          params_.ks),
                         new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
                                               ceres::TAKE_OWNERSHIP),
                         &depth_est(row, col), &depth_est(n.row, n.col))};
@@ -165,13 +163,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         }
     }
 
-    const Eigen::ParametrizedLine<double, 3> ray_nn(Eigen::Vector3<double>(0,0,0),Eigen::Vector3<double>(0,0,1));
-    Eigen::Hyperplane<double, 3> plane_this(Eigen::Vector3<double>(0,1,0),Eigen::Vector3<double>(0,1,0)
-                                            );
+    const Eigen::ParametrizedLine<double, 3> ray_nn(Eigen::Vector3<double>(0, 0, 0),
+                                                    Eigen::Vector3<double>(0, 0, 1));
+    Eigen::Hyperplane<double, 3> plane_this(Eigen::Vector3<double>(0, 1, 0),
+                                            Eigen::Vector3<double>(0, 1, 0));
     LOG(INFO) << "intersection of imossible point: " << ray_nn.intersectionPoint(plane_this);
 
-
-    if (params_.use_cost_functor_normal_distance) {
+    if (params_.use_functor_normal_distance) {
         std::vector<ceres::ResidualBlockId> normal_dist_ids;
         LOG(INFO) << "Add Normal distance cost";
         for (int row = 0; row < rows; row++) {
@@ -203,10 +201,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                                       support_nn, direction_nn),
                         new ceres::ScaledLoss(new ceres::TrivialLoss, 1. / neighbors.size(),
                                               ceres::TAKE_OWNERSHIP),
-                        &depth_est(row, col), &depth_est(n.row, n.col), &normal_x_est(row, col),
-                        &normal_y_est(row, col), &normal_z_est(row, col))};
+                        &depth_est(row, col), &depth_est(n.row, n.col),
+                        cloud.at(col, row).normal.data())};
                     normal_dist_ids.emplace_back(block_id);
                 }
+
+                problem.SetParameterization(cloud.at(col, row).normal.data(),
+                                            new util_ceres::ConstantLengthParameterization<3>);
             }
         }
         ceres::Problem::EvaluateOptions options;
@@ -214,8 +215,10 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         double total_cost = 0.0;
         std::vector<double> residuals;
         problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
+        int i{0};
         for (const auto& c : residuals) {
-            LOG(INFO) << "residual cost: " << c;
+            LOG(INFO) << "residual cost at " << i << " is :" << c;
+            i++;
         }
     }
 
@@ -274,16 +277,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             camera_->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             PointT p;
             p.getVector3fMap() = (support + direction * depth_est(row, col)).cast<float>();
-            p.getNormalVector3fMap() =
-                Eigen::Vector3f(normal_x_est(row, col), normal_y_est(row, col),
-                                normal_z_est(row, col))
-                    .cast<float>();
-            out.cloud->push_back(
-                pcl::transformPoint(p, out.transform.inverse().template cast<float>()));
+            p.getNormalVector3fMap() = cloud.at(col, row).normal.cast<float>();
+            out.cloud->push_back(p);
         }
     }
     out.cloud->width = cols;
     out.cloud->height = rows;
+    pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 
     LOG(INFO) << "Write info";
     ResultInfo info;

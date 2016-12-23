@@ -12,11 +12,6 @@
 #include "noise.hpp"
 #include "solver.hpp"
 
-using namespace mrf;
-
-using PointT = pcl::PointXYZ;
-using Cloud = pcl::PointCloud<PointT>;
-using DataT = Data<PointT>;
 struct GroundTruthParams {
     bool equidistant;
     int rows_inbetween;
@@ -48,79 +43,75 @@ struct GroundTruthParams {
     }
 };
 
-const Cloud::Ptr loadCloudSparse(const Cloud::Ptr& cloud_dense, const int width, const int height,
-                                 const GroundTruthParams params) {
-
-    Cloud::Ptr out;
-    if (params.equidistant) {
-        out = downsampleEquidistant<PointT>(cloud_dense, params.rows_inbetween,
-                                            params.cols_inbetween);
-    } else {
-        out = downsampleRandom<PointT>(cloud_dense, params.seedpoint_number);
-    }
-    if (params.addCloudNoise) {
-        out = addNoise<PointT>(out, params.noise_sigma, params.noise_sigma, params.noise_sigma);
-    }
-    return out;
-}
-
-TEST(Groundtruth, loadGT) {
-    google::InitGoogleLogging("Groundtruth");
-    google::InstallFailureSignalHandler();
-
-    /**
-     * Create Data
-     */
-    constexpr size_t cols = 1384;
-    constexpr size_t rows = 1032;
+template <typename T>
+mrf::Data<T> createDense(const size_t& rows, const size_t& cols) {
+    using namespace mrf;
     cv::Mat img{cv::Mat::zeros(rows, cols, CV_32FC1)};
+    const typename Data<T>::Cloud::Ptr cl{new typename Data<T>::Cloud};
+    cl->resize(rows * cols);
+
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < 0.3 * cols; col++) {
             img.at<float>(row, col) = 1;
+            cl->points[row * cols + col] = pcl::PointXYZ(row, col, img.at<float>(row, col));
         }
     }
     for (size_t row = 0; row < 0.7 * rows; row++) {
         for (size_t col = 0.3 * cols; col < cols; col++) {
             img.at<float>(row, col) = row / (0.7 * rows);
+            cl->points[row * cols + col] = pcl::PointXYZ(row, col, img.at<float>(row, col));
         }
     }
     for (size_t row = 0.7 * rows; row < rows; row++) {
         for (size_t col = 0.3 * cols; col < cols; col++) {
             img.at<float>(row, col) = 0;
+            cl->points[row * cols + col] = pcl::PointXYZ(row, col, img.at<float>(row, col));
         }
     }
+    cl->width = cols;
+    cl->height = rows;
+    return Data<T>(cl, img, Eigen::Affine3d::Identity());
+}
 
-    const Cloud::Ptr cloud_dense{new Cloud};
+TEST(Groundtruth, loadGT) {
+    using namespace mrf;
+    google::InitGoogleLogging("Groundtruth");
+    google::InstallFailureSignalHandler();
+    using PointT = pcl::PointXYZ;
 
-    pcl::io::loadPCDFile<PointT>("gt_dense.pcd", *cloud_dense);
+    LOG(INFO) << "Set Parameters";
+    constexpr size_t cols = 1000;
+    constexpr size_t rows = 500;
+    GroundTruthParams params;
+    params.equidistant = true;
+    LOG(INFO) << "Load Groundtruth Data";
+    const Data<PointT> gt_data{createDense<PointT>(rows, cols)};
+    LOG(INFO) << "dense cloud size: " << gt_data.cloud->size();
 
-    /**
-     * Load GT Data
-     */
-    GroundTruthParams params_gt;
-    LOG(INFO) << "Test GroundTruthParams: " << params_gt;
-    const Cloud::Ptr cloud_sparse{loadCloudSparse(cloud_dense, cols, rows, params_gt)};
+    LOG(INFO) << "Load Sparse Data";
+    typename Data<PointT>::Cloud::Ptr sparse{new typename Data<PointT>::Cloud};
+    if (params.equidistant) {
+        LOG(INFO) << "Equidistant";
+        sparse = downsampleEquidistant<PointT>(gt_data.cloud, params.rows_inbetween,
+                                               params.cols_inbetween);
+    } else {
+        LOG(INFO) << "Random";
+        sparse = downsampleRandom<PointT>(gt_data.cloud, params.seedpoint_number);
+    }
+    if (params.addCloudNoise) {
+        LOG(INFO) << "Add Noise";
+        sparse = addNoise<PointT>(gt_data.cloud, params.noise_sigma, params.noise_sigma,
+                                  params.noise_sigma);
+    }
 
-    LOG(INFO) << "cloud_sparse points: " << cloud_sparse->points.size() << std::endl;
-    const DataT gt_data(cloud_dense, img, DataT::Transform::Identity());
-
-    const DataT::Cloud::Ptr cl{new DataT::Cloud};
-    cl->push_back(PointT(1, 1, 500));
-    cl->push_back(PointT(cols - 1, rows - 1, 50));
-    cl->push_back(PointT(845, 354, 271));
-
-    /**
-    * Solver
-    */
+    LOG(INFO) << "Solve";
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
-    DataT in(cloud_sparse, img, DataT::Transform::Identity());
+    Data<PointT> in(sparse, gt_data.image, gt_data.transform);
     Data<pcl::PointXYZINormal> out;
     Solver solver{cam, Parameters("parameters.yaml")};
     solver.solve(in, out);
 
-    /**
-     * Write output data
-     */
+    LOG(INFO) << "Write to file";
     boost::filesystem::path path_name{"/tmp/test/gt/solver/"};
     boost::filesystem::create_directories(path_name);
     exportData(in, path_name.string() + "in_");

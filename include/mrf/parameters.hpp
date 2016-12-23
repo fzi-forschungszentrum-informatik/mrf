@@ -26,10 +26,10 @@ struct Parameters {
 
     inline friend std::ostream& operator<<(std::ostream& os, const Parameters& p) {
         return os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
-           << "ks: " << p.ks << std::endl
-           << "kd: " << p.kd << std::endl
-           << "max_iterations: " << p.max_iterations << std::endl
-           << "limits: " << static_cast<int>(p.limits) << std::endl;
+                  << "ks: " << p.ks << std::endl
+                  << "kd: " << p.kd << std::endl
+                  << "max_iterations: " << p.max_iterations << std::endl
+                  << "limits: " << static_cast<int>(p.limits) << std::endl;
     }
 
     double ks{2};
@@ -43,15 +43,16 @@ struct Parameters {
     int neighbor_search{6};
 
     bool estimate_normals{true};
-    bool use_cost_functor_normal_distance{true};
-    bool use_cost_functor_normal_smoothness{true};
-    bool use_cost_functor_normal{true};
-    bool use_cost_functor_depth{true};
-    bool use_cost_functor_depth_smoothness{true};
+    bool use_functor_normal_distance{true};
+    bool use_functor_smoothness_normal{true};
+    bool use_functor_normal{true};
+    bool use_functor_distance{true};
+    bool use_functor_smoothness_distance{true};
 
     double loss_function_scale{1};
 
     Initialization initialization{Initialization::none};
+
     Neighborhood neighborhood{Neighborhood::four};
 
     ceres::Solver::Options solver;

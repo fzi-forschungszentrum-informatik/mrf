@@ -14,15 +14,12 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
     getParam(cfg, "max_iterations", max_iterations);
     getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
-    getParam(cfg, "neighbor_search",neighbor_search);
-    getParam(cfg, "use_cost_functor_normal_distance",use_cost_functor_normal_distance);
-    getParam(cfg, "use_cost_functor_normal_smoothness",use_cost_functor_normal_smoothness);
-    getParam(cfg, "use_cost_functor_normal",use_cost_functor_normal);
-    getParam(cfg, "use_cost_functor_depth",use_cost_functor_depth);
-    getParam(cfg, "use_cost_functor_depth_smoothness",use_cost_functor_depth_smoothness);
-
-
-
+    getParam(cfg, "neighbor_search", neighbor_search);
+    getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);
+    getParam(cfg, "use_functor_smoothness_normal", use_functor_smoothness_normal);
+    getParam(cfg, "use_functor_normal", use_functor_normal);
+    getParam(cfg, "use_functor_distance", use_functor_distance);
+    getParam(cfg, "use_functor_smoothness_distance", use_functor_smoothness_distance);
 
     if (getParam(cfg, "limits", tmp)) {
         if (tmp == "none") {
