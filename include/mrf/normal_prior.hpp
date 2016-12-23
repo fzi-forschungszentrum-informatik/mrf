@@ -3,7 +3,6 @@
 #include <memory>
 #include <Eigen/Eigen>
 #include <camera_models/camera_model.h>
-#include <pcl/point_types.h>
 
 #include "eigen.hpp"
 #include "parameters.hpp"
@@ -12,9 +11,8 @@
 
 namespace mrf {
 
-using PointT = pcl::PointXYZINormal;
 using DataType = double;
-using mapT = std::map<Pixel, PointT, PixelLess>;
+using mapT = std::map<Pixel, Point<DataType>, PixelLess>;
 
 template<typename T>
 void getNormalEst(Cloud<T>& cl, mapT& projection,

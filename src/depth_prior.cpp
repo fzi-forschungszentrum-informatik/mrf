@@ -2,12 +2,7 @@
 
 namespace mrf {
 
-using PointT = pcl::PointXYZINormal;
-using DataType = double;
 using DistanceType = flann::L2_Simple<DataType>;
-using mapT = std::map<Pixel, PointT, PixelLess>;
-using treeT = std::unique_ptr<flann::Index<DistanceType>>;
-using EigenT = Eigen::Matrix<DataType, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
 flann::Matrix<DataType> convertEigen2FlannRow(const EigenT& mEigen) {
     flann::Matrix<DataType> mFlann(new DataType[mEigen.size()], mEigen.rows(), mEigen.cols());
@@ -114,7 +109,7 @@ void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT&
         Eigen::Vector3d support, direction;
         cam->getViewingRay(Eigen::Vector2d(el.first.row, el.first.col), support, direction);
         const Eigen::Hyperplane<double, 3> plane(direction,
-                                                 el.second.getVector3fMap().cast<double>());
+                                                 el.second.position);
         depth_est(el.first.row, el.first.col) =
             (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
              support)
@@ -150,7 +145,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
             Eigen::Vector3d support, direction;
             cam->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
             const Eigen::Hyperplane<double, 3> plane(direction,
-                                                     el.second.getVector3fMap().cast<double>());
+                                                     el.second.position);
             sum +=
                 (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
                  support)
@@ -181,8 +176,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
                 Eigen::Vector3d p{
                     projection
                         .at(Pixel(coordinates(0, neighbours[0]), coordinates(1, neighbours[0])))
-                        .getVector3fMap()
-                        .cast<double>()};
+                        .position};
                 Eigen::Vector3d support, direction;
                 Eigen::Vector2d coor{
                     Eigen::Vector2i(coordinates(0, neighbours[0]), coordinates(1, neighbours[0]))
@@ -225,7 +219,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
                     for (size_t i = 0; i < 3; i++) {
                         Pixel c{coordinates(0, triangle_neighbours[i]),
                                 coordinates(1, triangle_neighbours[i])};
-                        neighbours_points.col(i) = projection.at(c).getVector3fMap().cast<double>();
+                        neighbours_points.col(i) = projection.at(c).position;
                     }
                     cam->getViewingRay(image_coordinate, supportPoint, direction);
                     depth_est(row, col) =
