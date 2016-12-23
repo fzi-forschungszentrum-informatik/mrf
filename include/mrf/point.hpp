@@ -7,6 +7,8 @@ namespace mrf {
 template <typename T>
 struct Point {
 
+    using ScalarT = T;
+
     inline Point()
             : position{Eigen::Vector3<T>::Zero()}, normal{Eigen::Vector3<T>::Zero()},
               intensity{0} {};

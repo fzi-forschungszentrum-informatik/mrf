@@ -19,23 +19,27 @@ struct Parameters {
     inline Parameters(const std::string& file_name = std::string()) {
         problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+
+        solver.max_num_iterations = 20;
+
         if (file_name.size()) {
             fromConfig(file_name);
         }
+
+
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const Parameters& p) {
         return os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
                   << "ks: " << p.ks << std::endl
                   << "kd: " << p.kd << std::endl
-                  << "max_iterations: " << p.max_iterations << std::endl
+                  << "max_iterations: " << p.solver.max_num_iterations << std::endl
                   << "limits: " << static_cast<int>(p.limits) << std::endl;
     }
 
     double ks{2};
     double kd{1};
     double discontinuity_threshold{0.2};
-    int max_iterations{20};
     double radius_normal_estimation{0.5};
     Limits limits{Limits::none};
     double custom_depth_limit_min{0};
@@ -52,7 +56,6 @@ struct Parameters {
     double loss_function_scale{1};
 
     Initialization initialization{Initialization::none};
-
     Neighborhood neighborhood{Neighborhood::four};
 
     ceres::Solver::Options solver;
