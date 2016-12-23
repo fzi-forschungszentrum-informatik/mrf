@@ -18,6 +18,10 @@ class Cloud {
         height = 1;
     }
 
+    inline size_t size(){
+    	return width*height;
+    }
+
     inline void resize(const size_t& n) {
         points.resize(n);
         if (width * height != n) {

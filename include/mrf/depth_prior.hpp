@@ -32,8 +32,8 @@ std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT&
 double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
                          const Eigen::Matrix3Xd& neighbours);
 
-void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,const std::shared_ptr<CameraModel> cam);
-
+void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
+                   const std::shared_ptr<CameraModel> cam);
 
 void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
                  const std::shared_ptr<CameraModel> cam, const Parameters::Initialization type,

@@ -52,20 +52,20 @@ mrf::Data<T> createDense(const size_t& rows, const size_t& cols) {
 
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < 0.3 * cols; col++) {
-            img.at<float>(row, col) = 1;
-            cl->points[row * cols + col] = pcl::PointXYZ(row, col, img.at<float>(row, col));
+            img.at<double>(row, col) = 1;
+            cl->points[row * cols + col] = pcl::PointXYZ(row, col, 1);
         }
     }
     for (size_t row = 0; row < 0.7 * rows; row++) {
         for (size_t col = 0.3 * cols; col < cols; col++) {
-            img.at<float>(row, col) = row / (0.7 * rows);
-            cl->points[row * cols + col] = pcl::PointXYZ(row, col, img.at<float>(row, col));
+            img.at<double>(row, col) = row / (0.7 * rows);
+            cl->points[row * cols + col] = pcl::PointXYZ(row, col, row / (0.7 * rows));
         }
     }
     for (size_t row = 0.7 * rows; row < rows; row++) {
         for (size_t col = 0.3 * cols; col < cols; col++) {
-            img.at<float>(row, col) = 0;
-            cl->points[row * cols + col] = pcl::PointXYZ(row, col, img.at<float>(row, col));
+            img.at<double>(row, col) = 0;
+            cl->points[row * cols + col] = pcl::PointXYZ(row, col, 0);
         }
     }
     cl->width = cols;

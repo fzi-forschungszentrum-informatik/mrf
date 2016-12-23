@@ -12,6 +12,7 @@
 #include "../cloud.hpp"
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
+#include "../normal_prior.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
 #include "../functor_normal_distance.hpp"
@@ -69,12 +70,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 params_.neighbor_search);
 
     LOG(INFO) << "Initialise Cloud with given normals";
-    for (auto const& el : projection) {
-        LOG(INFO) << "el: normals: (" << el.second.normal_x << ", " << el.second.normal_y << ", "
-                  << el.second.normal_z << ")";
-        cloud.at(el.first.col, el.first.row).normal =
-            el.second.getNormalVector3fMap().cast<double>();
-    }
+    getNormalEst<double>(cloud,projection,camera_);
 
     std::vector<FunctorDistance::Ptr> functors_distance;
     functors_distance.reserve(projection.size());

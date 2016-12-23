@@ -2,7 +2,6 @@
 
 namespace mrf {
 
-
 using PointT = pcl::PointXYZINormal;
 using DataType = double;
 using DistanceType = flann::L2_Simple<DataType>;
@@ -114,7 +113,8 @@ void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT&
         certainty(el.first.row, el.first.col) = 1;
         Eigen::Vector3d support, direction;
         cam->getViewingRay(Eigen::Vector2d(el.first.row, el.first.col), support, direction);
-        const Eigen::Hyperplane<double, 3> plane(direction, el.second.getVector3fMap().cast<double>());
+        const Eigen::Hyperplane<double, 3> plane(direction,
+                                                 el.second.getVector3fMap().cast<double>());
         depth_est(el.first.row, el.first.col) =
             (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
              support)
@@ -149,7 +149,8 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
         for (auto const& el : projection) {
             Eigen::Vector3d support, direction;
             cam->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-            const Eigen::Hyperplane<double, 3> plane(direction, el.second.getVector3fMap().cast<double>());
+            const Eigen::Hyperplane<double, 3> plane(direction,
+                                                     el.second.getVector3fMap().cast<double>());
             sum +=
                 (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
                  support)
@@ -177,8 +178,11 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
 
                 std::vector<int> neighbours{
                     getNeighbours(coordinates, kd_index_ptr_, Pixel(col, row), 1)};
-                Eigen::Vector3d p{projection.at(
-                    Pixel(coordinates(0, neighbours[0]), coordinates(1, neighbours[0]))).getVector3fMap().cast<double>()};
+                Eigen::Vector3d p{
+                    projection
+                        .at(Pixel(coordinates(0, neighbours[0]), coordinates(1, neighbours[0])))
+                        .getVector3fMap()
+                        .cast<double>()};
                 Eigen::Vector3d support, direction;
                 Eigen::Vector2d coor{
                     Eigen::Vector2i(coordinates(0, neighbours[0]), coordinates(1, neighbours[0]))
