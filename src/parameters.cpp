@@ -12,7 +12,7 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "ks", ks);
     getParam(cfg, "kd", kd);
     getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
-    getParam(cfg, "max_iterations", max_iterations);
+    getParam(cfg, "max_iterations", solver.max_num_iterations);
     getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
     getParam(cfg, "neighbor_search", neighbor_search);
     getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);
