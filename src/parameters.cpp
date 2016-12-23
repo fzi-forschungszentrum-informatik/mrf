@@ -11,15 +11,21 @@ void Parameters::fromConfig(const std::string& file_name) {
 
     getParam(cfg, "ks", ks);
     getParam(cfg, "kd", kd);
+    getParam(cfg, "kn", kn);
     getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
+    getParam(cfg, "smoothness_rate", smoothness_rate);
     getParam(cfg, "max_iterations", solver.max_num_iterations);
     getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
     getParam(cfg, "neighbor_search", neighbor_search);
+
     getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);
     getParam(cfg, "use_functor_smoothness_normal", use_functor_smoothness_normal);
     getParam(cfg, "use_functor_normal", use_functor_normal);
     getParam(cfg, "use_functor_distance", use_functor_distance);
     getParam(cfg, "use_functor_smoothness_distance", use_functor_smoothness_distance);
+
+    getParam(cfg, "pin_normals", pin_normals);
+    getParam(cfg, "pin_distances", pin_distances);
 
     if (getParam(cfg, "limits", tmp)) {
         if (tmp == "none") {

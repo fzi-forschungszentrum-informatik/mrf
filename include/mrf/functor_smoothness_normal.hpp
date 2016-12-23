@@ -14,9 +14,9 @@ struct FunctorSmoothnessNormal {
 
     template <typename T>
     inline bool operator()(const T* const n_this, const T* const n_nn, T* res) const {
-        res[0] = T(w_) * (n_this[0] - n_nn[0]);
-        res[1] = T(w_) * (n_this[1] - n_nn[2]);
-        res[2] = T(w_) * (n_this[1] - n_nn[2]);
+        using namespace Eigen;
+        Map<Vector3<T>>(res, DimResidual) =
+            T(w_) * (Map<const Vector3<T>>(n_this) - Map<const Vector3<T>>(n_nn));
         return true;
     }
 

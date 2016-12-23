@@ -45,59 +45,65 @@ struct GroundTruthParams {
 
 template <typename T>
 mrf::Data<T> createDense(const size_t& rows, const size_t& cols) {
-    using namespace mrf;
     cv::Mat img{cv::Mat::zeros(rows, cols, CV_32FC1)};
-    const typename Data<T>::Cloud::Ptr cl{new typename Data<T>::Cloud};
-    cl->resize(rows * cols);
-
     for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < 0.3 * cols; col++) {
+        for (size_t col = 0; col < 0.25 * cols; col++) {
             img.at<double>(row, col) = 1;
-            cl->points[row * cols + col] = pcl::PointXYZ(row, col, 1);
         }
     }
-    for (size_t row = 0; row < 0.7 * rows; row++) {
-        for (size_t col = 0.3 * cols; col < cols; col++) {
-            img.at<double>(row, col) = row / (0.7 * rows);
-            cl->points[row * cols + col] = pcl::PointXYZ(row, col, row / (0.7 * rows));
+    for (size_t row = 0; row < 0.75 * rows; row++) {
+        for (size_t col = 0.25 * cols; col < cols; col++) {
+            img.at<double>(row, col) = row / (0.75 * rows);
         }
     }
-    for (size_t row = 0.7 * rows; row < rows; row++) {
-        for (size_t col = 0.3 * cols; col < cols; col++) {
+    for (size_t row = 0.75 * rows; row < rows; row++) {
+        for (size_t col = 0.25 * cols; col < cols; col++) {
             img.at<double>(row, col) = 0;
-            cl->points[row * cols + col] = pcl::PointXYZ(row, col, 0);
         }
     }
+
+    using namespace mrf;
+    const typename Data<T>::Cloud::Ptr cl{new typename Data<T>::Cloud};
     cl->width = cols;
     cl->height = rows;
-    return Data<T>(cl, img, Eigen::Affine3d::Identity());
+    cl->resize(cl->width * cl->height);
+    for (size_t r = 0; r < rows; r++) {
+        for (size_t c = 0; c < cols; c++) {
+            cl->at(c, r) = pcl::PointXYZ(r, c, img.at<double>(r, c));
+        }
+    }
+    return Data<T>(cl, img);
 }
 
-TEST(Groundtruth, loadGT) {
+TEST(Groundtruth, solve) {
     using namespace mrf;
     google::InitGoogleLogging("Groundtruth");
     google::InstallFailureSignalHandler();
     using PointT = pcl::PointXYZ;
 
     LOG(INFO) << "Set Parameters";
-    constexpr size_t cols = 1000;
-    constexpr size_t rows = 500;
+    /**
+     * \attention cols and rows need to be divisable by four
+     */
+    constexpr size_t cols = 500;
+    constexpr size_t rows = 250;
     GroundTruthParams params;
     params.equidistant = true;
     LOG(INFO) << "Load Groundtruth Data";
     const Data<PointT> gt_data{createDense<PointT>(rows, cols)};
     LOG(INFO) << "dense cloud size: " << gt_data.cloud->size();
 
-    LOG(INFO) << "Load Sparse Data";
+    LOG(INFO) << "Generate sparse data";
     typename Data<PointT>::Cloud::Ptr sparse{new typename Data<PointT>::Cloud};
     if (params.equidistant) {
-        LOG(INFO) << "Equidistant";
+        LOG(INFO) << "Equidistant downsampling";
         sparse = downsampleEquidistant<PointT>(gt_data.cloud, params.rows_inbetween,
                                                params.cols_inbetween);
     } else {
-        LOG(INFO) << "Random";
+        LOG(INFO) << "Random downsampling";
         sparse = downsampleRandom<PointT>(gt_data.cloud, params.seedpoint_number);
     }
+
     if (params.addCloudNoise) {
         LOG(INFO) << "Add Noise";
         sparse = addNoise<PointT>(gt_data.cloud, params.noise_sigma, params.noise_sigma,
@@ -109,10 +115,10 @@ TEST(Groundtruth, loadGT) {
     Data<PointT> in(sparse, gt_data.image, gt_data.transform);
     Data<pcl::PointXYZINormal> out;
     Solver solver{cam, Parameters("parameters.yaml")};
-    solver.solve(in, out);
+//    solver.solve(in, out);
 
     LOG(INFO) << "Write to file";
-    boost::filesystem::path path_name{"/tmp/test/gt/solver/"};
+    boost::filesystem::path path_name{"/tmp/test/groundtruth/"};
     boost::filesystem::create_directories(path_name);
     exportData(in, path_name.string() + "in_");
     exportData(out, path_name.string() + "out_");

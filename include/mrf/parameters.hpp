@@ -39,7 +39,9 @@ struct Parameters {
 
     double ks{2};
     double kd{1};
+    double kn{1};
     double discontinuity_threshold{0.2};
+    double smoothness_rate{2};
     double radius_normal_estimation{0.5};
     Limits limits{Limits::none};
     double custom_depth_limit_min{0};
@@ -52,6 +54,9 @@ struct Parameters {
     bool use_functor_normal{true};
     bool use_functor_distance{true};
     bool use_functor_smoothness_distance{true};
+
+    bool pin_normals{false};
+    bool pin_distances{false};
 
     double loss_function_scale{1};
 
@@ -71,6 +76,7 @@ private:
             val = cfg[name].as<T>();
             return true;
         }
+        LOG(WARNING) << "Parameter " << name << " not available.";
         return false;
     }
 };

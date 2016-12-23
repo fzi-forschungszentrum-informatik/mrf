@@ -13,41 +13,37 @@ struct FunctorNormalDistance {
     using Ptr = std::shared_ptr<FunctorNormalDistance>;
 
     static constexpr size_t DimDepth = 1;
-    static constexpr size_t DimResidual = 1;
+    static constexpr size_t DimResidual = 3;
     static constexpr size_t DimNormal = 3;
 
-    inline FunctorNormalDistance(const double& w, const Eigen::Vector3d& support_this,
-                                 const Eigen::Vector3d& direction_this,
-                                 const Eigen::Vector3d& support_nn,
-                                 const Eigen::Vector3d& direction_nn)
-            : w_{w}, support_this_{support_this}, direction_this_{direction_this},
-              support_nn_{support_nn}, direction_nn_{direction_nn} {};
+    inline FunctorNormalDistance(const double& w,
+                                 const Eigen::ParametrizedLine<double, 3>& ray_this,
+                                 const Eigen::ParametrizedLine<double, 3>& ray_nn)
+            : w_{w}, ray_this_{ray_this}, ray_nn_{ray_nn} {};
 
     template <typename T>
     inline bool operator()(const T* const depth_this, const T* const depth_nn,
                            const T* const normal_this, T* res) const {
         using namespace Eigen;
-        const ParametrizedLine<T, 3> ray_nn(support_nn_.cast<T>(), direction_nn_.cast<T>());
-        const Eigen::Map<const Eigen::Vector3<T>> n(normal_this);
-        const Hyperplane<T, 3> plane_this(n, support_this_.cast<T>() +
-                                                 direction_this_.cast<T>() * depth_this[0]);
-        Eigen::Vector3<T> intersect{ray_nn.intersectionPoint(plane_this)};
-        if (intersect != intersect) { //>filter if no intersection found
-            res[0] = T(0);
-        } else {
-            res[0] = T(w_) * (intersect - ray_nn.pointAt(depth_nn[0])).norm();
-        }
+        const Map<const Vector3<T>> n(normal_this);
+        const Hyperplane<T, 3> plane_this(n, ray_this_.cast<T>().pointAt(depth_this[0]));
+
+        //        Map<Vector3<T>>(res, DimResidual) =
+        //            T(w_) * (ray_nn_.cast<T>().intersectionPoint(plane_this) -
+        //                     ray_nn_.cast<T>().pointAt(depth_nn[0]));
+
+        const Vector3<T> p_nn{ray_nn_.cast<T>().pointAt(depth_nn[0])};
+        Map<Vector3<T>>(res, DimResidual) = T(w_) * (plane_this.projection(p_nn) - p_nn);
 
         return true;
     }
 
-    inline static ceres::CostFunction* create(const double& w, const Eigen::Vector3d& support_this,
-                                              const Eigen::Vector3d& direction_this,
-                                              const Eigen::Vector3d& support_nn,
-                                              const Eigen::Vector3d& direction_nn) {
+    inline static ceres::CostFunction* create(const double& w,
+                                              const Eigen::ParametrizedLine<double, 3>& ray_this,
+                                              const Eigen::ParametrizedLine<double, 3>& ray_nn) {
         return new ceres::AutoDiffCostFunction<FunctorNormalDistance, DimResidual, DimDepth,
                                                DimDepth, DimNormal>(
-            new FunctorNormalDistance(w, support_this, direction_this, support_nn, direction_nn));
+            new FunctorNormalDistance(w, ray_this, ray_nn));
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const FunctorNormalDistance& f) {
@@ -60,8 +56,6 @@ struct FunctorNormalDistance {
 
 private:
     double w_; ///< Weight
-
-    Eigen::Vector3d support_this_, support_nn_;
-    Eigen::Vector3d direction_this_, direction_nn_;
+    const Eigen::ParametrizedLine<double, 3> ray_this_, ray_nn_;
 };
 }

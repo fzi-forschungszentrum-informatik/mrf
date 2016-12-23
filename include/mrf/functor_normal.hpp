@@ -20,9 +20,8 @@ struct FunctorNormal {
     template <typename T>
     inline bool operator()(const T* const normal, const T* const rotation, T* res) const {
         using namespace Eigen;
-        const Affine3<T> tf{util_ceres::fromQuaternion(rotation)};
-        const Eigen::Map<const Eigen::Vector3<T>> n(normal);
-        Map<Vector3<T>>(res, DimResidual) = T(w_) * (n - tf * n_.cast<T>());
+        const Map<const Vector3<T>> n(normal);
+        Map<Vector3<T>>(res, DimResidual) = T(w_) * (n - util_ceres::fromQuaternion(rotation) * n_.cast<T>());
         return true;
     }
 

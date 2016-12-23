@@ -17,9 +17,8 @@ TEST(Data, Instantiation) {
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
     cl->push_back(PointT());
     const DataT::Ptr d{
-        DataT::create(cl, cv::Mat::zeros(2, 2, CV_32FC1), Eigen::Affine3d::Identity())};
+        DataT::create(cl, cv::Mat::zeros(2, 2, CV_32FC1))};
     LOG(INFO) << "Data: \n" << *d;
-
     boost::filesystem::path path_name{"/tmp/test/data/"};
     boost::filesystem::create_directories(path_name);
     exportData(*d, path_name.string());

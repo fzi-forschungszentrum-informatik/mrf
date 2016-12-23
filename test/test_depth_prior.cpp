@@ -25,7 +25,7 @@ TEST(DepthPrior, initialisation) {
     cl->push_back(PointT(30, 40, 10));
     cl->push_back(PointT(25, 45, 10));
     const DataT in(cl, cv::Mat::eye(rows, cols, CV_32FC1), DataT::Transform::Identity());
-    Parameters params;
+    Parameters params("parameters.yaml");
     params.initialization = Parameters::Initialization::triangles;
     params.ks = 0;
     params.kd = 0;
@@ -35,7 +35,7 @@ TEST(DepthPrior, initialisation) {
     Data<pcl::PointXYZINormal> out;
     solver.solve(in, out);
 
-    boost::filesystem::path path_name{"/tmp/test/depthPrior/"};
+    boost::filesystem::path path_name{"/tmp/test/depth_prior/"};
     boost::filesystem::create_directories(path_name);
     exportData(in, path_name.string() + "in_");
     exportData(out, path_name.string() + "out_");
