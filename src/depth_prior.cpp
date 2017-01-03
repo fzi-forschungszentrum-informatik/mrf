@@ -108,8 +108,7 @@ void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT&
         certainty(el.first.row, el.first.col) = 1;
         Eigen::Vector3d support, direction;
         cam->getViewingRay(Eigen::Vector2d(el.first.row, el.first.col), support, direction);
-        const Eigen::Hyperplane<double, 3> plane(direction,
-                                                 el.second.position);
+        const Eigen::Hyperplane<double, 3> plane(direction, el.second.position);
         depth_est(el.first.row, el.first.col) =
             (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
              support)
@@ -144,8 +143,7 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
         for (auto const& el : projection) {
             Eigen::Vector3d support, direction;
             cam->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-            const Eigen::Hyperplane<double, 3> plane(direction,
-                                                     el.second.position);
+            const Eigen::Hyperplane<double, 3> plane(direction, el.second.position);
             sum +=
                 (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
                  support)

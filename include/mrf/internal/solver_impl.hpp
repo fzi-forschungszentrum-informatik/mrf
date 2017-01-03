@@ -3,13 +3,15 @@
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
 #include <glog/logging.h>
+#include <pcl_ceres/point.hpp>
+#include <pcl_ceres/point_cloud.hpp>
+#include <pcl_ceres/transforms.hpp>
 #include <util_ceres/constant_length_parameterization.h>
 #include <util_ceres/eigen_quaternion_parameterization.h>
 #include <opencv2/core/eigen.hpp>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/filter.h>
 
-#include "../cloud.hpp"
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
 #include "../functor_distance.hpp"
@@ -31,17 +33,19 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     const cv::Mat img{edge(in.image)};
 
     LOG(INFO) << "Preprocess and transform cloud";
-    using CloudT = pcl::PointCloud<PointT>;
-    CloudT::Ptr cl{new CloudT};
+    pcl::PointCloud<PointT>::Ptr cl{new pcl::PointCloud<PointT>};
     pcl::copyPointCloud<T, PointT>(*(in.cloud), *cl);
+
     if (params_.estimate_normals) {
         cl = estimateNormals<PointT, PointT>(cl, params_.radius_normal_estimation);
     }
     std::vector<int> indices;
     pcl::removeNaNNormalsFromPointCloud(*cl, *cl, indices);
+    LOG(INFO) << "Removed " << in.cloud->size() - cl->size() << " invalid points";
 
-    using PType = Point<double>;
-    const Cloud<PType>::Ptr cloud{Cloud<PType>::create()};
+    using PType = pcl_ceres::Point<double>;
+    using ClType = pcl_ceres::PointCloud<PType>;
+    const ClType::Ptr cloud{ClType::create()};
     cloud->points.reserve(cl->size());
     for (size_t c = 0; c < cl->size(); c++) {
         cloud->points.emplace_back(PType(cl->points[c].getVector3fMap().cast<double>(),
@@ -50,7 +54,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
     cloud->height = cl->height;
     cloud->width = cl->width;
-    const Cloud<PType>::Ptr cloud_tf = transform<PType, double>(cloud, in.transform);
+    const ClType::Ptr cloud_tf = pcl_ceres::transform<PType>(cloud, in.transform);
 
     LOG(INFO) << "Compute point projection in camera image";
     const Eigen::Matrix3Xd pts_3d_tf{cloud_tf->getMatrixPoints()};
@@ -59,7 +63,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     int cols, rows;
     camera_->getImageSize(cols, rows);
-    LOG(INFO) << "Image size: " << cols << " x " << rows;
+    LOG(INFO) << "Image size: " << cols << " x " << rows << " = " << cols * rows;
     std::map<Pixel, PType, PixelLess> projection, projection_tf;
     for (size_t c = 0; c < in_img.size(); c++) {
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
@@ -77,7 +81,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 params_.neighbor_search);
 
     LOG(INFO) << "Initialize normals";
-    const Cloud<PType>::Ptr cloud_est{Cloud<PType>::create(rows, cols)};
+    const ClType::Ptr cloud_est{ClType::create(rows, cols)};
     getNormalEst(*cloud_est, projection, camera_);
 
     LOG(INFO) << "Create optimization problem";
@@ -92,8 +96,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                               new util_ceres::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
-    if (params_.use_functor_normal || params_.use_functor_normal_distance ||
-        params_.use_functor_smoothness_normal) {
+    const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
+                               params_.use_functor_smoothness_normal};
+    if (use_any_normals) {
         LOG(INFO) << "Add normal parameterization";
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
@@ -217,11 +222,11 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
 
     if (pin_transform) {
-        LOG(INFO) << "Set parameterization";
+        LOG(INFO) << "Pin transform";
         problem.SetParameterBlockConstant(rotation.coeffs().data());
         problem.SetParameterBlockConstant(translation.data());
     }
-    if (params_.pin_normals) {
+    if (params_.pin_normals && use_any_normals) {
         LOG(INFO) << "Pin normals";
         for (auto const& el : projection) {
             problem.SetParameterBlockConstant(&depth_est(el.first.row, el.first.col));
@@ -230,8 +235,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     if (params_.pin_distances) {
         LOG(INFO) << "Pin distances";
         for (auto const& el : projection) {
-            problem.SetParameterBlockConstant(
-                cloud_est->at(el.first.col, el.first.row).normal.data());
+            problem.SetParameterBlockConstant(&depth_est(el.first.row, el.first.col));
         }
     }
 

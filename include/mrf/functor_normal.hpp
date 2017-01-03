@@ -21,7 +21,8 @@ struct FunctorNormal {
     inline bool operator()(const T* const normal, const T* const rotation, T* res) const {
         using namespace Eigen;
         const Map<const Vector3<T>> n(normal);
-        Map<Vector3<T>>(res, DimResidual) = T(w_) * (n - util_ceres::fromQuaternion(rotation) * n_.cast<T>());
+        Map<Vector3<T>>(res, DimResidual) =
+            T(w_) * (n - util_ceres::fromQuaternion(rotation) * n_.cast<T>());
         return true;
     }
 

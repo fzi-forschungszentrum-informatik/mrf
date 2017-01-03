@@ -18,6 +18,7 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
     getParam(cfg, "neighbor_search", neighbor_search);
 
+    getParam(cfg, "estimate_normals", estimate_normals);
     getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);
     getParam(cfg, "use_functor_smoothness_normal", use_functor_smoothness_normal);
     getParam(cfg, "use_functor_normal", use_functor_normal);
@@ -38,7 +39,6 @@ void Parameters::fromConfig(const std::string& file_name) {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
-
     getParam(cfg, "custom_depth_limit_min", custom_depth_limit_min);
     getParam(cfg, "custom_depth_limit_max", custom_depth_limit_max);
 

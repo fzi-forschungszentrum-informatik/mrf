@@ -3,15 +3,17 @@
 #include <memory>
 #include <Eigen/Eigen>
 #include <camera_models/camera_model.h>
+#include <pcl_ceres/point_cloud.hpp>
+#include <pcl_ceres/point.hpp>
 
-#include "cloud.hpp"
 #include "eigen.hpp"
 #include "pixel.hpp"
 
 namespace mrf {
 
 template <typename T>
-void getNormalEst(Cloud<T>& cl, const std::map<Pixel, Point<double>, PixelLess>& projection,
+void getNormalEst(pcl_ceres::PointCloud<T>& cl,
+                  const std::map<Pixel, T, PixelLess>& projection,
                   const std::shared_ptr<CameraModel>& cam) {
 
     int rows, cols;
