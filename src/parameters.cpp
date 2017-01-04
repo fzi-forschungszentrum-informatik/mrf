@@ -14,7 +14,7 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "kn", kn);
     getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
     getParam(cfg, "smoothness_rate", smoothness_rate);
-    getParam(cfg, "max_iterations", solver.max_num_iterations);
+    getParam(cfg, "max_num_iterations", solver.max_num_iterations);
     getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
     getParam(cfg, "neighbor_search", neighbor_search);
 

@@ -21,11 +21,11 @@ struct Pixel {
 
 struct PixelLess {
     inline bool operator()(const Pixel& lhs, const Pixel& rhs) {
-        if (lhs.x < rhs.x)
+        if (lhs.col < rhs.col)
             return true;
-        else if (lhs.x > rhs.x)
+        else if (lhs.col > rhs.col)
             return false;
-        else if (lhs.y < rhs.y)
+        else if (lhs.row < rhs.row)
             return true;
         return false;
     }

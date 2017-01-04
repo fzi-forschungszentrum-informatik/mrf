@@ -33,7 +33,7 @@ struct Data {
         return os;
     }
 
-    const typename Cloud::Ptr cloud;
+    typename Cloud::Ptr cloud;
     Image image;
     Transform transform; ///< Transform between camera and laser
 };

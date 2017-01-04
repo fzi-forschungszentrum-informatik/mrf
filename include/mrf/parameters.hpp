@@ -19,8 +19,10 @@ struct Parameters {
     inline Parameters(const std::string& file_name = std::string()) {
         problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-
-        solver.max_num_iterations = 20;
+        solver.max_num_iterations = 25;
+        solver.minimizer_progress_to_stdout = true;
+        solver.num_threads = 4;
+        solver.max_solver_time_in_seconds = 180;
 
         if (file_name.size()) {
             fromConfig(file_name);

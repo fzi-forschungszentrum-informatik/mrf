@@ -19,8 +19,8 @@ void getNormalEst(pcl_ceres::PointCloud<T>& cl,
     int rows, cols;
     cam->getImageSize(cols, rows);
 
-    for (size_t row = 0; row < rows; row++) {
-        for (size_t col = 0; col < cols; col++) {
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
             Eigen::Vector3d support, direction;
             cam->getViewingRay(Eigen::Vector2d(col, row), support, direction);
             cl.at(col, row).normal = -direction.normalized();
