@@ -20,13 +20,8 @@ struct FunctorNormalDistance {
     inline bool operator()(const T* const depth_this, const T* const depth_nn,
                            const T* const normal_this, T* res) const {
         using namespace Eigen;
-        const Map<const Vector3<T>> n(normal_this);
-        const Hyperplane<T, 3> plane_this(n, ray_this_.cast<T>().pointAt(depth_this[0]));
-
-        //        Map<Vector3<T>>(res, DimResidual) =
-        //            T(w_) * (ray_nn_.cast<T>().intersectionPoint(plane_this) -
-        //                     ray_nn_.cast<T>().pointAt(depth_nn[0]));
-
+        const Hyperplane<T, 3> plane_this(Map<const Vector3<T>>(normal_this),
+                                          ray_this_.cast<T>().pointAt(depth_this[0]));
         const Vector3<T> p_nn{ray_nn_.cast<T>().pointAt(depth_nn[0])};
         Map<Vector3<T>>(res, DimResidual) = plane_this.projection(p_nn) - p_nn;
         return true;

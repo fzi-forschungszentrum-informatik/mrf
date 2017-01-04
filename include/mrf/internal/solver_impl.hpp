@@ -11,6 +11,7 @@
 #include <opencv2/core/eigen.hpp>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/filter.h>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
@@ -86,8 +87,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << "Estimate initial depths: " << projection.size();
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(depth_est, certainty, projection_tf, camera_, params_.initialization,
-                params_.neighbor_search);
+    getDepthEst(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
+                depth_est, certainty);
 
     LOG(INFO) << "Create optimization problem";
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -134,21 +135,31 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             }
         }
     }
-
+    Eigen::MatrixXd smoothness_costs{Eigen::MatrixXd::Zero(rows,cols)};
     if (params_.use_functor_smoothness_normal) {
         LOG(INFO) << "Add normal smoothness costs";
+        Eigen::MatrixXd smoothness_costs(rows,cols);
         for (auto const& el : rays) {
             const std::vector<Pixel> neighbors{
                 getNeighbors(el.first, d_.image, params_.neighborhood)};
+            std::vector<ceres::ResidualBlockId> smoothness_blocks;
             for (auto const& n : neighbors) {
                 const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
                                                 params_.smoothness_rate) *
                                params_.ks / neighbors.size()};
-                problem.AddResidualBlock(FunctorSmoothnessNormal::create(),
-                                         new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
-                                         cloud_est->at(el.first.col, el.first.row).normal.data(),
-                                         cloud_est->at(n.col, n.row).normal.data());
+                ceres::ResidualBlockId block_id{problem.AddResidualBlock(
+                    FunctorSmoothnessNormal::create(),
+                    new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
+                    cloud_est->at(el.first.col, el.first.row).normal.data(),
+                    cloud_est->at(n.col, n.row).normal.data())};
+                smoothness_blocks.emplace_back(block_id);
             }
+            ceres::Problem::EvaluateOptions options;
+            options.residual_blocks = smoothness_blocks;
+            double total_cost = 0.0;
+            std::vector<double> residuals;
+            problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
+            smoothness_costs(el.first.row,el.first.col) = total_cost;
         }
     }
 
@@ -244,6 +255,10 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             el.second.pointAt(depth_est(el.first.row, el.first.col)).cast<float>();
         out.cloud->at(el.first.col, el.first.row).getNormalVector3fMap() =
             cloud_est->at(el.first.col, el.first.row).normal.cast<float>();
+        cv::Mat img;
+        cv::cvtColor(in.image, img, CV_BGR2GRAY);
+        out.cloud->at(el.first.col, el.first.row).intensity =
+            img.at<float>(el.first.row, el.first.col);
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 
@@ -252,6 +267,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rays.size();
+    info.smoothness_costs = smoothness_costs;
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";
@@ -270,6 +286,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             covariance.GetCovarianceBlock(&depth_est(p.row, p.col), &depth_est(p.row, p.col),
                                           &(info.covariance_depth(p.row, p.col)));
         }
+
     }
 
     return info;

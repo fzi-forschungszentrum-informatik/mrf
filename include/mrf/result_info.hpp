@@ -31,6 +31,7 @@ struct ResultInfo {
 
     Eigen::MatrixXd covariance_depth;
     Eigen::MatrixXd smoothness_costs;
+    Eigen::MatrixXd normal_distance_costs;
     Eigen::Matrix<double, 7, 7> covariance_transform;
 };
 }

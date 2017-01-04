@@ -2,6 +2,12 @@
 
 namespace mrf {
 
+using DataType = double;
+using Point = pcl_ceres::Point<DataType>;
+using PixelMapT = std::map<Pixel, Point, PixelLess>;
+using RayMapT = std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess>;
+using treeT = std::unique_ptr<flann::Index<flann::L2_Simple<DataType>>>;
+using EigenT = Eigen::Matrix<DataType, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 using DistanceType = flann::L2_Simple<DataType>;
 
 flann::Matrix<DataType> convertEigen2FlannRow(const EigenT& mEigen) {
@@ -23,14 +29,14 @@ bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::V
     const Eigen::Vector2i& PB{P - second};
     const Eigen::Vector2i& PC{P - third};
 
-    const double u{(BA[0] * PA[1] - (BA[1] * PA[0]))};
-    const double v{(BA[0] * (-1 * AC[1])) - (BA[1] * (-1 * AC[0]))};
+    const int u{(BA[0] * PA[1] - (BA[1] * PA[0]))};
+    const int v{(BA[0] * (-1 * AC[1])) - (BA[1] * (-1 * AC[0]))};
     if (u * v >= 0) {
-        const double u2{(AC[0] * PC[1] - (AC[1] * PC[0]))};
-        const double v2{(AC[0] * (-1 * CB[1])) - (AC[1] * (-1 * CB[0]))};
+        const int u2{(AC[0] * PC[1] - (AC[1] * PC[0]))};
+        const int v2{(AC[0] * (-1 * CB[1])) - (AC[1] * (-1 * CB[0]))};
         if (u2 * v2 >= 0) {
-            const double u3{(CB[0] * PB[1] - (CB[1] * PB[0]))};
-            const double v3{(CB[0] * (-1 * BA[1])) - (CB[1] * (-1 * BA[0]))};
+            const int u3{(CB[0] * PB[1] - (CB[1] * PB[0]))};
+            const int v3{(CB[0] * (-1 * BA[1])) - (CB[1] * (-1 * BA[0]))};
             if (u3 * v3 >= 0) {
                 return true;
             }
@@ -45,17 +51,17 @@ std::vector<int> getTriangleNeighbours(std::vector<int>& neighbours_in,
         return std::vector<int>{-1, -1, -1};
     }
     std::vector<int> neighbours{-1, -1, -1};
-    int i{0};
+    size_t i{0};
     while (i < (neighbours_in.size() - 2)) {
         const Eigen::Vector2i& first_coorinate{coordinates(0, neighbours_in[i]),
                                                coordinates(1, neighbours_in[i])};
         neighbours[0] = neighbours_in[i];
-        int j{1 + i};
+        size_t j{1 + i};
         while (j < (neighbours_in.size() - 1)) {
             const Eigen::Vector2i& second_coorinate{coordinates(0, neighbours_in[j]),
                                                     coordinates(1, neighbours_in[j])};
             neighbours[1] = neighbours_in[j];
-            int n{j + 1};
+            size_t n{j + 1};
             while (n < (neighbours_in.size())) {
                 const Eigen::Vector2i& third_coorinate{coordinates(0, neighbours_in[n]),
                                                        coordinates(1, neighbours_in[n])};
@@ -84,7 +90,7 @@ std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT&
     return indices_vec[0];
 }
 
-double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
+double pointIntersection(const Eigen::ParametrizedLine<double, 3>& ray,
                          const Eigen::Matrix3Xd& neighbours) {
     const Eigen::Vector3d& q0_world{neighbours.col(0)};
     const Eigen::Vector3d& q1_world{neighbours.col(1)};
@@ -95,69 +101,58 @@ double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
 
     Eigen::Vector3d normal = (direction_1_norm.cross(direction_2_norm)).normalized();
 
-    const Eigen::ParametrizedLine<double, 3> pline(sp, dir);
     Eigen::Hyperplane<double, 3> plane(normal, q0_world);
-    Eigen::Vector3d p_int{pline.intersectionPoint(plane)};
-    return (p_int - sp).norm();
+    Eigen::Vector3d p_int{ray.intersectionPoint(plane)};
+    return (p_int - ray.origin()).norm();
 }
 
-void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
-                   const std::shared_ptr<CameraModel> cam) {
-    LOG(INFO) << "projection size: " << projection.size();
+void addSeedPoints(const RayMapT& rays, const PixelMapT& projection, Eigen::MatrixXd& depth_est,
+                   Eigen::MatrixXd& certainty) {
     for (auto const& el : projection) {
-        certainty(el.first.row, el.first.col) = 1;
-        Eigen::Vector3d support, direction;
-        cam->getViewingRay(Eigen::Vector2d(el.first.row, el.first.col), support, direction);
-        const Eigen::Hyperplane<double, 3> plane(direction, el.second.position);
-        depth_est(el.first.row, el.first.col) =
-            (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
-             support)
-                .norm();
+        const Pixel& p{el.first};
+        certainty(p.row, p.col) = 1;
+        const Eigen::ParametrizedLine<double, 3>& ray{rays.at(p)};
+        const Eigen::Hyperplane<double, 3> plane(ray.direction(), el.second.position);
+        depth_est(p.row, p.col) =
+            (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
     }
 }
 
-void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
-                 const std::shared_ptr<CameraModel> cam, const Parameters::Initialization type,
-                 const int neighborsearch) {
+void getDepthEst(const RayMapT& rays, const PixelMapT& projection, const size_t& rows,
+                 const size_t& cols, const Parameters::Initialization type,
+                 const int neighborsearch, Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty) {
     if (type == Parameters::Initialization::none) {
-        addSeedPoints(depth_est, certainty, projection, cam);
+        addSeedPoints(rays, projection, depth_est, certainty);
         return;
     }
-
-    int rows, cols;
-    cam->getImageSize(cols, rows);
-    std::unique_ptr<flann::Index<DistanceType>> kd_index_ptr_;
-
+    double max_depth{0};
+    double sum{0};
+    size_t i{0};
     Eigen::Matrix2Xi coordinates(2, projection.size());
-    int i{0};
-    for (mapT::iterator it = projection.begin(); it != projection.end(); ++it) {
-        coordinates(0, i) = (it->first).col;
-        coordinates(1, i) = (it->first).row;
-        i++;
+    for (auto const& el : projection) {
+        coordinates(0, i) = el.first.col;
+        coordinates(1, i++) = el.first.row;
+        const Pixel& p{el.first};
+        const Eigen::ParametrizedLine<double, 3>& ray{rays.at(p)};
+        const Eigen::Hyperplane<double, 3> plane(ray.direction(), el.second.position);
+        double val{(rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm()};
+        sum += val;
+        if (val > max_depth) {
+            max_depth = val;
+        }
     }
 
     if (type == Parameters::Initialization::mean_depth) {
         LOG(INFO) << "Mean Depth";
-        Eigen::Matrix3Xd points(2, projection.size());
-        double sum{0};
-        for (auto const& el : projection) {
-            Eigen::Vector3d support, direction;
-            cam->getViewingRay(Eigen::Vector2d(el.first.x, el.first.y), support, direction);
-            const Eigen::Hyperplane<double, 3> plane(direction, el.second.position);
-            sum +=
-                (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
-                 support)
-                    .norm();
-        }
-
         double mean_depth{sum / projection.size()};
         LOG(INFO) << "mean depth is " << mean_depth;
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
         certainty = 0 * Eigen::MatrixXd::Ones(rows, cols);
-        addSeedPoints(depth_est, certainty, projection, cam);
+        addSeedPoints(rays, projection, depth_est, certainty);
         return;
     }
 
+    std::unique_ptr<flann::Index<DistanceType>> kd_index_ptr_;
     flann::Matrix<DistanceType::ElementType> flann_dataset{
         convertEigen2FlannRow(coordinates.transpose().cast<DataType>())};
     kd_index_ptr_ =
@@ -171,28 +166,24 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
 
                 std::vector<int> neighbours{
                     getNeighbours(coordinates, kd_index_ptr_, Pixel(col, row), 1)};
-                Eigen::Vector3d p{
-                    projection
-                        .at(Pixel(coordinates(0, neighbours[0]), coordinates(1, neighbours[0])))
-                        .position};
-                Eigen::Vector3d support, direction;
-                Eigen::Vector2d coor{
-                    Eigen::Vector2i(coordinates(0, neighbours[0]), coordinates(1, neighbours[0]))
-                        .cast<double>()};
-                cam->getViewingRay(coor, support, direction);
-                const Eigen::Hyperplane<double, 3> plane(direction, p);
-                depth_est(row, col) = (Eigen::ParametrizedLine<double, 3>(support, direction)
-                                           .intersectionPoint(plane) -
-                                       support)
-                                          .norm();
-                if (coor(0) == row && coor(1) == col) {
+                const Pixel p(coordinates(0, neighbours[0]), coordinates(1, neighbours[0]));
+                const Eigen::ParametrizedLine<double, 3>& ray{rays.at(p)};
+                const Eigen::Hyperplane<double, 3> plane(ray.direction(),
+                                                         projection.at(p).position);
+                depth_est(row, col) =
+                    (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
+                if (depth_est(row, col) > max_depth)
+                    depth_est(row, col) = max_depth;
+                if (depth_est(row, col) < 0)
+                    depth_est(row, col) = 0;
+                if (size_t(p.row) == row && size_t(p.col) == col) {
                     certainty(row, col) = 0.1;
                 } else {
                     certainty(row, col) = 0.1;
                 }
             }
         }
-        addSeedPoints(depth_est, certainty, projection, cam);
+        addSeedPoints(rays, projection, depth_est, certainty);
         return;
     }
 
@@ -210,23 +201,23 @@ void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& p
                     depth_est(row, col) = 0;
                     certainty(row, col) = 0;
                 } else {
-                    Eigen::Vector3d supportPoint(3, 1);
-                    Eigen::Vector3d direction(3, 1);
-                    Eigen::Vector2d image_coordinate{col, row};
                     Eigen::Matrix3Xd neighbours_points(3, 3);
                     for (size_t i = 0; i < 3; i++) {
-                        Pixel c{coordinates(0, triangle_neighbours[i]),
-                                coordinates(1, triangle_neighbours[i])};
+                        Pixel c(coordinates(0, triangle_neighbours[i]),
+                                coordinates(1, triangle_neighbours[i]));
                         neighbours_points.col(i) = projection.at(c).position;
                     }
-                    cam->getViewingRay(image_coordinate, supportPoint, direction);
                     depth_est(row, col) =
-                        pointIntersection(supportPoint, direction, neighbours_points);
+                        pointIntersection(rays.at(Pixel(col, row)), neighbours_points);
+                    if (depth_est(row, col) > max_depth)
+                        depth_est(row, col) = max_depth;
+                    if (depth_est(row, col) < 0)
+                        depth_est(row, col) = 0;
                     certainty(row, col) = 0.2;
                 }
             }
         }
-        addSeedPoints(depth_est, certainty, projection, cam);
+        addSeedPoints(rays, projection, depth_est, certainty);
     }
 }
 }

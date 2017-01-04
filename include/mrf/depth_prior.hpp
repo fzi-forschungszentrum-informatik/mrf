@@ -12,13 +12,8 @@
 
 namespace mrf {
 
-using DataType = double;
-using Point = pcl_ceres::Point<DataType>;
-using mapT = std::map<Pixel, Point, PixelLess>;
-using treeT = std::unique_ptr<flann::Index<flann::L2_Simple<DataType>>>;
-using EigenT = Eigen::Matrix<DataType, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-
-flann::Matrix<DataType> convertEigen2FlannRow(const EigenT& mEigen);
+flann::Matrix<double> convertEigen2FlannRow(
+    const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& mEigen);
 
 bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::Vector2i& second,
                     const Eigen::Vector2i& third);
@@ -26,16 +21,19 @@ bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::V
 std::vector<int> getTriangleNeighbours(std::vector<int>& neighbours_in,
                                        const Eigen::Matrix2Xi& coordinates, const Pixel& p);
 
-std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT& tree,
+std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates,
+                               const std::unique_ptr<flann::Index<flann::L2_Simple<double>>>& tree,
                                const Pixel& p, const int num_neigh);
 
-double pointIntersection(const Eigen::Vector3d& sp, const Eigen::Vector3d& dir,
+double pointIntersection(const Eigen::ParametrizedLine<double, 3>&,
                          const Eigen::Matrix3Xd& neighbours);
 
-void addSeedPoints(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
-                   const std::shared_ptr<CameraModel> cam);
+void addSeedPoints(const std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess>&,
+                   const std::map<Pixel, pcl_ceres::Point<double>, PixelLess>&,
+                   Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty);
 
-void getDepthEst(Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty, mapT& projection,
-                 const std::shared_ptr<CameraModel> cam, const Parameters::Initialization type,
-                 const int neighborsearch);
+void getDepthEst(const std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess>&,
+                 const std::map<Pixel, pcl_ceres::Point<double>, PixelLess>&,
+                 const size_t& rows, const size_t& cols, const Parameters::Initialization type,
+                 const int neighborsearch, Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty);
 }

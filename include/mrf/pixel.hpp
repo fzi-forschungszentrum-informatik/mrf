@@ -20,7 +20,7 @@ struct Pixel {
 };
 
 struct PixelLess {
-    inline bool operator()(const Pixel& lhs, const Pixel& rhs) {
+    inline bool operator()(const Pixel& lhs, const Pixel& rhs) const {
         if (lhs.col < rhs.col)
             return true;
         else if (lhs.col > rhs.col)
