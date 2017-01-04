@@ -40,7 +40,7 @@ neighborhood: eight
 # Available options: trivial, huber
 loss_function: trivial
 loss_function_scale: 1
-max_num_iterations: 25
+max_num_iterations: 50
 
 use_functor_distance: true
 use_functor_normal: true
@@ -50,3 +50,5 @@ use_functor_smoothness_distance: false
 
 pin_normals: true
 pin_distances: true
+
+estimate_covariances: true

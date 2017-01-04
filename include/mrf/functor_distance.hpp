@@ -1,15 +1,11 @@
 #pragma once
 
-#include <memory>
-#include <ostream>
 #include <ceres/autodiff_cost_function.h>
 #include <util_ceres/eigen.h>
 
 namespace mrf {
 
 struct FunctorDistance {
-
-    using Ptr = std::shared_ptr<FunctorDistance>;
 
     static constexpr size_t DimDepth = 1;
     static constexpr size_t DimResidual = 3;
@@ -28,22 +24,10 @@ struct FunctorDistance {
         return true;
     }
 
-    inline static Ptr create(const Eigen::Vector3d& p,
-                             const Eigen::ParametrizedLine<double, 3>& ray) {
-        return std::make_shared<FunctorDistance>(p, ray);
-    }
-
-    inline ceres::CostFunction* toCeres() {
+    inline static ceres::CostFunction* create(const Eigen::Vector3d& p,
+                                              const Eigen::ParametrizedLine<double, 3>& ray) {
         return new ceres::AutoDiffCostFunction<FunctorDistance, DimResidual, DimDepth, DimRotation,
-                                               DimTranslation>(this);
-    }
-
-    inline friend std::ostream& operator<<(std::ostream& os, const FunctorDistance& f) {
-        return os << "Vector: " << f.p_ << std::endl;
-    }
-
-    inline void setPoint(const Eigen::Vector3d& p) {
-        p_ = p;
+                                               DimTranslation>(new FunctorDistance(p, ray));
     }
 
 private:

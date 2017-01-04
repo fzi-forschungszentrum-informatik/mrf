@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <ceres/autodiff_cost_function.h>
 #include <Eigen/src/Geometry/Hyperplane.h>
 #include <Eigen/src/Geometry/ParametrizedLine.h>
@@ -8,8 +7,6 @@
 namespace mrf {
 
 struct FunctorNormalDistance {
-
-    using Ptr = std::shared_ptr<FunctorNormalDistance>;
 
     static constexpr size_t DimDepth = 1;
     static constexpr size_t DimResidual = 3;

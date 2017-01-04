@@ -30,30 +30,7 @@ struct Parameters {
         LOG(INFO) << *this;
     }
 
-    inline friend std::ostream& operator<<(std::ostream& os, const Parameters& p) {
-        return os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
-                  << "ks: " << p.ks << std::endl
-                  << "kd: " << p.kd << std::endl
-                  << "kn: " << p.kn << std::endl
-                  << "max_iterations: " << p.solver.max_num_iterations << std::endl
-                  << "limits: " << static_cast<int>(p.limits) << std::endl
-				  << "smoothness_rate: " << p.smoothness_rate << std::endl
-				  << "radius_normal_estimation: " << p.radius_normal_estimation << std::endl
-				  << "custom_depth_limit_min: " << p.custom_depth_limit_min << std::endl
-				  << "custom_depth_limit_max: " << p.custom_depth_limit_max << std::endl
-				  << "neighbor_search: " << p.neighbor_search << std::endl
-				  << "estimate_normals: " << p.estimate_normals << std::endl
-				  << "use_functor_normal_distance: " << p.use_functor_normal_distance << std::endl
-				  << "use_functor_smoothness_normal: " << p.use_functor_smoothness_normal << std::endl
-				  << "use_functor_normal: " << p.use_functor_normal << std::endl
-				  << "use_functor_distance: " << p.use_functor_distance << std::endl
-				  << "use_functor_smoothness_distance: " << p.use_functor_smoothness_distance << std::endl
-				  << "pin_normals: " << p.pin_normals << std::endl
-				  << "pin_distances: " << p.pin_distances << std::endl
-				  << "loss_function_scale: " << p.loss_function_scale << std::endl
-                  << "initialization: " << static_cast<int>(p.initialization) << std::endl
-				  << "neighborhood: " << static_cast<int>(p.neighborhood) << std::endl;
-    }
+    friend std::ostream& operator<<(std::ostream& os, const Parameters& p);
 
     double ks{2};
     double kd{1};
@@ -77,6 +54,8 @@ struct Parameters {
     bool pin_distances{false};
 
     double loss_function_scale{1};
+
+    bool estimate_covariances{false};
 
     Initialization initialization{Initialization::none};
     Neighborhood neighborhood{Neighborhood::four};

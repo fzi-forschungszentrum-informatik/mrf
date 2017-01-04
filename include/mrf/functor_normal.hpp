@@ -1,15 +1,11 @@
 #pragma once
 
-#include <memory>
-#include <ostream>
 #include <ceres/autodiff_cost_function.h>
 #include <util_ceres/eigen.h>
 
 namespace mrf {
 
 struct FunctorNormal {
-
-    using Ptr = std::shared_ptr<FunctorNormal>;
 
     static constexpr size_t DimNormal = 3;
     static constexpr size_t DimResidual = 3;
@@ -25,21 +21,9 @@ struct FunctorNormal {
         return true;
     }
 
-    inline static Ptr create(const Eigen::Vector3d& n) {
-        return std::make_shared<FunctorNormal>(n);
-    }
-
-    inline ceres::CostFunction* toCeres() {
+    inline static ceres::CostFunction* create(const Eigen::Vector3d& n) {
         return new ceres::AutoDiffCostFunction<FunctorNormal, DimResidual, DimNormal, DimRotation>(
-            this);
-    }
-
-    inline friend std::ostream& operator<<(std::ostream& os, const FunctorNormal& f) {
-        return os << "Vector: " << f.n_ << std::endl;
-    }
-
-    inline void setNormal(const Eigen::Vector3d& p) {
-        n_ = p;
+            new FunctorNormal(n));
     }
 
 private:
