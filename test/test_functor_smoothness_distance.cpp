@@ -8,6 +8,6 @@ TEST(FunctorSmoothnessDistance, Instantiation) {
     google::InitGoogleLogging("FunctorSmoothness");
     google::InstallFailureSignalHandler();
 
-    mrf::FunctorSmoothnessDistance f(0.5);
-    std::cout << "\nTest functor smoothness:\n" << f;
+   // mrf::FunctorSmoothnessDistance f(0.5);
+  //  std::cout << "\nTest functor smoothness:\n" << f;
 }

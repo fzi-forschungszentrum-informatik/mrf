@@ -16,7 +16,7 @@ smoothness_rate: 50
 # Whether normal estimation is performed as a preprocessing step
 # This parameter can be set to false if normals are not needed or provided
 # otherwise
-estimate_normals: false
+estimate_normals: true
 
 # Radius in which the normal estimation is performed
 radius_normal_estimation: 0.3
@@ -31,7 +31,7 @@ custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
 # Available options: none, nearest_neighbor, triangles, mean_depth
-initialization: triangles
+initialization: mean_depth
 
 # Neighborhood for each pixel to consider
 # Available options: four, eight
@@ -43,10 +43,10 @@ loss_function_scale: 1
 max_num_iterations: 50
 
 use_functor_distance: true
-use_functor_normal: false
-use_functor_normal_distance: false
-use_functor_smoothness_normal: false
-use_functor_smoothness_distance: true
+use_functor_normal: true
+use_functor_normal_distance: true
+use_functor_smoothness_normal: true
+use_functor_smoothness_distance: false
 
 pin_normals: true
 pin_distances: true

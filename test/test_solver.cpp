@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <pcl/point_types.h>
+#include <opencv2/highgui/highgui.hpp>
 
 #include "camera_model_ortho.h"
 #include "solver.hpp"
@@ -26,7 +27,9 @@ mrf::Data<pcl::PointXYZINormal> create(const size_t& rows, const size_t& cols) {
     p2.getNormalVector3fMap() = Eigen::Vector3f(0, 0, -1);
     cl->push_back(p2);
     pcl::transformPointCloudWithNormals(*cl, *cl, tf);
-    return Data<T>(cl, cv::Mat::eye(rows, cols, cv::DataType<uint8_t>::type), tf.inverse());
+    cv::Mat img{cv::Mat::eye(rows, cols, cv::DataType<uint8_t>::type)};
+    cv::cvtColor(img,img,CV_GRAY2BGR);
+    return Data<T>(cl,img, tf.inverse());
 }
 
 TEST(Solver, Solve) {

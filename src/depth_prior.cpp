@@ -172,12 +172,13 @@ void getDepthEst(const RayMapT& rays, const PixelMapT& projection, const size_t&
                                                          projection.at(p).position);
                 depth_est(row, col) =
                     (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
-                if (depth_est(row, col) > max_depth)
+                if (depth_est(row, col) > max_depth) {
                     depth_est(row, col) = max_depth;
-                if (depth_est(row, col) < 0)
+                    certainty(row, col) = 0;
+                } else if (depth_est(row, col) < 0 || depth_est(row, col) != depth_est(row, col) ||
+                           std::isinf(depth_est(row, col))) {
                     depth_est(row, col) = 0;
-                if (size_t(p.row) == row && size_t(p.col) == col) {
-                    certainty(row, col) = 0.1;
+                    certainty(row, col) = 0;
                 } else {
                     certainty(row, col) = 0.1;
                 }
@@ -209,11 +210,17 @@ void getDepthEst(const RayMapT& rays, const PixelMapT& projection, const size_t&
                     }
                     depth_est(row, col) =
                         pointIntersection(rays.at(Pixel(col, row)), neighbours_points);
-                    if (depth_est(row, col) > max_depth)
+                    if (depth_est(row, col) > max_depth) {
                         depth_est(row, col) = max_depth;
-                    if (depth_est(row, col) < 0)
+                        certainty(row, col) = 0;
+                    } else if (depth_est(row, col) < 0 ||
+                               depth_est(row, col) != depth_est(row, col) ||
+                               std::isinf(depth_est(row, col))) {
                         depth_est(row, col) = 0;
-                    certainty(row, col) = 0.2;
+                        certainty(row, col) = 0;
+                    } else {
+                        certainty(row, col) = 0.2;
+                    }
                 }
             }
         }
