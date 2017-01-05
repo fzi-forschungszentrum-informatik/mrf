@@ -89,8 +89,8 @@ TEST(Groundtruth, solve) {
     /**
      * \attention cols and rows need to be divisable by four
      */
-    const size_t cols = 50;
-    const size_t rows = 30;
+    const size_t cols = 28;
+    const size_t rows = 12;
     GroundTruthParams params;
     params.equidistant = true;
     LOG(INFO) << "Load Groundtruth Data";

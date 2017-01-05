@@ -37,8 +37,8 @@ TEST(Solver, Solve) {
     google::InitGoogleLogging("Solver");
     google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 20;
-    constexpr size_t cols = 30;
+    constexpr size_t rows = 15;
+    constexpr size_t cols = 20;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     const Data<pcl::PointXYZINormal> in{create(rows, cols)};

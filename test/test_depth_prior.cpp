@@ -14,16 +14,16 @@ TEST(DepthPrior, initialisation) {
     google::InitGoogleLogging("DepthPrior");
     google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 50;
-    constexpr size_t cols = 100;
+    constexpr size_t rows = 10;
+    constexpr size_t cols = 20;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     using PointT = pcl::PointXYZ;
     using DataT = Data<PointT>;
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
-    cl->push_back(PointT(20, 40, 10));
-    cl->push_back(PointT(30, 40, 10));
-    cl->push_back(PointT(25, 45, 10));
+    cl->push_back(PointT(5, 8, 10));
+    cl->push_back(PointT(6, 8, 10));
+    cl->push_back(PointT(5, 9, 10));
     const cv::Mat img{cv::Mat::zeros(rows, cols, CV_32FC3)};
     const DataT in(cl, img, DataT::Transform::Identity());
     Parameters params("parameters.yaml");

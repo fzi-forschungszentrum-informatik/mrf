@@ -12,7 +12,7 @@ discontinuity_threshold: 0.1
 
 # Exponential decrease rate of smoothness weighting
 smoothness_rate: 25
-smoothness_weight_min: 0.000001
+smoothness_weight_min: 0.00001
 
 # Whether normal estimation is performed as a preprocessing step
 # This parameter can be set to false if normals are not needed or provided
@@ -32,7 +32,7 @@ custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
 # Available options: none, nearest_neighbor, triangles, mean_depth
-initialization: nearest_neighbor
+initialization: triangles
 
 # Neighborhood for each pixel to consider
 # Available options: two, four, eight
