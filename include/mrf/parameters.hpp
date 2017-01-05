@@ -23,8 +23,8 @@ struct Parameters {
         solver.minimizer_progress_to_stdout = true;
         solver.num_threads = 8;
         solver.num_linear_solver_threads = 8;
-        solver.max_solver_time_in_seconds = 240;
-        //        solver.use_inner_iterations = true;
+        solver.max_solver_time_in_seconds = 600;
+        solver.use_inner_iterations = true;
         //        solver.use_nonmonotonic_steps = true;
 
         if (file_name.size()) {

@@ -104,7 +104,6 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         LOG(INFO) << "Initialize normals";
         getNormalEst(*cloud_est, projection, camera_);
     }
-
     for (auto const& el : rays) {
         problem.AddParameterBlock(&depth_est(el.first.row, el.first.col),
                                   FunctorDistance::DimDepth);
