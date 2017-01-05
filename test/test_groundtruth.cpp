@@ -62,7 +62,7 @@ mrf::Data<T> createDense(const size_t& rows, const size_t& cols) {
             img.at<float>(row, col) = 0;
         }
     }
-    LOG(INFO) << "Image size: " << img.cols << "x" << img.rows <<"=" <<img.rows*img.cols ;
+    LOG(INFO) << "Image size: " << img.cols << "x" << img.rows << "=" << img.rows * img.cols;
     using namespace mrf;
     LOG(INFO) << "Create Cloud";
     const typename Data<T>::Cloud::Ptr cl{new typename Data<T>::Cloud};
@@ -71,10 +71,10 @@ mrf::Data<T> createDense(const size_t& rows, const size_t& cols) {
     cl->resize(cols * rows);
     for (size_t row = 0; row < rows; row++) {
         for (size_t col = 0; col < cols; col++) {
-            cl->at(col, row) = pcl::PointXYZ(col, row, img.at<float>(row, col)*100);
+            cl->at(col, row) = pcl::PointXYZ(col, row, img.at<float>(row, col) * 100);
         }
     }
-    LOG(INFO) << "Cloud size: " << cl->width << "x" << cl->height <<"=" << cl->height*cl->width ;
+    LOG(INFO) << "Cloud size: " << cl->width << "x" << cl->height << "=" << cl->height * cl->width;
     cv::cvtColor(img, img, CV_GRAY2BGR);
     return Data<T>(cl, img);
 }
@@ -126,6 +126,4 @@ TEST(Groundtruth, solve) {
     boost::filesystem::create_directories(path_name);
     exportData(in, path_name.string() + "in_");
     exportData(out, path_name.string() + "out_");
-    //exportDepthImage<PointT>(in, cam, path_name.string());
-    exportGradientImage(in.image, path_name.string());
 }
