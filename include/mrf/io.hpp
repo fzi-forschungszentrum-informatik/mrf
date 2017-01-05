@@ -13,13 +13,15 @@
 namespace mrf {
 
 inline cv::Mat createOutput(const cv::Mat& in, const bool normalize = true) {
+    using TargetT = uint8_t;
     cv::Mat out;
     if (normalize) {
-        cv::normalize(in, out, 0, std::numeric_limits<uint16_t>::max(), cv::NORM_MINMAX);
-        out.convertTo(out, cv::DataType<uint16_t>::type);
+        cv::normalize(in, out, 0, std::numeric_limits<TargetT>::max(), cv::NORM_MINMAX);
+        out.convertTo(out, cv::DataType<TargetT>::type);
     } else {
-        in.convertTo(out, cv::DataType<uint16_t>::type);
+        in.convertTo(out, cv::DataType<TargetT>::type);
     }
+
     return out;
 }
 
@@ -76,12 +78,5 @@ inline void exportImage(const cv::Mat& img, const std::string& p, const bool nor
     const std::string file_name{p + "image.png"};
     LOG(INFO) << "Writing image to '" << file_name << "'.";
     cv::imwrite(file_name, createOutput(img, normalize));
-}
-
-inline void exportGradientImage(const cv::Mat& img, const std::string& p,
-                                const bool normalize = true) {
-    const std::string file_name{p + "gradient.png"};
-    LOG(INFO) << "Writing image to '" << file_name << "'.";
-    cv::imwrite(file_name, createOutput(edge(img), normalize));
 }
 }

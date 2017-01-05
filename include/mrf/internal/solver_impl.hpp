@@ -83,7 +83,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         }
     }
 
-    LOG(INFO) << "Estimate initial depths: " << projection.size();
+    LOG(INFO) << "Estimate initial depths";
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
     getDepthEst(depth_est, certainty, projection_tf, camera_, params_.initialization,
@@ -103,78 +103,53 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     if (use_any_normals) {
         LOG(INFO) << "Initialize normals";
         getNormalEst(*cloud_est, projection, camera_);
-        LOG(INFO) << "Add normal parameterization";
-        for (auto const& el : rays) {
+    }
+
+    for (auto const& el : rays) {
+        problem.AddParameterBlock(&depth_est(el.first.row, el.first.col),
+                                  FunctorDistance::DimDepth);
+        if (use_any_normals) {
             problem.AddParameterBlock(
                 cloud_est->at(el.first.col, el.first.row).normal.data(), FunctorNormal::DimNormal,
                 new util_ceres::ConstantLengthParameterization<FunctorNormal::DimNormal>);
         }
     }
 
-    if (params_.use_functor_distance) {
-        LOG(INFO) << "Add distance costs";
-        for (auto const& el : projection) {
+    for (auto const& el : projection) {
+        if (params_.use_functor_distance) {
             problem.AddResidualBlock(
                 FunctorDistance::create(el.second.position, rays.at(el.first)),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
                 &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
                 translation.data());
         }
-    }
-
-    if (params_.use_functor_normal) {
-        LOG(INFO) << "Add normal costs";
-        for (auto const& el : projection) {
-            if (params_.use_functor_normal) {
-                problem.AddResidualBlock(
-                    FunctorNormal::create(el.second.normal),
-                    new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
-                    cloud_est->at(el.first.col, el.first.row).normal.data(),
-                    rotation.coeffs().data());
-            }
+        if (params_.use_functor_normal) {
+            problem.AddResidualBlock(
+                FunctorNormal::create(el.second.normal),
+                new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
+                cloud_est->at(el.first.col, el.first.row).normal.data(), rotation.coeffs().data());
         }
     }
 
-    if (params_.use_functor_smoothness_normal) {
-        LOG(INFO) << "Add normal smoothness costs";
-        for (auto const& el : rays) {
-            const std::vector<Pixel> neighbors{
-                getNeighbors(el.first, d_.image, params_.neighborhood)};
-            for (auto const& n : neighbors) {
-                const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
-                                                params_.smoothness_rate) *
-                               params_.ks / neighbors.size()};
+    for (auto const& el : rays) {
+        const std::vector<Pixel> neighbors{getNeighbors(el.first, d_.image, params_.neighborhood)};
+        for (auto const& n : neighbors) {
+            const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
+                                            params_.smoothness_rate) *
+                           params_.ks / neighbors.size()};
+            if (params_.use_functor_smoothness_normal) {
                 problem.AddResidualBlock(FunctorSmoothnessNormal::create(),
                                          new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
                                          cloud_est->at(el.first.col, el.first.row).normal.data(),
                                          cloud_est->at(n.col, n.row).normal.data());
             }
-        }
-    }
-
-    if (params_.use_functor_smoothness_distance) {
-        LOG(INFO) << "Add distance smoothness costs";
-        for (auto const& el : rays) {
-            const std::vector<Pixel> neighbors{
-                getNeighbors(el.first, d_.image, params_.neighborhood)};
-            for (auto const& n : neighbors) {
-                const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
-                                                params_.smoothness_rate) *
-                               params_.ks / neighbors.size()};
+            if (params_.use_functor_smoothness_distance) {
                 problem.AddResidualBlock(FunctorSmoothnessDistance::create(),
                                          new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
                                          &depth_est(el.first.row, el.first.col),
                                          &depth_est(n.row, n.col));
             }
-        }
-    }
-
-    if (params_.use_functor_normal_distance) {
-        LOG(INFO) << "Add normal distance cost";
-        for (auto const& el : rays) {
-            const std::vector<Pixel> neighbors{
-                getNeighbors(el.first, d_.image, params_.neighborhood)};
-            for (auto const& n : neighbors) {
+            if (params_.use_functor_normal_distance) {
                 problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(el.first), rays.at(n)),
                     new ScaledLoss(new TrivialLoss, params_.kn / neighbors.size(), TAKE_OWNERSHIP),
@@ -191,8 +166,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             lb = params_.custom_depth_limit_min;
             LOG(INFO) << "Use custom limits. Min: " << lb << ", Max: " << ub;
         } else if (params_.limits == Parameters::Limits::adaptive) {
-            ub = pts_3d_tf.colwise().norm().maxCoeff();
-            lb = pts_3d_tf.colwise().norm().minCoeff();
+            ub = depth_est.maxCoeff();
+            lb = depth_est.minCoeff();
             LOG(INFO) << "Use adaptive limits. Min: " << lb << ", Max: " << ub;
         }
         for (auto const& el : rays) {
@@ -206,7 +181,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         problem.SetParameterBlockConstant(rotation.coeffs().data());
         problem.SetParameterBlockConstant(translation.data());
     }
-    if (params_.pin_normals && use_any_normals) {
+    if (use_any_normals && params_.pin_normals) {
         LOG(INFO) << "Pin normals";
         for (auto const& el : projection) {
             problem.SetParameterBlockConstant(&depth_est(el.first.row, el.first.col));
@@ -215,7 +190,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     const bool use_any_distances{params_.use_functor_distance ||
                                  params_.use_functor_smoothness_distance ||
                                  params_.use_functor_normal_distance};
-    if (params_.pin_distances && use_any_distances) {
+    if (use_any_distances && params_.pin_distances) {
         LOG(INFO) << "Pin distances";
         for (auto const& el : projection) {
             problem.SetParameterBlockConstant(&depth_est(el.first.row, el.first.col));

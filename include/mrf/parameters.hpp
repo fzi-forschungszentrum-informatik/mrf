@@ -12,7 +12,7 @@ namespace mrf {
 
 struct Parameters {
 
-    enum class Neighborhood { four = 4, eight = 8 };
+    enum class Neighborhood { two = 2, four = 4, eight = 8 };
     enum class Initialization { none, nearest_neighbor, triangles, mean_depth };
     enum class Limits { none, custom, adaptive };
 
@@ -21,8 +21,11 @@ struct Parameters {
         problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
         solver.max_num_iterations = 25;
         solver.minimizer_progress_to_stdout = true;
-        solver.num_threads = 4;
-        solver.max_solver_time_in_seconds = 180;
+        solver.num_threads = 8;
+        solver.num_linear_solver_threads = 8;
+        solver.max_solver_time_in_seconds = 240;
+        //        solver.use_inner_iterations = true;
+        //        solver.use_nonmonotonic_steps = true;
 
         if (file_name.size()) {
             fromConfig(file_name);
@@ -32,23 +35,23 @@ struct Parameters {
 
     friend std::ostream& operator<<(std::ostream& os, const Parameters& p);
 
-    double ks{2};
+    double ks{1};
     double kd{1};
     double kn{1};
-    double discontinuity_threshold{0.2};
-    double smoothness_rate{2};
+    double discontinuity_threshold{0.1};
+    double smoothness_rate{50};
     double radius_normal_estimation{0.5};
     Limits limits{Limits::none};
     double custom_depth_limit_min{0};
     double custom_depth_limit_max{100};
-    int neighbor_search{6};
+    int neighbor_search{20};
 
     bool estimate_normals{true};
     bool use_functor_normal_distance{true};
-    bool use_functor_smoothness_normal{true};
     bool use_functor_normal{true};
     bool use_functor_distance{true};
-    bool use_functor_smoothness_distance{true};
+    bool use_functor_smoothness_normal{true};
+    bool use_functor_smoothness_distance{false};
 
     bool pin_normals{false};
     bool pin_distances{false};
@@ -57,8 +60,8 @@ struct Parameters {
 
     bool estimate_covariances{false};
 
-    Initialization initialization{Initialization::none};
-    Neighborhood neighborhood{Neighborhood::four};
+    Initialization initialization{Initialization::mean_depth};
+    Neighborhood neighborhood{Neighborhood::eight};
 
     ceres::Solver::Options solver;
     ceres::Problem::Options problem;

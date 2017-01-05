@@ -1,19 +1,22 @@
 #pragma once
 
 #include <ceres/autodiff_cost_function.h>
+#include <util_ceres/eigen.h>
 
 namespace mrf {
 
 struct FunctorSmoothnessNormal {
 
     static constexpr size_t DimNormal = 3;
-    static constexpr size_t DimResidual = 3;
+    static constexpr size_t DimResidual = 1;
 
     template <typename T>
-    inline bool operator()(const T* const n_this, const T* const n_nn, T* res) const {
-        res[0] = n_this[0] - n_nn[0];
-        res[1] = n_this[1] - n_nn[1];
-        res[2] = n_this[2] - n_nn[2];
+    inline bool operator()(const T* const n_this_ceres, const T* const n_nn_ceres, T* res_ceres) const {
+    	using namespace Eigen;
+    	const Map<const Vector3<T>> n_this{n_this_ceres};
+    	const Map<const Vector3<T>> n_nn{n_nn_ceres};
+//    	Map<Vector3<T>>(res_ceres, DimResidual) = n_this - n_nn;
+    	res_ceres[0] = T(1) - n_this.dot(n_nn);
         return true;
     }
 
