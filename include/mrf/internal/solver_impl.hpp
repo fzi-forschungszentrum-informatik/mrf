@@ -9,9 +9,9 @@
 #include <util_ceres/constant_length_parameterization.h>
 #include <util_ceres/eigen_quaternion_parameterization.h>
 #include <opencv2/core/eigen.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/filter.h>
-#include <opencv2/imgproc/imgproc.hpp>
 
 #include "../cloud_preprocessing.hpp"
 #include "../depth_prior.hpp"
@@ -87,8 +87,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << "Estimate initial depths";
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
-    getDepthEst(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
-                depth_est, certainty);
+    const ClType::Ptr cloud_est{ClType::create(rows, cols)};
+    const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
+                               params_.use_functor_smoothness_normal};
+
+    LOG(INFO) << "Initialize priors";
+    getPriorEst(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
+                depth_est, certainty, cloud_est);
 
     LOG(INFO) << "Create optimization problem";
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -98,13 +103,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     problem.AddParameterBlock(rotation.coeffs().data(), FunctorDistance::DimRotation,
                               new util_ceres::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
-    const ClType::Ptr cloud_est{ClType::create(rows, cols)};
-    const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
-                               params_.use_functor_smoothness_normal};
-    if (use_any_normals) {
-        LOG(INFO) << "Initialize normals";
-        getNormalEst(*cloud_est, projection, camera_);
-    }
+
+    LOG(INFO) << "Adding parameter blocks";
     for (auto const& el : rays) {
         problem.AddParameterBlock(&depth_est(el.first.row, el.first.col),
                                   FunctorDistance::DimDistance);

@@ -25,6 +25,7 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "max_solver_time_in_seconds", solver.max_solver_time_in_seconds);
     getParam(cfg, "use_inner_iterations", solver.use_inner_iterations);
     getParam(cfg, "use_nonmonotonic_steps", solver.use_nonmonotonic_steps);
+    getParam(cfg, "function_tolerance", solver.function_tolerance);
 
     getParam(cfg, "estimate_normals", estimate_normals);
     getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);

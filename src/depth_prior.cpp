@@ -31,13 +31,13 @@ bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::V
 
     const int u{(BA[0] * PA[1] - (BA[1] * PA[0]))};
     const int v{(BA[0] * (-1 * AC[1])) - (BA[1] * (-1 * AC[0]))};
-    if (u * v >= 0) {
+    if (u * v > 0) {
         const int u2{(AC[0] * PC[1] - (AC[1] * PC[0]))};
         const int v2{(AC[0] * (-1 * CB[1])) - (AC[1] * (-1 * CB[0]))};
-        if (u2 * v2 >= 0) {
+        if (u2 * v2 > 0) {
             const int u3{(CB[0] * PB[1] - (CB[1] * PB[0]))};
             const int v3{(CB[0] * (-1 * BA[1])) - (CB[1] * (-1 * BA[0]))};
-            if (u3 * v3 >= 0) {
+            if (u3 * v3 > 0) {
                 return true;
             }
         }
@@ -45,29 +45,29 @@ bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::V
     return false;
 }
 
-std::vector<int> getTriangleNeighbours(std::vector<int>& neighbours_in,
-                                       const Eigen::Matrix2Xi& coordinates, const Pixel& p) {
+bool getTriangleNeighbours(const std::vector<int>& neighbours_in,
+                           const Eigen::Matrix2Xi& coordinates, const Pixel& p,
+                           std::vector<int>& triangle_neighbours) {
     if (neighbours_in.size() < 3) {
-        return std::vector<int>{-1, -1, -1};
+        return false;
     }
-    std::vector<int> neighbours{-1, -1, -1};
     size_t i{0};
     while (i < (neighbours_in.size() - 2)) {
         const Eigen::Vector2i& first_coorinate{coordinates(0, neighbours_in[i]),
                                                coordinates(1, neighbours_in[i])};
-        neighbours[0] = neighbours_in[i];
+        triangle_neighbours[0] = neighbours_in[i];
         size_t j{1 + i};
         while (j < (neighbours_in.size() - 1)) {
             const Eigen::Vector2i& second_coorinate{coordinates(0, neighbours_in[j]),
                                                     coordinates(1, neighbours_in[j])};
-            neighbours[1] = neighbours_in[j];
+            triangle_neighbours[1] = neighbours_in[j];
             size_t n{j + 1};
             while (n < (neighbours_in.size())) {
                 const Eigen::Vector2i& third_coorinate{coordinates(0, neighbours_in[n]),
                                                        coordinates(1, neighbours_in[n])};
-                neighbours[2] = neighbours_in[n];
+                triangle_neighbours[2] = neighbours_in[n];
                 if (insideTriangle(p, first_coorinate, second_coorinate, third_coorinate)) {
-                    return neighbours;
+                    return true;
                 }
                 n++;
             }
@@ -75,7 +75,7 @@ std::vector<int> getTriangleNeighbours(std::vector<int>& neighbours_in,
         }
         i++;
     }
-    return std::vector<int>{-1, -1, -1};
+    return false;
 }
 
 std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT& tree,
@@ -91,23 +91,20 @@ std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT&
 }
 
 double pointIntersection(const Eigen::ParametrizedLine<double, 3>& ray,
-                         const Eigen::Matrix3Xd& neighbours) {
-    const Eigen::Vector3d& q0_world{neighbours.col(0)};
-    const Eigen::Vector3d& q1_world{neighbours.col(1)};
-    const Eigen::Vector3d& q2_world{neighbours.col(2)};
+                         const std::vector<Eigen::Vector3d>& neighbours) {
 
-    Eigen::Vector3d direction_1_norm{q0_world - q1_world}; //.normalized();
-    Eigen::Vector3d direction_2_norm{q2_world - q1_world}; //.normalized();
+    const Eigen::Vector3d direction_1_norm{neighbours[0] - neighbours[1]}; //.normalized();
+    const Eigen::Vector3d direction_2_norm{neighbours[2] - neighbours[1]}; //.normalized();
 
-    Eigen::Vector3d normal = (direction_1_norm.cross(direction_2_norm)).normalized();
+    const Eigen::Vector3d normal = (direction_1_norm.cross(direction_2_norm)).normalized();
 
-    Eigen::Hyperplane<double, 3> plane(normal, q0_world);
-    Eigen::Vector3d p_int{ray.intersectionPoint(plane)};
+    const Eigen::Hyperplane<double, 3> plane(normal, neighbours[0]);
+    const Eigen::Vector3d p_int{ray.intersectionPoint(plane)};
     return (p_int - ray.origin()).norm();
 }
 
 void addSeedPoints(const RayMapT& rays, const PixelMapT& projection, Eigen::MatrixXd& depth_est,
-                   Eigen::MatrixXd& certainty) {
+                   Eigen::MatrixXd& certainty, const pcl_ceres::PointCloud<Point>::Ptr& cl) {
     for (auto const& el : projection) {
         const Pixel& p{el.first};
         certainty(p.row, p.col) = 1;
@@ -115,14 +112,16 @@ void addSeedPoints(const RayMapT& rays, const PixelMapT& projection, Eigen::Matr
         const Eigen::Hyperplane<double, 3> plane(ray.direction(), el.second.position);
         depth_est(p.row, p.col) =
             (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
+        cl->at(p.col, p.row).normal = el.second.normal;
     }
 }
 
-void getDepthEst(const RayMapT& rays, const PixelMapT& projection, const size_t& rows,
+void getPriorEst(const RayMapT& rays, const PixelMapT& projection, const size_t& rows,
                  const size_t& cols, const Parameters::Initialization type,
-                 const int neighborsearch, Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty) {
+                 const int neighborsearch, Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty,
+                 const pcl_ceres::PointCloud<Point>::Ptr& cl) {
     if (type == Parameters::Initialization::none) {
-        addSeedPoints(rays, projection, depth_est, certainty);
+        addSeedPoints(rays, projection, depth_est, certainty, cl);
         return;
     }
     double max_depth{0};
@@ -148,7 +147,7 @@ void getDepthEst(const RayMapT& rays, const PixelMapT& projection, const size_t&
         LOG(INFO) << "mean depth is " << mean_depth;
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
         certainty = 0 * Eigen::MatrixXd::Ones(rows, cols);
-        addSeedPoints(rays, projection, depth_est, certainty);
+        addSeedPoints(rays, projection, depth_est, certainty, cl);
         return;
     }
 
@@ -161,70 +160,68 @@ void getDepthEst(const RayMapT& rays, const PixelMapT& projection, const size_t&
 
     if (type == Parameters::Initialization::nearest_neighbor) {
         LOG(INFO) << "nearest_neighbor Depth";
-        for (size_t row = 0; row < rows; row++) {
-            for (size_t col = 0; col < cols; col++) {
-
-                std::vector<int> neighbours{
-                    getNeighbours(coordinates, kd_index_ptr_, Pixel(col, row), 1)};
-                const Pixel p(coordinates(0, neighbours[0]), coordinates(1, neighbours[0]));
-                const Eigen::ParametrizedLine<double, 3>& ray{rays.at(p)};
-                const Eigen::Hyperplane<double, 3> plane(ray.direction(),
-                                                         projection.at(p).position);
-                depth_est(row, col) =
-                    (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
-                if (depth_est(row, col) > max_depth) {
-                    depth_est(row, col) = max_depth;
-                    certainty(row, col) = 0;
-                } else if (depth_est(row, col) < 0 || depth_est(row, col) != depth_est(row, col) ||
-                           std::isinf(depth_est(row, col))) {
-                    depth_est(row, col) = 0;
-                    certainty(row, col) = 0;
-                } else {
-                    certainty(row, col) = 0.1;
-                }
-            }
+        for (auto const& el : rays) {
+            const Pixel& p{el.first};
+            std::vector<int> neighbours{getNeighbours(coordinates, kd_index_ptr_, p, 1)};
+            const Pixel nn(coordinates(0, neighbours[0]), coordinates(1, neighbours[0]));
+            const Eigen::ParametrizedLine<double, 3>& ray{rays.at(nn)};
+            const Eigen::Hyperplane<double, 3> plane(ray.direction(), projection.at(nn).position);
+            depth_est(p.row, p.col) =
+                (rays.at(nn).intersectionPoint(plane) - rays.at(nn).origin()).norm();
+            cl->at(p.col, p.row).normal = projection.at(nn).normal;
         }
-        addSeedPoints(rays, projection, depth_est, certainty);
+
+        addSeedPoints(rays, projection, depth_est, certainty, cl);
         return;
     }
 
     if (type == Parameters::Initialization::triangles) {
         LOG(INFO) << "triangles Depth";
-        for (size_t row = 0; row < rows; row++) {
-            for (size_t col = 0; col < cols; col++) {
 
-                std::vector<int> all_neighbours{
-                    getNeighbours(coordinates, kd_index_ptr_, Pixel(col, row), neighborsearch)};
-                std::vector<int> triangle_neighbours{
-                    getTriangleNeighbours(all_neighbours, coordinates, Pixel(col, row))};
+        for (auto const& el : rays) {
+            const Pixel& p{el.first};
+            std::vector<int> all_neighbours{
+                getNeighbours(coordinates, kd_index_ptr_, p, neighborsearch)};
+            std::vector<int> triangle_neighbours(3);
+            const bool found_triangle{
+                getTriangleNeighbours(all_neighbours, coordinates, p, triangle_neighbours)};
 
-                if (triangle_neighbours[0] == -1) {
-                    depth_est(row, col) = 0;
-                    certainty(row, col) = 0;
-                } else {
-                    Eigen::Matrix3Xd neighbours_points(3, 3);
-                    for (size_t i = 0; i < 3; i++) {
-                        Pixel c(coordinates(0, triangle_neighbours[i]),
-                                coordinates(1, triangle_neighbours[i]));
-                        neighbours_points.col(i) = projection.at(c).position;
-                    }
-                    depth_est(row, col) =
-                        pointIntersection(rays.at(Pixel(col, row)), neighbours_points);
-                    if (depth_est(row, col) > max_depth) {
-                        depth_est(row, col) = max_depth;
-                        certainty(row, col) = 0;
-                    } else if (depth_est(row, col) < 0 ||
-                               depth_est(row, col) != depth_est(row, col) ||
-                               std::isinf(depth_est(row, col))) {
-                        depth_est(row, col) = 0;
-                        certainty(row, col) = 0;
-                    } else {
-                        certainty(row, col) = 0.2;
-                    }
+            if (found_triangle) {
+                std::vector<Pixel> neighbour_pixels;
+                std::vector<Eigen::Vector3d> neighbour_points;
+                std::vector<double> dists;
+                double sum_dist{0};
+                for (size_t i = 0; i < 3; i++) {
+                    Pixel c(coordinates(0, triangle_neighbours[i]),
+                            coordinates(1, triangle_neighbours[i]));
+                    neighbour_pixels.emplace_back(c);
+                    neighbour_points.emplace_back(projection.at(c).position);
+                    dists.emplace_back(
+                        std::sqrt(std::pow(p.row - c.row, 2) + std::pow(p.col - c.col, 2)));
+                    sum_dist += dists.back();
                 }
+                depth_est(p.row, p.col) = pointIntersection(rays.at(p), neighbour_points);
+                cl->at(p.col, p.row).normal =
+                    1. / 3 * (dists[0] / sum_dist * projection.at(neighbour_pixels[0]).normal +
+                              dists[1] / sum_dist * projection.at(neighbour_pixels[1]).normal +
+                              dists[2] / sum_dist * projection.at(neighbour_pixels[2]).normal);
+                cl->at(p.col, p.row).normal.normalize();
+                certainty(p.row, p.col) = 0.2;
+            }
+            if (!found_triangle || depth_est(p.row, p.col) > max_depth ||
+                depth_est(p.row, p.col) < 0 || depth_est(p.row, p.col) != depth_est(p.row, p.col) ||
+                std::isinf(depth_est(p.row, p.col))) {
+                Pixel nn(coordinates(0, all_neighbours[0]), coordinates(1, all_neighbours[0]));
+                const Eigen::ParametrizedLine<double, 3>& ray{rays.at(nn)};
+                const Eigen::Hyperplane<double, 3> plane(ray.direction(),
+                                                         projection.at(nn).position);
+                depth_est(p.row, p.col) =
+                    (rays.at(nn).intersectionPoint(plane) - rays.at(nn).origin()).norm();
+                certainty(p.row, p.col) = 0;
+                cl->at(p.col, p.row).normal = projection.at(nn).normal;
             }
         }
-        addSeedPoints(rays, projection, depth_est, certainty);
+        addSeedPoints(rays, projection, depth_est, certainty, cl);
     }
 }
 }

@@ -26,6 +26,7 @@ struct Parameters {
         solver.max_solver_time_in_seconds = 600;
         solver.use_inner_iterations = true;
         solver.use_nonmonotonic_steps = true;
+        solver.function_tolerance = 1e-5;
 
         if (file_name.size()) {
             fromConfig(file_name);
