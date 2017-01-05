@@ -4,14 +4,14 @@ kd: 1
 # Smoothness weight (within discontinuity threshold)
 ks: 1
 
-# Normal weight
+# Normal distance weight
 kn: 1
 
 # Threshold at which smoothness weighting starts to decrease
 discontinuity_threshold: 0.1
 
 # Exponential decrease rate of smoothness weighting
-smoothness_rate: 50
+smoothness_rate: 25
 
 # Whether normal estimation is performed as a preprocessing step
 # This parameter can be set to false if normals are not needed or provided
@@ -26,7 +26,7 @@ neighbor_search: 10
 
 # Depth limits that constrain the optimization
 # Available options: none, custom, adaptive
-limits: none
+limits: adaptive
 custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
@@ -34,19 +34,19 @@ custom_depth_limit_max: 1
 initialization: mean_depth
 
 # Neighborhood for each pixel to consider
-# Available options: four, eight
+# Available options: two, four, eight
 neighborhood: eight
 
-# Available options: trivial, huber
+# Available options: trivial, huber, cauchy
 loss_function: trivial
-loss_function_scale: 1
+loss_function_scale: 0.1
 max_num_iterations: 50
 
 use_functor_distance: true
 use_functor_normal: true
 use_functor_normal_distance: true
 use_functor_smoothness_normal: true
-use_functor_smoothness_distance: false
+use_functor_smoothness_distance: true
 
 pin_normals: true
 pin_distances: true

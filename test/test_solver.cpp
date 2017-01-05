@@ -18,14 +18,13 @@ mrf::Data<pcl::PointXYZINormal> create(const size_t& rows, const size_t& cols) {
 
     using T = pcl::PointXYZINormal;
     const typename Data<T>::Cloud::Ptr cl{new typename Data<T>::Cloud};
-    T p1;
-    p1.getVector3fMap() = Eigen::Vector3f(cols - 1, 1, 0);
-    p1.getNormalVector3fMap() = Eigen::Vector3f(0, 0, -1);
-    cl->push_back(p1);
-    T p2;
-    p2.getVector3fMap() = Eigen::Vector3f(1, rows - 1, 1);
-    p2.getNormalVector3fMap() = Eigen::Vector3f(0, 0, -1);
-    cl->push_back(p2);
+    T p;
+    p.getVector3fMap() = Eigen::Vector3f(cols - 1, 1, 0);
+    p.getNormalVector3fMap() = Eigen::Vector3f(0, 0, -1);
+    cl->push_back(p);
+    p.getVector3fMap() = Eigen::Vector3f(1, rows - 1, 1);
+    p.getNormalVector3fMap() = Eigen::Vector3f(0, 0, -1);
+    cl->push_back(p);
     pcl::transformPointCloudWithNormals(*cl, *cl, tf);
     cv::Mat img{cv::Mat::eye(rows, cols, cv::DataType<uint8_t>::type)};
     cv::cvtColor(img,img,CV_GRAY2BGR);
@@ -38,15 +37,26 @@ TEST(Solver, Solve) {
     google::InitGoogleLogging("Solver");
     google::InstallFailureSignalHandler();
 
-    constexpr size_t rows = 40;
-    constexpr size_t cols = 60;
+    constexpr size_t rows = 20;
+    constexpr size_t cols = 30;
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     const Data<pcl::PointXYZINormal> in{create(rows, cols)};
     Data<pcl::PointXYZINormal> out;
 
-    Solver solver{cam, Parameters("parameters.yaml")};
+    Parameters p("parameters.yaml");
+    p.estimate_normals = false;
+    p.pin_distances = true;
+    p.pin_normals = true;
+    Solver solver{cam, p};
     solver.solve(in, out);
+    const Data<pcl::PointXYZINormal> debug {solver.getDebugInfo()};
+
+    boost::filesystem::path path_name{"/tmp/test/solver/"};
+    boost::filesystem::create_directories(path_name);
+    exportData(in, path_name.string() + "in_");
+    exportData(out, path_name.string() + "out_");
+    exportData(debug, path_name.string() + "debug_");
 
     ASSERT_NEAR(pcl::transformPoint(out.cloud->at(cols - 1, 1), out.transform.cast<float>()).z, 0,
                 1e-6);
@@ -55,10 +65,4 @@ TEST(Solver, Solve) {
     ASSERT_NEAR(
         pcl::transformPoint(out.cloud->at(cols - 1, rows / 2), out.transform.cast<float>()).z, 0,
         1e-3);
-
-    boost::filesystem::path path_name{"/tmp/test/solver/"};
-    boost::filesystem::create_directories(path_name);
-    exportData(in, path_name.string() + "in_");
-    exportData(out, path_name.string() + "out_");
-    exportGradientImage(in.image, path_name.string());
 }

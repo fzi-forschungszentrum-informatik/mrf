@@ -59,7 +59,9 @@ void Parameters::fromConfig(const std::string& file_name) {
     }
 
     if (getParam(cfg, "neighborhood", tmp)) {
-        if (tmp == "four") {
+        if (tmp == "two") {
+            neighborhood = Neighborhood::two;
+        } else if (tmp == "four") {
             neighborhood = Neighborhood::four;
         } else if (tmp == "eight") {
             neighborhood = Neighborhood::eight;
@@ -74,6 +76,8 @@ void Parameters::fromConfig(const std::string& file_name) {
             loss_function = std::make_shared<ceres::TrivialLoss>();
         } else if (tmp == "huber") {
             loss_function = std::make_shared<ceres::HuberLoss>(loss_function_scale);
+        } else if (tmp == "cauchy") {
+            loss_function = std::make_shared<ceres::CauchyLoss>(loss_function_scale);
         } else {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
@@ -81,10 +85,10 @@ void Parameters::fromConfig(const std::string& file_name) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Parameters& p) {
-    return os << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
-              << "ks: " << p.ks << std::endl
+    return os << "ks: " << p.ks << std::endl
               << "kd: " << p.kd << std::endl
               << "kn: " << p.kn << std::endl
+              << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
               << "max_iterations: " << p.solver.max_num_iterations << std::endl
               << "limits: " << static_cast<int>(p.limits) << std::endl
               << "smoothness_rate: " << p.smoothness_rate << std::endl
@@ -93,10 +97,10 @@ std::ostream& operator<<(std::ostream& os, const Parameters& p) {
               << "custom_depth_limit_max: " << p.custom_depth_limit_max << std::endl
               << "neighbor_search: " << p.neighbor_search << std::endl
               << "estimate_normals: " << p.estimate_normals << std::endl
+              << "use_functor_distance: " << p.use_functor_distance << std::endl
+              << "use_functor_normal: " << p.use_functor_normal << std::endl
               << "use_functor_normal_distance: " << p.use_functor_normal_distance << std::endl
               << "use_functor_smoothness_normal: " << p.use_functor_smoothness_normal << std::endl
-              << "use_functor_normal: " << p.use_functor_normal << std::endl
-              << "use_functor_distance: " << p.use_functor_distance << std::endl
               << "use_functor_smoothness_distance: " << p.use_functor_smoothness_distance
               << std::endl
               << "pin_normals: " << p.pin_normals << std::endl
