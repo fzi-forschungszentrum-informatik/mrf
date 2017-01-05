@@ -25,7 +25,7 @@ struct Parameters {
         solver.num_linear_solver_threads = 8;
         solver.max_solver_time_in_seconds = 600;
         solver.use_inner_iterations = true;
-        //        solver.use_nonmonotonic_steps = true;
+        solver.use_nonmonotonic_steps = true;
 
         if (file_name.size()) {
             fromConfig(file_name);
@@ -40,6 +40,7 @@ struct Parameters {
     double kn{1};
     double discontinuity_threshold{0.1};
     double smoothness_rate{50};
+    double smoothness_weight_min{0.001};
     double radius_normal_estimation{0.5};
     Limits limits{Limits::none};
     double custom_depth_limit_min{0};

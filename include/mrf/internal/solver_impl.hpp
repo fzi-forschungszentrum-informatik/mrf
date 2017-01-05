@@ -107,7 +107,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
     for (auto const& el : rays) {
         problem.AddParameterBlock(&depth_est(el.first.row, el.first.col),
-                                  FunctorDistance::DimDepth);
+                                  FunctorDistance::DimDistance);
         if (use_any_normals) {
             problem.AddParameterBlock(
                 cloud_est->at(el.first.col, el.first.row).normal.data(), FunctorNormal::DimNormal,
@@ -115,58 +115,58 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         }
     }
 
+    std::vector<ResidualBlockId> ids_functor_distance, ids_functor_normal;
+    ids_functor_distance.reserve(projection.size());
+    ids_functor_normal.reserve(projection.size());
     for (auto const& el : projection) {
         if (params_.use_functor_distance) {
-            problem.AddResidualBlock(
+            ids_functor_distance.emplace_back(problem.AddResidualBlock(
                 FunctorDistance::create(el.second.position, rays.at(el.first)),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
                 &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
-                translation.data());
+                translation.data()));
         }
         if (params_.use_functor_normal) {
-            problem.AddResidualBlock(
+            ids_functor_normal.emplace_back(problem.AddResidualBlock(
                 FunctorNormal::create(el.second.normal),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
-                cloud_est->at(el.first.col, el.first.row).normal.data(), rotation.coeffs().data());
+                cloud_est->at(el.first.col, el.first.row).normal.data(), rotation.coeffs().data()));
         }
     }
-	Eigen::MatrixXd smoothness_costs{Eigen::MatrixXd::Zero(rows,cols)};
 
-
+    std::vector<ResidualBlockId> ids_functor_smoothness_normal, ids_functor_smoothness_distance,
+        ids_functor_normal_distance;
+    ids_functor_smoothness_normal.reserve(rays.size());
+    ids_functor_smoothness_distance.reserve(rays.size());
+    ids_functor_normal_distance.reserve(rays.size());
     for (auto const& el : rays) {
         const std::vector<Pixel> neighbors{getNeighbors(el.first, d_.image, params_.neighborhood)};
- 		std::vector<ceres::ResidualBlockId> smoothness_blocks;        
-	for (auto const& n : neighbors) {
+        for (auto const& n : neighbors) {
             const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
-                                            params_.smoothness_rate) *
+                                            params_.smoothness_rate,
+                                            params_.smoothness_weight_min) *
                            params_.ks / neighbors.size()};
             if (params_.use_functor_smoothness_normal) {
-                ceres::ResidualBlockId block_id{problem.AddResidualBlock(FunctorSmoothnessNormal::create(),
-                                         new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
-                                         cloud_est->at(el.first.col, el.first.row).normal.data(),
-                                         cloud_est->at(n.col, n.row).normal.data())};
-				smoothness_blocks.emplace_back(block_id);
+                ids_functor_smoothness_normal.emplace_back(problem.AddResidualBlock(
+                    FunctorSmoothnessNormal::create(),
+                    new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
+                    cloud_est->at(el.first.col, el.first.row).normal.data(),
+                    cloud_est->at(n.col, n.row).normal.data()));
             }
             if (params_.use_functor_smoothness_distance) {
-                problem.AddResidualBlock(FunctorSmoothnessDistance::create(),
-                                         new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
-                                         &depth_est(el.first.row, el.first.col),
-                                         &depth_est(n.row, n.col));
+                ids_functor_smoothness_distance.emplace_back(problem.AddResidualBlock(
+                    FunctorSmoothnessDistance::create(),
+                    new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
+                    &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col)));
             }
             if (params_.use_functor_normal_distance) {
-                problem.AddResidualBlock(
+                ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(el.first), rays.at(n)),
                     new ScaledLoss(new TrivialLoss, params_.kn / neighbors.size(), TAKE_OWNERSHIP),
                     &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col),
-                    cloud_est->at(el.first.col, el.first.row).normal.data());
+                    cloud_est->at(el.first.col, el.first.row).normal.data()));
             }
         }
-			ceres::Problem::EvaluateOptions options;
-            options.residual_blocks = smoothness_blocks;
-            double total_cost = 0.0;
-            std::vector<double> residuals;
-            problem.Evaluate(options, &total_cost, &residuals, nullptr, nullptr);
-            smoothness_costs(el.first.row,el.first.col) = total_cost;
     }
 
     if (params_.limits != Parameters::Limits::none) {
@@ -241,7 +241,6 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rays.size();
-    info.smoothness_costs = smoothness_costs;
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";

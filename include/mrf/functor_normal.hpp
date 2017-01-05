@@ -8,16 +8,19 @@ namespace mrf {
 struct FunctorNormal {
 
     static constexpr size_t DimNormal = 3;
-    static constexpr size_t DimResidual = 3;
+    static constexpr size_t DimResidual = 1;
     static constexpr size_t DimRotation = 4;
 
     inline FunctorNormal(const Eigen::Vector3d& n) : n_{n} {};
 
     template <typename T>
-    inline bool operator()(const T* const normal, const T* const rotation, T* res) const {
+    inline bool operator()(const T* const n_ceres, const T* const rot_ceres, T* res_ceres) const {
         using namespace Eigen;
-        Map<Vector3<T>>(res, DimResidual) =
-            Map<const Vector3<T>>(normal) - util_ceres::fromQuaternion(rotation) * n_.cast<T>();
+        const Map<const Vector3<T>> n(n_ceres);
+        //        Map<Vector3<T>>(res_ceres, DimResidual) =
+        //            Map<const Vector3<T>>(n_ceres) - util_ceres::fromQuaternion(rot_ceres) *
+        //            n_.cast<T>();
+        res_ceres[0] = T(1) - n.dot(n_.cast<T>());
         return true;
     }
 
