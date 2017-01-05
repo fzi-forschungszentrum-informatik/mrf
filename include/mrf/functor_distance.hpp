@@ -7,7 +7,7 @@ namespace mrf {
 
 struct FunctorDistance {
 
-    static constexpr size_t DimDepth = 1;
+    static constexpr size_t DimDistance = 1;
     static constexpr size_t DimResidual = 3;
     static constexpr size_t DimRotation = 4;
     static constexpr size_t DimTranslation = 3;
@@ -26,7 +26,7 @@ struct FunctorDistance {
 
     inline static ceres::CostFunction* create(const Eigen::Vector3d& p,
                                               const Eigen::ParametrizedLine<double, 3>& ray) {
-        return new ceres::AutoDiffCostFunction<FunctorDistance, DimResidual, DimDepth, DimRotation,
+        return new ceres::AutoDiffCostFunction<FunctorDistance, DimResidual, DimDistance, DimRotation,
                                                DimTranslation>(new FunctorDistance(p, ray));
     }
 
