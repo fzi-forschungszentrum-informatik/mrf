@@ -12,10 +12,9 @@ TEST(Data, Instantiation) {
     google::InstallFailureSignalHandler();
 
     using namespace mrf;
-    using PointT = pcl::PointXYZ;
-    using DataT = Data<PointT>;
+    using DataT = Data<pcl::PointXYZ>;
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
-    cl->push_back(PointT());
+    cl->push_back(pcl::PointXYZ());
     const DataT::Ptr d{
         DataT::create(cl, cv::Mat::zeros(2, 2, CV_32FC1))};
     LOG(INFO) << "Data: \n" << *d;

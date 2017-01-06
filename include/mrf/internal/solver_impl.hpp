@@ -1,4 +1,3 @@
-#include <limits>
 #include <map>
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
@@ -14,7 +13,6 @@
 #include <pcl/filters/filter.h>
 
 #include "../cloud_preprocessing.hpp"
-#include "../depth_prior.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
 #include "../functor_normal_distance.hpp"
@@ -22,7 +20,7 @@
 #include "../functor_smoothness_normal.hpp"
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
-#include "../normal_prior.hpp"
+#include "../prior.hpp"
 #include "../smoothness_weight.hpp"
 
 namespace mrf {
@@ -78,7 +76,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
             Eigen::Vector3d support, direction;
-            const Pixel p(col, row, d_.image.at<double>(row, col));
+            const Pixel p(col, row, d_.image.at<float>(row, col));
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
             rays.insert(std::make_pair(p, Eigen::ParametrizedLine<double, 3>(support, direction)));
         }
@@ -91,9 +89,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
                                params_.use_functor_smoothness_normal};
 
-    LOG(INFO) << "Initialize priors";
-    getPriorEst(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
-                depth_est, certainty, cloud_est);
+    LOG(INFO) << "Estimate priors";
+    estimatePrior(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
+                  depth_est, certainty, cloud_est);
 
     LOG(INFO) << "Create optimization problem";
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -143,8 +141,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         const std::vector<Pixel> neighbors{getNeighbors(el.first, d_.image, params_.neighborhood)};
         for (auto const& n : neighbors) {
             const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
-                                            params_.smoothness_rate,
-                                            params_.smoothness_weight_min) *
+                                            params_.smoothness_weight_min,
+                                            params_.smoothness_weighting, params_.smoothness_rate) *
                            params_.ks / neighbors.size()};
             if (params_.use_functor_smoothness_normal) {
                 ids_functor_smoothness_normal.emplace_back(problem.AddResidualBlock(
@@ -162,7 +160,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             if (params_.use_functor_normal_distance) {
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(el.first), rays.at(n)),
-                    new ScaledLoss(new TrivialLoss, params_.kn / neighbors.size(), TAKE_OWNERSHIP),
+                    new ScaledLoss(params_.loss_function.get(), w * params_.kn, TAKE_OWNERSHIP),
                     &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col),
                     cloud_est->at(el.first.col, el.first.row).normal.data()));
             }
@@ -224,15 +222,21 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     out.cloud->width = cols;
     out.cloud->height = rows;
     out.cloud->resize(out.cloud->width * out.cloud->height);
+
+    cv::Mat img_intensity;
+    if (in.image.channels() > 1) {
+        cv::cvtColor(in.image, img_intensity, CV_BGR2GRAY);
+    } else {
+        img_intensity = in.image;
+    }
+
     for (auto const& el : rays) {
-        out.cloud->at(el.first.col, el.first.row).getVector3fMap() =
-            el.second.pointAt(depth_est(el.first.row, el.first.col)).cast<float>();
-        out.cloud->at(el.first.col, el.first.row).getNormalVector3fMap() =
-            cloud_est->at(el.first.col, el.first.row).normal.cast<float>();
-        cv::Mat img;
-        cv::cvtColor(in.image, img, CV_BGR2GRAY);
-        out.cloud->at(el.first.col, el.first.row).intensity =
-            img.at<float>(el.first.row, el.first.col);
+        const Pixel& p{el.first};
+        out.cloud->at(p.col, p.row).getVector3fMap() =
+            el.second.pointAt(depth_est(p.row, p.col)).cast<float>();
+        out.cloud->at(p.col, p.row).getNormalVector3fMap() =
+            cloud_est->at(p.col, p.row).normal.cast<float>();
+        out.cloud->at(p.col, p.row).intensity = img_intensity.at<float>(p.row, p.col);
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 

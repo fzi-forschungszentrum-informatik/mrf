@@ -89,13 +89,13 @@ TEST(Groundtruth, solve) {
     /**
      * \attention cols and rows need to be divisable by four
      */
-    const size_t cols = 50;
-    const size_t rows = 30;
+    constexpr size_t cols = 28;
+    constexpr size_t rows = 12;
     GroundTruthParams params;
     params.equidistant = true;
     LOG(INFO) << "Load Groundtruth Data";
     const Data<PointT> gt_data{createDense<PointT>(rows, cols)};
-    LOG(INFO) << "dense cloud size: " << gt_data.cloud->size();
+    LOG(INFO) << "Dense cloud size: " << gt_data.cloud->size();
 
     LOG(INFO) << "Generate sparse data";
     typename Data<PointT>::Cloud::Ptr sparse{new typename Data<PointT>::Cloud};

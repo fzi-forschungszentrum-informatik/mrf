@@ -53,6 +53,22 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "custom_depth_limit_min", custom_depth_limit_min);
     getParam(cfg, "custom_depth_limit_max", custom_depth_limit_max);
 
+    if (getParam(cfg, "smoothness_weighting", tmp)) {
+        if (tmp == "none") {
+            smoothness_weighting = SmoothnessWeighting::none;
+        } else if (tmp == "step") {
+            smoothness_weighting = SmoothnessWeighting::step;
+        } else if (tmp == "linear") {
+            smoothness_weighting = SmoothnessWeighting::linear;
+        } else if (tmp == "exponential") {
+            smoothness_weighting = SmoothnessWeighting::exponential;
+        } else if (tmp == "sigmoid") {
+            smoothness_weighting = SmoothnessWeighting::sigmoid;
+        } else {
+            LOG(WARNING) << "No parameter " << tmp << " available.";
+        }
+    }
+
     if (getParam(cfg, "initialization", tmp)) {
         if (tmp == "none") {
             initialization = Initialization::none;
@@ -93,37 +109,4 @@ void Parameters::fromConfig(const std::string& file_name) {
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const Parameters& p) {
-    return os << "ks: " << p.ks << std::endl
-              << "kd: " << p.kd << std::endl
-              << "kn: " << p.kn << std::endl
-              << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
-              << "limits: " << static_cast<int>(p.limits) << std::endl
-              << "smoothness_rate: " << p.smoothness_rate << std::endl
-              << "smoothness_weight_min: " << p.smoothness_weight_min << std::endl
-              << "radius_normal_estimation: " << p.radius_normal_estimation << std::endl
-              << "custom_depth_limit_min: " << p.custom_depth_limit_min << std::endl
-              << "custom_depth_limit_max: " << p.custom_depth_limit_max << std::endl
-              << "neighbor_search: " << p.neighbor_search << std::endl
-              << "max_iterations: " << p.solver.max_num_iterations << std::endl
-              << "minimizer_progress_to_stdout: " << p.solver.minimizer_progress_to_stdout << std::endl
-              << "num_threads: " << p.solver.num_threads << std::endl
-              << "num_linear_solver_threads: " << p.solver.num_linear_solver_threads << std::endl
-              << "max_solver_time_in_seconds: " << p.solver.max_solver_time_in_seconds << std::endl
-              << "use_inner_iterations: " << p.solver.use_inner_iterations << std::endl
-              << "use_nonmonotonic_steps: " << p.solver.use_nonmonotonic_steps << std::endl
-              << "estimate_normals: " << p.estimate_normals << std::endl
-              << "use_functor_distance: " << p.use_functor_distance << std::endl
-              << "use_functor_normal: " << p.use_functor_normal << std::endl
-              << "use_functor_normal_distance: " << p.use_functor_normal_distance << std::endl
-              << "use_functor_smoothness_normal: " << p.use_functor_smoothness_normal << std::endl
-              << "use_functor_smoothness_distance: " << p.use_functor_smoothness_distance
-              << std::endl
-              << "pin_normals: " << p.pin_normals << std::endl
-              << "pin_distances: " << p.pin_distances << std::endl
-              << "loss_function_scale: " << p.loss_function_scale << std::endl
-              << "initialization: " << static_cast<int>(p.initialization) << std::endl
-              << "neighborhood: " << static_cast<int>(p.neighborhood) << std::endl
-              << "estimate_covariances: " << p.estimate_covariances << std::endl;
-}
 }
