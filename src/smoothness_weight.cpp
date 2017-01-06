@@ -21,8 +21,10 @@ double smoothnessWeight(const Pixel& p, const Pixel& neighbor, const double& thr
         return 1;
     case Parameters::SmoothnessWeighting::step:
         return weight_min;
+    case Parameters::SmoothnessWeighting::linear:
+        return std::max(weight_min, 1 - alpha * (diff_abs - threshold));
     case Parameters::SmoothnessWeighting::exponential:
-        return std::max(weight_min, std::exp(-alpha * std::abs(diff_abs - threshold)));
+        return std::max(weight_min, std::exp(-alpha * (diff_abs - threshold)));
     case Parameters::SmoothnessWeighting::sigmoid:
         return std::max(weight_min, sigmoid(diff_abs - threshold, alpha, beta));
     }

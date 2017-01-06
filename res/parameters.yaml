@@ -8,13 +8,13 @@ ks: 1
 kn: 1
 
 # Smoothness weighting type
-# Available options: none, step, exponential
-smoothness_weighting: step
+# Available options: none, step, linear, exponential
+smoothness_weighting: linear
 
 # Threshold at which smoothness weighting starts to decrease
 discontinuity_threshold: 0.1
 
-# Exponential decrease rate of smoothness weighting
+# Decrease rate of smoothness weighting
 smoothness_rate: 25
 smoothness_weight_min: 1e-6
 
@@ -36,7 +36,7 @@ custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
 # Available options: none, nearest_neighbor, triangles, mean_depth
-initialization: triangles
+initialization: nearest_neighbor
 
 # Neighborhood for each pixel to consider
 # Available options: two, four, eight
@@ -51,15 +51,15 @@ minimizer_progress_to_stdout: true
 num_threads: 8
 num_linear_solver_threads: 8
 max_solver_time_in_seconds: 1200
-use_inner_iterations: true
+use_inner_iterations: false
 use_nonmonotonic_steps: false
 function_tolerance: 1e-5
 
-use_functor_distance: true
+use_functor_distance: false
 use_functor_normal: false
 use_functor_normal_distance: false
 use_functor_smoothness_normal: false
-use_functor_smoothness_distance: true
+use_functor_smoothness_distance: false
 
 pin_normals: true
 pin_distances: true

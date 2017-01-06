@@ -9,6 +9,7 @@
 
 #include "data.hpp"
 #include "image_preprocessing.hpp"
+#include "pixel.hpp"
 
 namespace mrf {
 
@@ -57,13 +58,11 @@ void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     const std::vector<bool> in_img{cam->getImagePoints(pts_3d, img_pts_raw)};
     for (size_t c = 0; c < in_img.size(); c++) {
-        const int row = img_pts_raw(1, c);
-        const int col = img_pts_raw(0, c);
+        const Pixel p{img_pts_raw(0, c), img_pts_raw(1, c)};
         Eigen::Vector3d support, direction;
-        cam->getViewingRay(Eigen::Vector2d(img_pts_raw(0, c), img_pts_raw(1, c)), support,
-                           direction);
+        cam->getViewingRay(Eigen::Vector2d(p.col, p.row), support, direction);
         const Eigen::Hyperplane<double, 3> plane(direction, pts_3d.col(c));
-        img_depth.at<double>(row, col) =
+        img_depth.at<double>(p.row, p.col) =
             (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
              support)
                 .norm();

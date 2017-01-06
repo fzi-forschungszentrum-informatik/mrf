@@ -58,6 +58,8 @@ void Parameters::fromConfig(const std::string& file_name) {
             smoothness_weighting = SmoothnessWeighting::none;
         } else if (tmp == "step") {
             smoothness_weighting = SmoothnessWeighting::step;
+        } else if (tmp == "linear") {
+            smoothness_weighting = SmoothnessWeighting::linear;
         } else if (tmp == "exponential") {
             smoothness_weighting = SmoothnessWeighting::exponential;
         } else if (tmp == "sigmoid") {
