@@ -160,7 +160,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             if (params_.use_functor_normal_distance) {
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(el.first), rays.at(n)),
-                    new ScaledLoss(params_.loss_function.get(), params_.kn / neighbors.size(), TAKE_OWNERSHIP),
+                    new ScaledLoss(params_.loss_function.get(), w * params_.kn, TAKE_OWNERSHIP),
                     &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col),
                     cloud_est->at(el.first.col, el.first.row).normal.data()));
             }
