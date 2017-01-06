@@ -1,4 +1,3 @@
-#include <limits>
 #include <map>
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
@@ -14,7 +13,6 @@
 #include <pcl/filters/filter.h>
 
 #include "../cloud_preprocessing.hpp"
-#include "../depth_prior.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
 #include "../functor_normal_distance.hpp"
@@ -22,7 +20,7 @@
 #include "../functor_smoothness_normal.hpp"
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
-#include "../normal_prior.hpp"
+#include "../prior.hpp"
 #include "../smoothness_weight.hpp"
 
 namespace mrf {
@@ -91,9 +89,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
                                params_.use_functor_smoothness_normal};
 
-    LOG(INFO) << "Initialize priors";
-    getPriorEst(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
-                depth_est, certainty, cloud_est);
+    LOG(INFO) << "Estimate priors";
+    estimatePrior(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
+                  depth_est, certainty, cloud_est);
 
     LOG(INFO) << "Create optimization problem";
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -162,7 +160,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             if (params_.use_functor_normal_distance) {
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(el.first), rays.at(n)),
-                    new ScaledLoss(new TrivialLoss, params_.kn / neighbors.size(), TAKE_OWNERSHIP),
+                    new ScaledLoss(params_.loss_function.get(), w, TAKE_OWNERSHIP),
                     &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col),
                     cloud_est->at(el.first.col, el.first.row).normal.data()));
             }
@@ -229,10 +227,16 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             el.second.pointAt(depth_est(el.first.row, el.first.col)).cast<float>();
         out.cloud->at(el.first.col, el.first.row).getNormalVector3fMap() =
             cloud_est->at(el.first.col, el.first.row).normal.cast<float>();
-        cv::Mat img;
-        cv::cvtColor(in.image, img, CV_BGR2GRAY);
-        out.cloud->at(el.first.col, el.first.row).intensity =
-            img.at<float>(el.first.row, el.first.col);
+
+        if (in.image.channels() > 1) {
+            cv::Mat img;
+            cv::cvtColor(in.image, img, CV_BGR2GRAY);
+            out.cloud->at(el.first.col, el.first.row).intensity =
+                img.at<float>(el.first.row, el.first.col);
+        } else {
+            out.cloud->at(el.first.col, el.first.row).intensity =
+                in.image.template at<float>(el.first.row, el.first.col);
+        }
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 

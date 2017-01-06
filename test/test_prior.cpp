@@ -5,13 +5,13 @@
 #include <pcl/point_types.h>
 
 #include "camera_model_ortho.h"
-#include "depth_prior.hpp"
+#include "prior.hpp"
 #include "solver.hpp"
 
 TEST(DepthPrior, initialisation) {
     using namespace mrf;
 
-    google::InitGoogleLogging("DepthPrior");
+    google::InitGoogleLogging("Prior");
     google::InstallFailureSignalHandler();
 
     constexpr size_t rows = 10;
@@ -21,9 +21,9 @@ TEST(DepthPrior, initialisation) {
     using PointT = pcl::PointXYZ;
     using DataT = Data<PointT>;
     const DataT::Cloud::Ptr cl{new DataT::Cloud};
-    cl->push_back(PointT(5, 8, 10));
-    cl->push_back(PointT(6, 8, 10));
-    cl->push_back(PointT(5, 9, 10));
+    cl->push_back(PointT(1, 1, 10));
+    cl->push_back(PointT(1, cols - 2, 10));
+    cl->push_back(PointT(rows - 2, 1, 10));
     const cv::Mat img{cv::Mat::zeros(rows, cols, CV_32FC3)};
     const DataT in(cl, img, DataT::Transform::Identity());
     Parameters params("parameters.yaml");

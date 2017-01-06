@@ -11,7 +11,7 @@ TEST(ImagePreprocessing, Instantiation) {
     using namespace mrf;
     constexpr size_t width = 20;
     constexpr size_t height = 10;
-    cv::Mat in{cv::Mat::eye(height, width, CV_32FC1)};
+    cv::Mat in{cv::Mat::eye(height, width, cv::DataType<float>::type)};
     cv::Mat out{edge(in)};
 
     double min, max;

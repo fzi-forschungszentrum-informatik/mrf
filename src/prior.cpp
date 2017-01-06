@@ -1,4 +1,6 @@
-#include "depth_prior.hpp"
+#include "prior.hpp"
+
+#include <flann/flann.h>
 
 namespace mrf {
 
@@ -116,11 +118,12 @@ void addSeedPoints(const RayMapT& rays, const PixelMapT& projection, Eigen::Matr
     }
 }
 
-void getPriorEst(const RayMapT& rays, const PixelMapT& projection, const size_t& rows,
-                 const size_t& cols, const Parameters::Initialization type,
-                 const int neighborsearch, Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty,
-                 const pcl_ceres::PointCloud<Point>::Ptr& cl) {
+void estimatePrior(const RayMapT& rays, const PixelMapT& projection, const size_t& rows,
+                   const size_t& cols, const Parameters::Initialization& type,
+                   const int neighborsearch, Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty,
+                   const pcl_ceres::PointCloud<Point>::Ptr& cl) {
     if (type == Parameters::Initialization::none) {
+        LOG(INFO) << "Estimate prior via 'none' method";
         addSeedPoints(rays, projection, depth_est, certainty, cl);
         return;
     }
@@ -142,7 +145,7 @@ void getPriorEst(const RayMapT& rays, const PixelMapT& projection, const size_t&
     }
 
     if (type == Parameters::Initialization::mean_depth) {
-        LOG(INFO) << "Mean Depth";
+        LOG(INFO) << "Estimate prior via 'mean_depth' method";
         double mean_depth{sum / projection.size()};
         LOG(INFO) << "mean depth is " << mean_depth;
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
@@ -159,7 +162,7 @@ void getPriorEst(const RayMapT& rays, const PixelMapT& projection, const size_t&
     kd_index_ptr_->buildIndex(flann_dataset);
 
     if (type == Parameters::Initialization::nearest_neighbor) {
-        LOG(INFO) << "nearest_neighbor Depth";
+        LOG(INFO) << "Estimate prior via 'nearest_neighbor' method";
         for (auto const& el : rays) {
             const Pixel& p{el.first};
             std::vector<int> neighbours{getNeighbours(coordinates, kd_index_ptr_, p, 1)};
@@ -176,7 +179,7 @@ void getPriorEst(const RayMapT& rays, const PixelMapT& projection, const size_t&
     }
 
     if (type == Parameters::Initialization::triangles) {
-        LOG(INFO) << "triangles Depth";
+        LOG(INFO) << "Estimate prior via 'triangles' method";
 
         for (auto const& el : rays) {
             const Pixel& p{el.first};

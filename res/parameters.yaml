@@ -12,7 +12,7 @@ discontinuity_threshold: 0.1
 
 # Exponential decrease rate of smoothness weighting
 smoothness_rate: 25
-smoothness_weight_min: 0.00001
+smoothness_weight_min: 1e-6
 
 # Whether normal estimation is performed as a preprocessing step
 # This parameter can be set to false if normals are not needed or provided
@@ -51,11 +51,11 @@ use_inner_iterations: true
 use_nonmonotonic_steps: false
 function_tolerance: 1e-5
 
-use_functor_distance: false
+use_functor_distance: true
 use_functor_normal: false
 use_functor_normal_distance: false
 use_functor_smoothness_normal: false
-use_functor_smoothness_distance: false
+use_functor_smoothness_distance: true
 
 pin_normals: true
 pin_distances: true
