@@ -53,6 +53,20 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "custom_depth_limit_min", custom_depth_limit_min);
     getParam(cfg, "custom_depth_limit_max", custom_depth_limit_max);
 
+    if (getParam(cfg, "smoothness_weighting", tmp)) {
+        if (tmp == "none") {
+            smoothness_weighting = SmoothnessWeighting::none;
+        } else if (tmp == "step") {
+            smoothness_weighting = SmoothnessWeighting::step;
+        } else if (tmp == "exponential") {
+            smoothness_weighting = SmoothnessWeighting::exponential;
+        } else if (tmp == "sigmoid") {
+            smoothness_weighting = SmoothnessWeighting::sigmoid;
+        } else {
+            LOG(WARNING) << "No parameter " << tmp << " available.";
+        }
+    }
+
     if (getParam(cfg, "initialization", tmp)) {
         if (tmp == "none") {
             initialization = Initialization::none;
@@ -99,14 +113,16 @@ std::ostream& operator<<(std::ostream& os, const Parameters& p) {
               << "kn: " << p.kn << std::endl
               << "discontinuity threshold: " << p.discontinuity_threshold << std::endl
               << "limits: " << static_cast<int>(p.limits) << std::endl
+              << "custom_depth_limit_min: " << p.custom_depth_limit_min << std::endl
+              << "custom_depth_limit_max: " << p.custom_depth_limit_max << std::endl
+              << "smoothness_weighting: " << static_cast<int>(p.smoothness_weighting) << std::endl
               << "smoothness_rate: " << p.smoothness_rate << std::endl
               << "smoothness_weight_min: " << p.smoothness_weight_min << std::endl
               << "radius_normal_estimation: " << p.radius_normal_estimation << std::endl
-              << "custom_depth_limit_min: " << p.custom_depth_limit_min << std::endl
-              << "custom_depth_limit_max: " << p.custom_depth_limit_max << std::endl
               << "neighbor_search: " << p.neighbor_search << std::endl
               << "max_iterations: " << p.solver.max_num_iterations << std::endl
-              << "minimizer_progress_to_stdout: " << p.solver.minimizer_progress_to_stdout << std::endl
+              << "minimizer_progress_to_stdout: " << p.solver.minimizer_progress_to_stdout
+              << std::endl
               << "num_threads: " << p.solver.num_threads << std::endl
               << "num_linear_solver_threads: " << p.solver.num_linear_solver_threads << std::endl
               << "max_solver_time_in_seconds: " << p.solver.max_solver_time_in_seconds << std::endl

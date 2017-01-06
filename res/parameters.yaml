@@ -7,6 +7,10 @@ ks: 1
 # Normal distance weight
 kn: 1
 
+# Smoothness weighting type
+# Available options: none, step, exponential
+smoothness_weighting: step
+
 # Threshold at which smoothness weighting starts to decrease
 discontinuity_threshold: 0.1
 

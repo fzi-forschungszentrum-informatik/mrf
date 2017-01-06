@@ -76,7 +76,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
             Eigen::Vector3d support, direction;
-            const Pixel p(col, row, d_.image.at<double>(row, col));
+            const Pixel p(col, row, d_.image.at<float>(row, col));
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
             rays.insert(std::make_pair(p, Eigen::ParametrizedLine<double, 3>(support, direction)));
         }
@@ -141,8 +141,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         const std::vector<Pixel> neighbors{getNeighbors(el.first, d_.image, params_.neighborhood)};
         for (auto const& n : neighbors) {
             const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
-                                            params_.smoothness_rate,
-                                            params_.smoothness_weight_min) *
+                                            params_.smoothness_weight_min,
+                                            params_.smoothness_weighting, params_.smoothness_rate) *
                            params_.ks / neighbors.size()};
             if (params_.use_functor_smoothness_normal) {
                 ids_functor_smoothness_normal.emplace_back(problem.AddResidualBlock(
@@ -237,6 +237,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             out.cloud->at(el.first.col, el.first.row).intensity =
                 in.image.template at<float>(el.first.row, el.first.col);
         }
+        out.cloud->at(el.first.col, el.first.row).intensity = el.first.val;
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 
