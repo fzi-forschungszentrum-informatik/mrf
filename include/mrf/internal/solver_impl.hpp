@@ -160,7 +160,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             if (params_.use_functor_normal_distance) {
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(el.first), rays.at(n)),
-                    new ScaledLoss(params_.loss_function.get(), w, TAKE_OWNERSHIP),
+                    new ScaledLoss(params_.loss_function.get(), params_.kn / neighbors.size(), TAKE_OWNERSHIP),
                     &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col),
                     cloud_est->at(el.first.col, el.first.row).normal.data()));
             }
@@ -222,22 +222,21 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     out.cloud->width = cols;
     out.cloud->height = rows;
     out.cloud->resize(out.cloud->width * out.cloud->height);
-    for (auto const& el : rays) {
-        out.cloud->at(el.first.col, el.first.row).getVector3fMap() =
-            el.second.pointAt(depth_est(el.first.row, el.first.col)).cast<float>();
-        out.cloud->at(el.first.col, el.first.row).getNormalVector3fMap() =
-            cloud_est->at(el.first.col, el.first.row).normal.cast<float>();
 
-        if (in.image.channels() > 1) {
-            cv::Mat img;
-            cv::cvtColor(in.image, img, CV_BGR2GRAY);
-            out.cloud->at(el.first.col, el.first.row).intensity =
-                img.at<float>(el.first.row, el.first.col);
-        } else {
-            out.cloud->at(el.first.col, el.first.row).intensity =
-                in.image.template at<float>(el.first.row, el.first.col);
-        }
-        out.cloud->at(el.first.col, el.first.row).intensity = el.first.val;
+    cv::Mat img_intensity;
+    if (in.image.channels() > 1) {
+        cv::cvtColor(in.image, img_intensity, CV_BGR2GRAY);
+    } else {
+        img_intensity = in.image;
+    }
+
+    for (auto const& el : rays) {
+        const Pixel& p{el.first};
+        out.cloud->at(p.col, p.row).getVector3fMap() =
+            el.second.pointAt(depth_est(p.row, p.col)).cast<float>();
+        out.cloud->at(p.col, p.row).getNormalVector3fMap() =
+            cloud_est->at(p.col, p.row).normal.cast<float>();
+        out.cloud->at(p.col, p.row).intensity = img_intensity.at<float>(p.row, p.col);
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 

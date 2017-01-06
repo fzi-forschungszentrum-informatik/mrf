@@ -15,7 +15,7 @@ smoothness_weighting: linear
 discontinuity_threshold: 0.1
 
 # Decrease rate of smoothness weighting
-smoothness_rate: 25
+smoothness_rate: 2.5
 smoothness_weight_min: 1e-6
 
 # Whether normal estimation is performed as a preprocessing step
@@ -36,7 +36,7 @@ custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
 # Available options: none, nearest_neighbor, triangles, mean_depth
-initialization: nearest_neighbor
+initialization: triangles
 
 # Neighborhood for each pixel to consider
 # Available options: two, four, eight
@@ -55,10 +55,10 @@ use_inner_iterations: false
 use_nonmonotonic_steps: false
 function_tolerance: 1e-5
 
-use_functor_distance: false
-use_functor_normal: false
-use_functor_normal_distance: false
-use_functor_smoothness_normal: false
+use_functor_distance: true
+use_functor_normal: true
+use_functor_normal_distance: true
+use_functor_smoothness_normal: true
 use_functor_smoothness_distance: false
 
 pin_normals: true
