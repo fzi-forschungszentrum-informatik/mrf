@@ -10,7 +10,6 @@
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <pcl/common/transforms.h>
-#include <pcl/filters/filter.h>
 
 #include "../cloud_preprocessing.hpp"
 #include "../functor_distance.hpp"
@@ -35,10 +34,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     pcl::copyPointCloud<T, PointT>(*(in.cloud), *d_.cloud);
 
     if (params_.estimate_normals) {
+        d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
-        std::vector<int> indices;
-        pcl::removeNaNNormalsFromPointCloud(*d_.cloud, *d_.cloud, indices);
-        LOG(INFO) << "Removed " << in.cloud->size() - d_.cloud->size() << " invalid normal points";
     }
 
     using PType = pcl_ceres::Point<double>;
@@ -249,6 +246,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";
         Covariance::Options options;
+        options.num_threads = params_.solver.num_threads;
         Covariance covariance(options);
         std::vector<std::pair<const double*, const double*>> covariance_blocks;
         covariance_blocks.reserve(rays.size());
@@ -256,6 +254,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             covariance_blocks.emplace_back(std::make_pair(&depth_est(el.first.row, el.first.col),
                                                           &depth_est(el.first.row, el.first.col)));
         }
+
         CHECK(covariance.Compute(covariance_blocks, &problem));
         info.covariance_depth.resize(rows, cols);
         for (auto const& el : rays) {
@@ -263,8 +262,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             covariance.GetCovarianceBlock(&depth_est(p.row, p.col), &depth_est(p.row, p.col),
                                           &(info.covariance_depth(p.row, p.col)));
         }
+        info.has_covariance_depth = true;
     }
-
     return info;
 }
 }

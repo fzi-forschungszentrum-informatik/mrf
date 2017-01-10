@@ -4,12 +4,14 @@
 #include <glog/logging.h>
 #include <Eigen/src/Geometry/Hyperplane.h>
 #include <Eigen/src/Geometry/ParametrizedLine.h>
+#include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
 
 #include "data.hpp"
 #include "image_preprocessing.hpp"
 #include "pixel.hpp"
+#include "result_info.hpp"
 
 namespace mrf {
 
@@ -77,5 +79,14 @@ inline void exportImage(const cv::Mat& img, const std::string& p, const bool nor
     const std::string file_name{p + "image.png"};
     LOG(INFO) << "Writing image to '" << file_name << "'.";
     cv::imwrite(file_name, createOutput(img, normalize));
+}
+
+void exportResultInfo(const ResultInfo& info, const std::string& p) {
+
+    if (info.has_covariance_depth) {
+        cv::Mat out;
+        cv::eigen2cv(info.covariance_depth, out);
+        cv::imwrite(p + "covariance_depth.png", createOutput(out));
+    }
 }
 }
