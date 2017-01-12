@@ -48,6 +48,12 @@ void exportData(const Data<T>& d, const std::string& p, const bool normalize = t
     pcl::io::savePCDFile<T>(file_name, *(d.cloud));
 }
 
+inline bool inImageRange(const unsigned int width, const unsigned int height,
+                         const Eigen::Vector2i& p) {
+    return (p.x() >= 0) && (static_cast<unsigned int>(p.x()) < width) && (p.y() >= 0) &&
+           (static_cast<unsigned int>(p.y()) < height);
+}
+
 template <typename T>
 void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
                       const std::string& p, const bool normalize = true) {
@@ -58,8 +64,10 @@ void exportDepthImage(const Data<T>& d, const std::shared_ptr<CameraModel>& cam,
     const Eigen::Matrix3Xd pts_3d{
         d.transform * d.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
-    const std::vector<bool> in_img{cam->getImagePoints(pts_3d, img_pts_raw)};
-    for (size_t c = 0; c < in_img.size(); c++) {
+    const std::vector<bool> in_front{cam->getImagePoints(pts_3d, img_pts_raw)};
+    for (size_t c = 0; c < in_front.size(); c++) {
+    	if (!inImageRange(cols, rows, img_pts_raw.col(c).cast<int>()))
+    		continue;
         const Pixel p{img_pts_raw(0, c), img_pts_raw(1, c)};
         Eigen::Vector3d support, direction;
         cam->getViewingRay(Eigen::Vector2d(p.col, p.row), support, direction);

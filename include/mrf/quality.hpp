@@ -29,7 +29,9 @@ struct Quality {
 				<< "normal_error_y_mean_abs" << del
 				<< "normal_error_z_mean_abs" << del
 				<< "normal_dot_product_mean" << del
-				<< "normal_dot_product_mean_abs";
+				<< "normal_dot_product_mean_abs" << del
+				<< "ref_distances_evaluated" << del
+				<< "ref_normals_evaluated";
         // clang-format on
         return oss.str();
     }
@@ -48,7 +50,9 @@ struct Quality {
                 << o.normal_error_mean_abs.y() << del
                 << o.normal_error_mean_abs.z() << del
                 << o.normal_dot_product_mean << del
-        		<< o.normal_dot_product_mean_abs;
+        		<< o.normal_dot_product_mean_abs << del
+				<< o.ref_distances_evaluated << del
+				<< o.ref_normals_evaluated;
         // clang-format on;
     }
 
@@ -63,5 +67,8 @@ struct Quality {
     Eigen::Vector3d normal_error_mean_abs{Eigen::Vector3d::Zero()};
     double normal_dot_product_mean{0};
     double normal_dot_product_mean_abs{0};
+
+    size_t ref_distances_evaluated{0};
+    size_t ref_normals_evaluated{0};
 };
 }

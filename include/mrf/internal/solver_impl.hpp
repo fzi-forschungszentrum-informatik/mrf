@@ -32,6 +32,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Preprocess and transform cloud";
     pcl::copyPointCloud<T, PointT>(*(in.cloud), *d_.cloud);
+    LOG(INFO) << "Cloud size: " << d_.cloud->height << " x " << d_.cloud->width << " = " << d_.cloud->size();
 
     if (params_.estimate_normals) {
         d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
