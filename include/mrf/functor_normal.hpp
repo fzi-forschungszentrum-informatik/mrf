@@ -15,9 +15,8 @@ struct FunctorNormal {
 
     template <typename T>
     inline bool operator()(const T* const n_ceres, const T* const rot_ceres, T* res_ceres) const {
-        using namespace Eigen;
-        const Map<const Vector3<T>> n(n_ceres);
-        res_ceres[0] = T(1) - n.dot(util_ceres::fromQuaternion(rot_ceres) * n_.cast<T>());
+        res_ceres[0] = Eigen::Map<const Eigen::Vector3<T>>(n_ceres).dot(
+                           util_ceres::fromQuaternion(rot_ceres) * n_.cast<T>()) - static_cast<T>(1);
         return true;
     }
 
@@ -27,6 +26,6 @@ struct FunctorNormal {
     }
 
 private:
-    Eigen::Vector3d n_; ///< 3D world point normal associated to this pixel
+    const Eigen::Vector3d n_; ///< 3D world point normal associated to this pixel
 };
 }

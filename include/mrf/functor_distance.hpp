@@ -16,22 +16,27 @@ struct FunctorDistance {
             : p_{p}, ray_{ray} {};
 
     template <typename T>
-    inline bool operator()(const T* const depth, const T* const rotation,
-                           const T* const translation, T* res) const {
-        using namespace Eigen;
-        const Affine3<T> tf{util_ceres::fromQuaternionTranslation(rotation, translation)};
-        Map<Vector3<T>>(res, DimResidual) = ray_.cast<T>().pointAt(depth[0]) - tf * p_.cast<T>();
+    inline bool operator()(const T* const depth,
+                           const T* const rotation,
+                           const T* const translation,
+                           T* res) const {
+        Eigen::Map<Eigen::Vector3<T>>(res, DimResidual) =
+            ray_.cast<T>().pointAt(depth[0]) -
+            util_ceres::fromQuaternionTranslation(rotation, translation) * p_.cast<T>();
         return true;
     }
 
     inline static ceres::CostFunction* create(const Eigen::Vector3d& p,
                                               const Eigen::ParametrizedLine<double, 3>& ray) {
-        return new ceres::AutoDiffCostFunction<FunctorDistance, DimResidual, DimDistance, DimRotation,
+        return new ceres::AutoDiffCostFunction<FunctorDistance,
+                                               DimResidual,
+                                               DimDistance,
+                                               DimRotation,
                                                DimTranslation>(new FunctorDistance(p, ray));
     }
 
 private:
-    Eigen::Vector3d p_; ///< 3D world point associated to this pixel
-    Eigen::ParametrizedLine<double, 3> ray_;
+    const Eigen::Vector3d p_; ///< 3D world point associated to this pixel
+    const Eigen::ParametrizedLine<double, 3> ray_;
 };
 }
