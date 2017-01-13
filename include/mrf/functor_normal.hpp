@@ -17,10 +17,7 @@ struct FunctorNormal {
     inline bool operator()(const T* const n_ceres, const T* const rot_ceres, T* res_ceres) const {
         using namespace Eigen;
         const Map<const Vector3<T>> n(n_ceres);
-        //        Map<Vector3<T>>(res_ceres, DimResidual) =
-        //            Map<const Vector3<T>>(n_ceres) - util_ceres::fromQuaternion(rot_ceres) *
-        //            n_.cast<T>();
-        res_ceres[0] = T(1) - n.dot(n_.cast<T>());
+        res_ceres[0] = T(1) - n.dot(util_ceres::fromQuaternion(rot_ceres) * n_.cast<T>());
         return true;
     }
 
