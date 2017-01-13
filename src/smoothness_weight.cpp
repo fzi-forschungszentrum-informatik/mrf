@@ -1,18 +1,16 @@
 #include "smoothness_weight.hpp"
 
+#include "math.hpp"
+
 namespace mrf {
 
-double sigmoid(const double& x, const double& alpha, const double& beta) {
-    return 0;
-}
-
-double smoothnessWeight(const Pixel& p, const Pixel& neighbor, const double& threshold,
+double smoothnessWeight(const Pixel& p,
+                        const double& threshold,
                         const double& weight_min,
                         const Parameters::SmoothnessWeighting& smoothness_weighting,
-                        const double& alpha, const double& beta) {
-
-    const double diff_abs{std::abs(p.val - neighbor.val)};
-    if (diff_abs < threshold) {
+                        const double& alpha,
+                        const double& beta) {
+    if (p.val < threshold) {
         return 1;
     }
 
@@ -22,11 +20,11 @@ double smoothnessWeight(const Pixel& p, const Pixel& neighbor, const double& thr
     case Parameters::SmoothnessWeighting::step:
         return weight_min;
     case Parameters::SmoothnessWeighting::linear:
-        return std::max(weight_min, 1 - alpha * (diff_abs - threshold));
+        return std::max(weight_min, 1 - alpha * (p.val - threshold));
     case Parameters::SmoothnessWeighting::exponential:
-        return std::max(weight_min, std::exp(-alpha * (diff_abs - threshold)));
+        return std::max(weight_min, std::exp(-alpha * (p.val - threshold)));
     case Parameters::SmoothnessWeighting::sigmoid:
-        return std::max(weight_min, sigmoid(diff_abs - threshold, alpha, beta));
+        return std::max(weight_min, sigmoid(p.val - threshold, alpha, beta));
     }
     return 0;
 }

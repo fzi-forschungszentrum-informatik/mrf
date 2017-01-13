@@ -15,7 +15,6 @@ struct FunctorSmoothnessNormal {
     	using namespace Eigen;
     	const Map<const Vector3<T>> n_this{n_this_ceres};
     	const Map<const Vector3<T>> n_nn{n_nn_ceres};
-//    	Map<Vector3<T>>(res_ceres, DimResidual) = n_this - n_nn;
     	res_ceres[0] = T(1) - n_this.dot(n_nn);
         return true;
     }

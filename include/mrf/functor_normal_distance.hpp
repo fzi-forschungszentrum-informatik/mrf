@@ -1,40 +1,55 @@
 #pragma once
 
-#include <ceres/autodiff_cost_function.h>
-#include <Eigen/src/Geometry/Hyperplane.h>
-#include <Eigen/src/Geometry/ParametrizedLine.h>
+#include <Eigen/Geometry>
+#include <ceres/dynamic_autodiff_cost_function.h>
+
+#include "neighbors.hpp"
+#include "normals.hpp"
+#include "optimization_data.hpp"
+#include "pixel.hpp"
 
 namespace mrf {
 
+
 struct FunctorNormalDistance {
 
-    static constexpr size_t DimDepth = 1;
-    static constexpr size_t DimResidual = 3;
-    static constexpr size_t DimNormal = 3;
-
-    inline FunctorNormalDistance(const Eigen::ParametrizedLine<double, 3>& ray_this,
-                                 const Eigen::ParametrizedLine<double, 3>& ray_nn)
-            : ray_this_{ray_this}, ray_nn_{ray_nn} {};
+    inline FunctorNormalDistance(const OptimizationData& d) : d_(d){};
 
     template <typename T>
-    inline bool operator()(const T* const depth_this, const T* const depth_nn,
-                           const T* const normal_this, T* res) const {
+    inline bool operator()(T const* const* parameters, T* res) const {
         using namespace Eigen;
-        const Hyperplane<T, 3> plane_this(Map<const Vector3<T>>(normal_this),
-                                          ray_this_.cast<T>().pointAt(depth_this[0]));
-        const Vector3<T> p_nn{ray_nn_.cast<T>().pointAt(depth_nn[0])};
-        Map<Vector3<T>>(res, DimResidual) = plane_this.projection(p_nn) - p_nn;
+
+        size_t it{0};
+        std::map<Pixel, T, PixelLess> depths;
+        for (auto const& el : d_.rays)
+            depths[el.first] = parameters[it++][0];
+
+        const Hyperplane<T, 3> plane_this(estimateNormal(d_.ref, d_.rays, depths, d_.mapping),
+                                          d_.rays.at(d_.ref).cast<T>().pointAt(depths.at(d_.ref)));
+
+        it = 0;
+        for (auto const& el : d_.rays) {
+
+            if (el.first == d_.ref) {
+                continue;
+                //                LOG(INFO) << "Skip " << it;
+            }
+
+            res[it++] = plane_this.signedDistance(el.second.cast<T>().pointAt(depths.at(el.first)));
+        }
         return true;
     }
 
-    inline static ceres::CostFunction* create(const Eigen::ParametrizedLine<double, 3>& ray_this,
-                                              const Eigen::ParametrizedLine<double, 3>& ray_nn) {
-        return new ceres::AutoDiffCostFunction<FunctorNormalDistance, DimResidual, DimDepth,
-                                               DimDepth, DimNormal>(
-            new FunctorNormalDistance(ray_this, ray_nn));
+    inline static ceres::CostFunction* create(const OptimizationData& d) {
+        using CostFunction = ceres::DynamicAutoDiffCostFunction<FunctorNormalDistance>;
+        CostFunction* cf{new CostFunction(new FunctorNormalDistance(d))};
+        for (auto const& el : d.rays)
+            cf->AddParameterBlock(1);
+        cf->SetNumResiduals(d.rays.size() - 1);
+        return cf;
     }
 
 private:
-    const Eigen::ParametrizedLine<double, 3> ray_this_, ray_nn_;
+    const OptimizationData d_;
 };
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <ostream>
 #include <stddef.h>
 
@@ -14,8 +15,12 @@ struct Pixel {
         return os;
     }
 
-    const int row, col;
-    const double x, y;
+    inline bool operator==(const Pixel& other) const {
+        return row == other.row && col == other.col;
+    }
+
+    int row, col;
+    double x, y;
     double val;
 };
 
