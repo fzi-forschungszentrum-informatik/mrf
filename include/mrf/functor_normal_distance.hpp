@@ -9,7 +9,7 @@ namespace mrf {
 struct FunctorNormalDistance {
 
     static constexpr size_t DimDepth = 1;
-    static constexpr size_t DimResidual = 3;
+    static constexpr size_t DimResidual = 1;
     static constexpr size_t DimNormal = 3;
 
     inline FunctorNormalDistance(const Eigen::ParametrizedLine<double, 3>& ray_this,
@@ -23,7 +23,7 @@ struct FunctorNormalDistance {
         const Hyperplane<T, 3> plane_this(Map<const Vector3<T>>(normal_this),
                                           ray_this_.cast<T>().pointAt(depth_this[0]));
         const Vector3<T> p_nn{ray_nn_.cast<T>().pointAt(depth_nn[0])};
-        Map<Vector3<T>>(res, DimResidual) = plane_this.projection(p_nn) - p_nn;
+        res[0] = plane_this.signedDistance(p_nn);
         return true;
     }
 
