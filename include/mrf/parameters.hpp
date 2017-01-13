@@ -18,8 +18,9 @@ struct Parameters {
     enum class SmoothnessWeighting { none = 0, step, linear, exponential, sigmoid };
 
     inline Parameters(const std::string& file_name = std::string()) {
-        problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-        problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+        using namespace ceres;
+        problem.cost_function_ownership = DO_NOT_TAKE_OWNERSHIP;
+        problem.loss_function_ownership = DO_NOT_TAKE_OWNERSHIP;
         solver.max_num_iterations = 25;
         solver.minimizer_progress_to_stdout = true;
         solver.num_threads = 8;
@@ -28,10 +29,13 @@ struct Parameters {
         solver.use_inner_iterations = true;
         solver.use_nonmonotonic_steps = true;
         solver.function_tolerance = 1e-5;
+        solver.minimizer_type = MinimizerType::TRUST_REGION;
+        solver.linear_solver_type = LinearSolverType::CGNR;
+//        solver.use_postordering = true;
 
-        if (file_name.size()) {
+        if (file_name.size())
             fromConfig(file_name);
-        }
+
         LOG(INFO) << header();
         LOG(INFO) << *this;
     }
