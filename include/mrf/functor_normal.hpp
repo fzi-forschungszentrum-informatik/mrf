@@ -23,12 +23,13 @@ struct FunctorNormal {
         for (auto const& nb : d_.rays)
             depths[nb.first] = parameters[it++][0];
         res_ceres[0] =
-            T(1) - estimateNormal(d_.ref, d_.rays, depths, d_.mapping).dot(tf * n_.cast<T>());
+            estimateNormal(d_.ref, d_.rays, depths, d_.mapping, T(10)).dot(tf * n_.cast<T>()) -
+            static_cast<T>(1);
         return true;
     }
 
     inline static ceres::CostFunction* create(const Eigen::Vector3d& n, const OptimizationData& d) {
-        using CostFunction = ceres::DynamicAutoDiffCostFunction<FunctorNormal>;
+        using CostFunction = ceres::DynamicAutoDiffCostFunction<FunctorNormal, 10>;
         CostFunction* cf{new CostFunction(new FunctorNormal(n, d))};
         cf->AddParameterBlock(DimRotation);
         for (auto const& el : d.rays)
@@ -39,7 +40,7 @@ struct FunctorNormal {
 
 
 private:
-    Eigen::Vector3d n_; ///< 3D world point normal associated to this pixel
-    OptimizationData d_;
+    const Eigen::Vector3d n_; ///< 3D world point normal associated to this pixel
+    const OptimizationData d_;
 };
 }
