@@ -15,18 +15,19 @@ struct OptimizationData {
     using Ray = Eigen::ParametrizedLine<double, 3>;
 
     std::map<Pixel, Ray, PixelLess> rays;
-    Pixel ref{Pixel(0, 0)};
-    std::vector<std::pair<Pixel, Pixel>> mapping;
-
-    inline friend std::ostream& operator<<(std::ostream& os, const OptimizationData& o) {
-        // clang-format on
-        os << "Ref: " << o.ref << std::endl;
-        // clang-format on;
-        return os;
-    }
+    std::vector<Pixel> ref;
+    std::map<Pixel, std::vector<std::pair<Pixel, Pixel>>, PixelLess> mapping;
 
     static OptimizationData create(const Pixel&,
                                    const std::map<Pixel, Ray, PixelLess>&,
                                    const std::map<NeighborRelation, Pixel>&);
+    static OptimizationData create(
+        const std::vector<Pixel>&,
+        const std::map<Pixel, Ray, PixelLess>&,
+        const std::map<Pixel, std::map<NeighborRelation, Pixel>, PixelLess>&);
+
+    void addRef(const Pixel&,
+                const std::map<Pixel, Ray, PixelLess>&,
+                const std::map<NeighborRelation, Pixel>&);
 };
 }

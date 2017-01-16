@@ -106,10 +106,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
     LOG(INFO) << "Adding parameter blocks";
-    for (auto const& el : rays) {
+    for (auto const& el : rays)
         problem.AddParameterBlock(&depth_est(el.first.row, el.first.col),
                                   FunctorDistance::DimDistance);
-    }
 
     std::vector<ResidualBlockId> ids_functor_distance, ids_functor_normal;
     ids_functor_distance.reserve(projection.size());
@@ -124,8 +123,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 translation.data()));
         }
         if (params_.use_functor_normal) {
-            const OptimizationData optimization_data{OptimizationData::create(
-                el.first, rays, getNeighbors(el.first, d_.image, params_.neighborhood))};
+            const OptimizationData optimization_data(OptimizationData::create(
+                el.first, rays, getNeighbors(el.first, d_.image, params_.neighborhood)));
             std::vector<double*> parameters;
             parameters.push_back(rotation.coeffs().data());
             for (auto const& el : optimization_data.rays)
@@ -145,8 +144,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (auto const& el_ray : rays) {
         const std::map<NeighborRelation, Pixel> neighbors{
             getNeighbors(el_ray.first, d_.image, params_.neighborhood)};
-        const OptimizationData optimization_data{
-            OptimizationData::create(el_ray.first, rays, neighbors)};
+        const OptimizationData optimization_data(
+            OptimizationData::create(el_ray.first, rays, neighbors));
         std::vector<double*> parameters;
         for (auto const& el : optimization_data.rays)
             parameters.emplace_back(&depth_est(el.first.row, el.first.col));
@@ -163,13 +162,27 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 parameters));
         }
 
-        //            if (params_.use_functor_smoothness_normal) {
-        //                ids_functor_smoothness_normal.emplace_back(problem.AddResidualBlock(
-        //                    FunctorSmoothnessNormal::create(),
-        //                    new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
-        //                    cloud_est->at(el_ray.first.col, el_ray.first.row).normal.data(),
-        //                    cloud_est->at(n.col, n.row).normal.data()));
-        //            }
+        if (params_.use_functor_smoothness_normal) {
+            for (auto const& el_neighbor : neighbors) {
+                const std::map<NeighborRelation, Pixel> neighbors2{
+                    getNeighbors(el_neighbor.second, d_.image, params_.neighborhood)};
+                std::map<Pixel, std::map<NeighborRelation, Pixel>, PixelLess> neighbor_mappings;
+                neighbor_mappings.emplace(el_ray.first, neighbors);
+                neighbor_mappings.emplace(el_neighbor.second, neighbors2);
+                std::vector<Pixel> refs;
+                refs.emplace_back(el_ray.first);
+                refs.emplace_back(el_neighbor.second);
+                const OptimizationData optimization_data2(
+                    OptimizationData::create(refs, rays, neighbor_mappings));
+                std::vector<double*> parameters2;
+                for (auto const& el : optimization_data2.rays)
+                    parameters2.emplace_back(&depth_est(el.first.row, el.first.col));
+                ids_functor_smoothness_normal.emplace_back(
+                    problem.AddResidualBlock(FunctorSmoothnessNormal::create(optimization_data2),
+                                             new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
+                                             parameters2));
+            }
+        }
 
         if (params_.use_functor_smoothness_distance) {
             for (auto const& el_neighbor : neighbors) {
@@ -238,15 +251,15 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     for (auto const& el : rays) {
         const Pixel& p{el.first};
-        const OptimizationData optimization_data{
-            OptimizationData::create(p, rays, getNeighbors(p, d_.image, params_.neighborhood))};
+        const OptimizationData optimization_data(
+            OptimizationData::create(p, rays, getNeighbors(p, d_.image, params_.neighborhood)));
         std::map<Pixel, double, PixelLess> depths;
         for (auto const& nb : optimization_data.rays)
             depths[nb.first] = depth_est(nb.first.row, nb.first.col);
         out.cloud->at(p.col, p.row).getVector3fMap() =
             el.second.pointAt(depth_est(p.row, p.col)).cast<float>();
         out.cloud->at(p.col, p.row).getNormalVector3fMap() =
-            estimateNormal(p, rays, depths, optimization_data.mapping, 10.).cast<float>();
+            estimateNormal(p, rays, depths, optimization_data.mapping.at(p), 10.).cast<float>();
         out.cloud->at(p.col, p.row).intensity = p.val;
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());

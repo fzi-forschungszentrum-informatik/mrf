@@ -22,9 +22,9 @@ struct FunctorNormal {
         std::map<Pixel, T, PixelLess> depths;
         for (auto const& nb : d_.rays)
             depths[nb.first] = parameters[it++][0];
-        res_ceres[0] =
-            estimateNormal(d_.ref, d_.rays, depths, d_.mapping, T(10)).dot(tf * n_.cast<T>()) -
-            static_cast<T>(1);
+        res_ceres[0] = estimateNormal(d_.ref[0], d_.rays, depths, d_.mapping.at(d_.ref[0]), T(10))
+                           .dot(tf * n_.cast<T>()) -
+                       static_cast<T>(1);
         return true;
     }
 

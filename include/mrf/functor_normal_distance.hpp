@@ -22,9 +22,11 @@ struct FunctorNormalDistance {
         std::map<Pixel, T, PixelLess> depths;
         for (auto const& el : d_.rays)
             depths[el.first] = parameters[it++][0];
-        const Hyperplane<T, 3> plane_this(estimateNormal(d_.ref, d_.rays, depths, d_.mapping, T(10)),
-                                          d_.rays.at(d_.ref).cast<T>().pointAt(depths.at(d_.ref)));
+
         it = 0;
+        const Hyperplane<T, 3> plane_this(
+            estimateNormal(d_.ref[it], d_.rays, depths, d_.mapping.at(d_.ref[it]), T(10)),
+            d_.rays.at(d_.ref[it]).cast<T>().pointAt(depths.at(d_.ref[it])));
         for (auto const& el : d_.rays) {
             res[it++] = plane_this.signedDistance(el.second.cast<T>().pointAt(depths.at(el.first)));
         }
@@ -32,7 +34,7 @@ struct FunctorNormalDistance {
     }
 
     inline static ceres::CostFunction* create(const OptimizationData& d) {
-        using CostFunction = ceres::DynamicAutoDiffCostFunction<FunctorNormalDistance, 10>;
+        using CostFunction = ceres::DynamicAutoDiffCostFunction<FunctorNormalDistance>;
         CostFunction* cf{new CostFunction(new FunctorNormalDistance(d))};
         for (auto const& el : d.rays)
             cf->AddParameterBlock(1);
