@@ -21,7 +21,9 @@ flann::Matrix<DataType> convertEigen2FlannRow(const EigenT& mEigen) {
     return mFlann;
 }
 
-bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::Vector2i& second,
+bool insideTriangle(const Pixel& p,
+                    const Eigen::Vector2i& first,
+                    const Eigen::Vector2i& second,
                     const Eigen::Vector2i& third) {
     const Eigen::Vector2i& P{p.col, p.row};
     const Eigen::Vector2i& AC{first - third};
@@ -48,7 +50,8 @@ bool insideTriangle(const Pixel& p, const Eigen::Vector2i& first, const Eigen::V
 }
 
 bool getTriangleNeighbours(const std::vector<int>& neighbours_in,
-                           const Eigen::Matrix2Xi& coordinates, const Pixel& p,
+                           const Eigen::Matrix2Xi& coordinates,
+                           const Pixel& p,
                            std::vector<int>& triangle_neighbours) {
     if (neighbours_in.size() < 3) {
         return false;
@@ -80,8 +83,10 @@ bool getTriangleNeighbours(const std::vector<int>& neighbours_in,
     return false;
 }
 
-std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates, const treeT& tree,
-                               const Pixel& p, const int num_neigh) {
+std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates,
+                               const treeT& tree,
+                               const Pixel& p,
+                               const int num_neigh) {
     DistanceType::ElementType queryData[] = {static_cast<DistanceType::ElementType>(p.col),
                                              static_cast<DistanceType::ElementType>(p.row)};
 
@@ -105,8 +110,11 @@ double pointIntersection(const Eigen::ParametrizedLine<double, 3>& ray,
     return (p_int - ray.origin()).norm();
 }
 
-void addSeedPoints(const RayMapT& rays, const PixelMapT& projection, Eigen::MatrixXd& depth_est,
-                   Eigen::MatrixXd& certainty, const pcl_ceres::PointCloud<Point>::Ptr& cl) {
+void addSeedPoints(const RayMapT& rays,
+                   const PixelMapT& projection,
+                   Eigen::MatrixXd& depth_est,
+                   Eigen::MatrixXd& certainty,
+                   const pcl_ceres::PointCloud<Point>::Ptr& cl) {
     for (auto const& el : projection) {
         const Pixel& p{el.first};
         certainty(p.row, p.col) = 1;
@@ -118,13 +126,24 @@ void addSeedPoints(const RayMapT& rays, const PixelMapT& projection, Eigen::Matr
     }
 }
 
-void estimatePrior(const RayMapT& rays, const PixelMapT& projection, const size_t& rows,
-                   const size_t& cols, const Parameters::Initialization& type,
-                   const int neighborsearch, Eigen::MatrixXd& depth_est, Eigen::MatrixXd& certainty,
+void estimatePrior(const RayMapT& rays,
+                   const PixelMapT& projection,
+                   const size_t& rows,
+                   const size_t& cols,
+                   const Parameters::Initialization& type,
+                   const int neighborsearch,
+                   Eigen::MatrixXd& depth_est,
+                   Eigen::MatrixXd& certainty,
                    const pcl_ceres::PointCloud<Point>::Ptr& cl) {
     if (type == Parameters::Initialization::none) {
         LOG(INFO) << "Estimate prior via 'none' method";
         addSeedPoints(rays, projection, depth_est, certainty, cl);
+
+        for (auto const& el : rays)
+            cl->at(el.first.col, el.first.row).normal = -rays.at(el.first).direction();
+        for (auto const& el : projection)
+            cl->at(el.first.col, el.first.row).normal = el.second.normal;
+
         return;
     }
     double max_depth{0};
@@ -151,6 +170,10 @@ void estimatePrior(const RayMapT& rays, const PixelMapT& projection, const size_
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
         certainty = 0 * Eigen::MatrixXd::Ones(rows, cols);
         addSeedPoints(rays, projection, depth_est, certainty, cl);
+        for (auto const& el : rays)
+            cl->at(el.first.col, el.first.row).normal = -rays.at(el.first).direction();
+        for (auto const& el : projection)
+            cl->at(el.first.col, el.first.row).normal = el.second.normal;
         return;
     }
 

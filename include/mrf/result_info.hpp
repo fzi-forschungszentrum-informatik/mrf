@@ -29,9 +29,15 @@ struct ResultInfo {
     size_t number_of_3d_points{0};
     size_t number_of_image_points{0};
 
+    bool has_covariance_depth{false};
     Eigen::MatrixXd covariance_depth;
+
+    bool has_smoothness_costs{false};
     Eigen::MatrixXd smoothness_costs;
+
+    bool has_normal_distance_costs{false};
     Eigen::MatrixXd normal_distance_costs;
+
     Eigen::Matrix<double, 7, 7> covariance_transform;
 };
 }

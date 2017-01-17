@@ -3,52 +3,108 @@
 #include <glog/logging.h>
 #include <opencv2/core/core.hpp>
 
+#include "data.hpp"
+#include "pixel.hpp"
 #include "quality.hpp"
 
 namespace mrf {
 
-inline double median(const cv::Mat& in) {
-    std::vector<double> v;
-    in.reshape(0, 1).copyTo(v);
-    auto median = begin(v);
-    std::advance(median, v.size() / 2);
-    std::nth_element(begin(v), median, end(v));
+inline double median(std::vector<double>& in) {
+    auto median = begin(in);
+    std::advance(median, in.size() / 2);
+    std::nth_element(begin(in), median, end(in));
     return *median;
 }
 
-inline double squaredSum(const cv::Mat& in) {
-    cv::Mat sq;
-    cv::pow(in, 2, sq);
-    return cv::sum(sq)[0];
-}
-
-inline Quality evaluate(const cv::Mat& est, const cv::Mat& ref) {
-    CHECK_EQ(est.size, ref.size) << "Images do not have the same size";
-    const size_t size = est.rows * est.cols;
+template <typename T, typename U>
+Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<CameraModel> cam) {
 
     Quality q;
 
-    q.depth_error = est - ref;
+    using namespace Eigen;
+    int rows, cols;
+    cam->getImageSize(cols, rows);
+    q.depth_error = cv::Mat::zeros(rows, cols, cv::DataType<double>::type);
 
-    using namespace cv;
-    const Mat depth_error_abs{abs(q.depth_error)};
-    q.depth_error_mean = sum(q.depth_error)[0] / size;
-    q.depth_error_mean_abs = sum(depth_error_abs)[0] / size;
-    q.depth_error_median = median(q.depth_error);
-    q.depth_error_median_abs = median(depth_error_abs);
-    q.depth_error_rms = std::sqrt(squaredSum(q.depth_error)) / size;
-    return q;
-}
+    Matrix3Xd refs_3d{est.transform *
+                      ref.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
+    Matrix2Xd refs_img(3, refs_3d.cols());
+    const std::vector<bool> in_front{cam->getImagePoints(refs_3d, refs_img)};
+    std::vector<double> depth_errors, depth_errors_abs;
+    depth_errors.reserve(in_front.size());
+    depth_errors_abs.reserve(in_front.size());
+    for (size_t c = 0; c < in_front.size(); c++) {
+        const T& p_ref{ref.cloud->points[c]};
+        const Vector3d& ref_3d{refs_3d.col(c)};
+        const Vector2d& ref_img{refs_img.col(c)};
 
-inline size_t badMatchedPixels(const cv::Mat& in, const double& max_val) {
-    size_t count{0};
-    for (int r = 0; r < in.rows; r++) {
-        for (int c = 0; c < in.cols; c++) {
-            if (in.at<float>(r, c) > max_val) {
-                count++;
-            }
+        if (!std::isfinite(ref_3d.x()) || !std::isfinite(ref_3d.y()) ||
+            !std::isfinite(ref_3d.z()) || !std::isfinite(ref_img.x()) ||
+            !std::isfinite(ref_img.y()))
+            LOG(INFO) << "NAN point: " << ref_3d.transpose() << ", " << ref_img.transpose();
+
+        const Pixel p(ref_img.x(), ref_img.y());
+        if (ref_3d.z() < 0 || !in_front[c] || (p.col < 0) || (p.col >= cols) || (p.row < 0) ||
+            (p.row >= rows)) {
+            LOG(INFO) << "Not in image: " << ref_3d.transpose() << ", " << ref_img.transpose();
+            continue;
         }
+        q.ref_distances_evaluated++;
+
+        /**
+         * Determine depth
+         */
+        Vector3d support, direction;
+        cam->getViewingRay(ref_img, support, direction);
+        const double distance_ref{
+            (ParametrizedLine<double, 3>(support, direction)
+                 .intersectionPoint(Hyperplane<double, 3>(direction, ref_3d)) -
+             support)
+                .norm()};
+
+        /**
+         * Depth errors
+         */
+        const double distance_error{est.image.template at<double>(p.row, p.col) - distance_ref};
+        if (!std::isfinite(distance_error)) {
+            q.ref_distances_evaluated--;
+            continue;
+        }
+        const double distance_error_abs{std::abs(distance_error)};
+        q.depth_error.at<double>(p.row, p.col) = distance_error;
+        q.depth_error_mean += distance_error;
+        q.depth_error_mean_abs += distance_error_abs;
+        depth_errors.push_back(distance_error);
+        depth_errors_abs.push_back(distance_error_abs);
+        q.depth_error_rms += std::pow(distance_error, 2);
+
+        /**
+         * Normal errors
+         */
+        if (!std::isfinite(p_ref.normal_x) || !std::isfinite(p_ref.normal_y) ||
+            !std::isfinite(p_ref.normal_z))
+            continue;
+        q.ref_normals_evaluated++;
+        const Eigen::Vector3d n_ref_eigen{p_ref.getNormalVector3fMap().template cast<double>()};
+        const Eigen::Vector3d n_est{
+            est.cloud->at(p.col, p.row).getNormalVector3fMap().template cast<double>()};
+        const Eigen::Vector3d delta{n_est - n_ref_eigen};
+        const double dot_product{n_est.dot(n_ref_eigen)};
+        q.normal_error_mean = q.normal_error_mean + delta;
+        q.normal_error_mean_abs += delta.array().abs().matrix();
+        q.normal_dot_product_mean += dot_product;
+        q.normal_dot_product_mean_abs += std::abs(dot_product);
     }
-    return count;
+    q.depth_error_mean /= q.ref_distances_evaluated;
+    q.depth_error_mean_abs /= q.ref_distances_evaluated;
+    q.depth_error_median = median(depth_errors);
+    q.depth_error_median_abs = median(depth_errors_abs);
+    q.depth_error_rms = std::sqrt(q.depth_error_rms / q.ref_distances_evaluated);
+    q.normal_error_mean /= q.ref_normals_evaluated;
+    q.normal_error_mean_abs /= q.ref_normals_evaluated;
+    q.normal_dot_product_mean /= q.ref_normals_evaluated;
+    q.normal_dot_product_mean_abs /= q.ref_normals_evaluated;
+
+    return q;
 }
 }
