@@ -9,7 +9,7 @@ kn: 1
 
 # Smoothness weighting type
 # Available options: none, step, linear, exponential
-smoothness_weighting: linear
+smoothness_weighting: exponential
 
 # Threshold at which smoothness weighting starts to decrease
 discontinuity_threshold: 0.1
@@ -40,7 +40,11 @@ initialization: triangles
 
 # Neighborhood for each pixel to consider
 # Available options: two, four, eight
-neighborhood: eight
+neighborhood: four
+
+# Box cropping mode to reduce the amount of data
+# Available options: none, min_max
+crop_mode: min_max
 
 # Optimizer parameters
 # Available options: trivial, huber, cauchy
@@ -56,10 +60,10 @@ use_nonmonotonic_steps: false
 function_tolerance: 1e-5
 
 use_functor_distance: true
-use_functor_normal: true
-use_functor_normal_distance: true
-use_functor_smoothness_normal: true
-use_functor_smoothness_distance: false
+use_functor_normal: false
+use_functor_normal_distance: false
+use_functor_smoothness_normal: false
+use_functor_smoothness_distance: true
 
 pin_normals: true
 pin_distances: true

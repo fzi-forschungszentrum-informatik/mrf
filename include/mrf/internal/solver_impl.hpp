@@ -64,20 +64,43 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (size_t c = 0; c < in_img.size(); c++) {
         Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
         if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
-            projection.insert(std::make_pair(p, cloud->points[c]));
-            projection_tf.insert(std::make_pair(p, cloud_tf->points[c]));
+            projection.emplace(p, cloud->points[c]);
+            projection_tf.emplace(p, cloud_tf->points[c]);
         }
     }
     LOG(INFO) << "Number of projections: " << projection.size();
 
+    int row_min{0}, row_max{rows};
+    int col_min{0}, col_max{cols};
+    if (params_.crop_mode == Parameters::CropMode::min_max) {
+        LOG(INFO) << "Perform 'min_max' box cropping";
+        row_min = rows - 1;
+        row_max = 0;
+        col_min = cols - 1;
+        col_max = 0;
+        for (auto const& el : projection) {
+        	const Pixel& p{el.first};
+            if (p.col < col_min)
+                col_min = p.col;
+            else if (p.col > col_max)
+                col_max = p.col;
+            if (p.row < row_min)
+                row_min = p.row;
+            else if (p.row > row_max)
+                row_max = p.row;
+        }
+        LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
+                  << ", col_max: " << col_max;
+    }
+
     LOG(INFO) << "Create ray map";
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
-    for (int row = 0; row < rows; row++) {
-        for (int col = 0; col < cols; col++) {
-            Eigen::Vector3d support, direction;
+    for (int row = row_min; row <= row_max; row++) {
+        for (int col = col_min; col <= col_max; col++) {
             const Pixel p(col, row, d_.image.at<float>(row, col));
+            Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
-            rays.insert(std::make_pair(p, Eigen::ParametrizedLine<double, 3>(support, direction)));
+            rays.emplace(p, Eigen::ParametrizedLine<double, 3>(support, direction));
         }
     }
 

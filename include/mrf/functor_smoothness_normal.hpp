@@ -15,7 +15,7 @@ struct FunctorSmoothnessNormal {
                            const T* const n_nn_ceres,
                            T* res_ceres) const {
         using namespace Eigen;
-        res_ceres[0] = Map<const Vector3<T>>{n_this_ceres}.dot(Map<const Vector3<T>>{n_nn_ceres}) -
+        res_ceres[0] = Map<const Vector3<T>>(n_this_ceres).dot(Map<const Vector3<T>>(n_nn_ceres)) -
                        static_cast<T>(1);
         return true;
     }

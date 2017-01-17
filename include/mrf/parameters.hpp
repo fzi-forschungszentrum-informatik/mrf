@@ -16,6 +16,7 @@ struct Parameters {
     enum class Initialization { none, nearest_neighbor, triangles, mean_depth };
     enum class Limits { none, custom, adaptive };
     enum class SmoothnessWeighting { none = 0, step, linear, exponential, sigmoid };
+    enum class CropMode {none = 0, min_max};
 
     inline Parameters(const std::string& file_name = std::string()) {
         using namespace ceres;
@@ -75,7 +76,8 @@ struct Parameters {
 			<< "loss_function_scale" << del
             << "initialization" << del
 			<< "neighborhood" << del
-			<< "estimate_covariances";
+			<< "estimate_covariances" << del
+			<< "crop_mode";
         // clang-format on
         return oss.str();
     }
@@ -111,7 +113,8 @@ struct Parameters {
 				<< p.loss_function_scale << del
                 << static_cast<int>(p.initialization) << del
 				<< static_cast<int>(p.neighborhood) << del
-				<< p.estimate_covariances;
+				<< p.estimate_covariances << del
+				<< static_cast<int>(p.crop_mode);
         // clang-format on
     }
 
@@ -142,6 +145,7 @@ struct Parameters {
     bool estimate_covariances{false};
     ceres::Problem::Options problem;
     std::shared_ptr<ceres::LossFunction> loss_function{new ceres::TrivialLoss};
+    CropMode crop_mode{CropMode::none};
 
 private:
     void fromConfig(const std::string& file_name);

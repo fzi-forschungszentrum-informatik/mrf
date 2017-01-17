@@ -107,6 +107,15 @@ void Parameters::fromConfig(const std::string& file_name) {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
-}
 
+    if (getParam(cfg, "crop_mode", tmp)) {
+        if (tmp == "none") {
+            crop_mode = CropMode::none;
+        } else if (tmp == "min_max") {
+            crop_mode = CropMode::min_max;
+        } else {
+            LOG(WARNING) << "No parameter " << tmp << " available.";
+        }
+    }
+}
 }
