@@ -1,3 +1,4 @@
+#include <chrono>
 #include <map>
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
@@ -7,6 +8,7 @@
 #include <pcl_ceres/transforms.hpp>
 #include <util_ceres/constant_length_parameterization.h>
 #include <util_ceres/eigen_quaternion_parameterization.h>
+#include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <pcl/common/transforms.h>
@@ -74,36 +76,31 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
+            Pixel p(col, row, in.image);
             Eigen::Vector3d support, direction;
-            const Pixel p(col, row, d_.image.at<float>(row, col));
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
             rays.insert(std::make_pair(p, Eigen::ParametrizedLine<double, 3>(support, direction)));
         }
     }
 
+    using Clock = std::chrono::high_resolution_clock;
+    auto start = Clock::now();
     LOG(INFO) << "Estimate prior";
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
     const ClType::Ptr cloud_est{ClType::create(rows, cols)};
     const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
                                params_.use_functor_smoothness_normal};
-    estimatePrior(rays,
-                  projection_tf,
-                  rows,
-                  cols,
-                  params_.initialization,
-                  params_.neighbor_search,
-                  depth_est,
-                  certainty,
-                  cloud_est);
+    estimatePrior(rays, projection_tf, rows, cols, params_.initialization, params_.neighbor_search,
+                  depth_est, certainty, cloud_est);
+    const std::chrono::duration<double> t_diff_prior = Clock::now() - start;
 
     LOG(INFO) << "Create optimization problem";
     Eigen::Quaterniond rotation{in.transform.rotation()};
     Eigen::Vector3d translation{in.transform.translation()};
     using namespace ceres;
     Problem problem(params_.problem);
-    problem.AddParameterBlock(rotation.coeffs().data(),
-                              FunctorDistance::DimRotation,
+    problem.AddParameterBlock(rotation.coeffs().data(), FunctorDistance::DimRotation,
                               new util_ceres::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
@@ -113,8 +110,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                   FunctorDistance::DimDistance);
         if (use_any_normals) {
             problem.AddParameterBlock(
-                cloud_est->at(el.first.col, el.first.row).normal.data(),
-                FunctorNormal::DimNormal,
+                cloud_est->at(el.first.col, el.first.row).normal.data(), FunctorNormal::DimNormal,
                 new util_ceres::ConstantLengthParameterization<FunctorNormal::DimNormal>);
         }
     }
@@ -127,16 +123,14 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             ids_functor_distance.emplace_back(problem.AddResidualBlock(
                 FunctorDistance::create(el.second.position, rays.at(el.first)),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
-                &depth_est(el.first.row, el.first.col),
-                rotation.coeffs().data(),
+                &depth_est(el.first.row, el.first.col), rotation.coeffs().data(),
                 translation.data()));
         }
         if (params_.use_functor_normal) {
             ids_functor_normal.emplace_back(problem.AddResidualBlock(
                 FunctorNormal::create(el.second.normal),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
-                cloud_est->at(el.first.col, el.first.row).normal.data(),
-                rotation.coeffs().data()));
+                cloud_est->at(el.first.col, el.first.row).normal.data(), rotation.coeffs().data()));
         }
     }
 
@@ -146,14 +140,11 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     ids_functor_smoothness_distance.reserve(8 * rays.size());
     ids_functor_normal_distance.reserve(8 * rays.size());
     for (auto const& el : rays) {
-        const std::vector<Pixel> neighbors{getNeighbors(el.first, d_.image, params_.neighborhood)};
+        const std::vector<Pixel> neighbors{getNeighbors(el.first, in.image, params_.neighborhood)};
         for (auto const& n : neighbors) {
-            const double w{smoothnessWeight(el.first,
-                                            n,
-                                            params_.discontinuity_threshold,
+            const double w{smoothnessWeight(el.first, n, params_.discontinuity_threshold,
                                             params_.smoothness_weight_min,
-                                            params_.smoothness_weighting,
-                                            params_.smoothness_rate) *
+                                            params_.smoothness_weighting, params_.smoothness_rate) *
                            params_.ks / neighbors.size()};
             if (params_.use_functor_smoothness_normal) {
                 ids_functor_smoothness_normal.emplace_back(problem.AddResidualBlock(
@@ -163,18 +154,16 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                     cloud_est->at(n.col, n.row).normal.data()));
             }
             if (params_.use_functor_smoothness_distance) {
-                ids_functor_smoothness_distance.emplace_back(
-                    problem.AddResidualBlock(FunctorSmoothnessDistance::create(),
-                                             new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
-                                             &depth_est(el.first.row, el.first.col),
-                                             &depth_est(n.row, n.col)));
+                ids_functor_smoothness_distance.emplace_back(problem.AddResidualBlock(
+                    FunctorSmoothnessDistance::create(),
+                    new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
+                    &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col)));
             }
             if (params_.use_functor_normal_distance) {
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(el.first), rays.at(n)),
                     new ScaledLoss(params_.loss_function.get(), w * params_.kn, TAKE_OWNERSHIP),
-                    &depth_est(el.first.row, el.first.col),
-                    &depth_est(n.row, n.col),
+                    &depth_est(el.first.row, el.first.col), &depth_est(n.row, n.col),
                     cloud_est->at(el.first.col, el.first.row).normal.data()));
             }
         }
@@ -253,8 +242,10 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 
-    LOG(INFO) << "Create result info";
+    LOG(INFO) << "Parse result info";
     ResultInfo info;
+    info.t_prior = t_diff_prior.count();
+    info.t_solver = summary.total_time_in_seconds;
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rays.size();
@@ -275,8 +266,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         info.covariance_depth.resize(rows, cols);
         for (auto const& el : rays) {
             auto const& p = el.first;
-            covariance.GetCovarianceBlock(&depth_est(p.row, p.col),
-                                          &depth_est(p.row, p.col),
+            covariance.GetCovarianceBlock(&depth_est(p.row, p.col), &depth_est(p.row, p.col),
                                           &(info.covariance_depth(p.row, p.col)));
         }
         info.has_covariance_depth = true;

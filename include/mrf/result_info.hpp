@@ -16,15 +16,17 @@ struct ResultInfo {
     inline static std::string header() {
         std::ostringstream oss;
         oss << "optimization_successful" << del << "number_of_3d_points" << del
-            << "number_of_image_points";
+            << "number_of_image_points" << del << "time_diff_prior" << del << "time_diff_solver";
         return oss.str();
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const ResultInfo& o) {
         return os << o.optimization_successful << del << o.number_of_3d_points << del
-                  << o.number_of_image_points;
+                  << o.number_of_image_points << del << o.t_prior << del << o.t_solver;
     }
 
+    double t_prior{0};
+    double t_solver{0};
     bool optimization_successful{false};
     size_t number_of_3d_points{0};
     size_t number_of_image_points{0};
