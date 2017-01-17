@@ -55,15 +55,15 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     const Eigen::Matrix3Xd pts_3d_tf{cloud_tf->getMatrixPoints()};
 
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, cloud->size())};
-    const std::vector<bool> in_img{camera_->getImagePoints(pts_3d_tf, img_pts_raw)};
+    const std::vector<bool> in_front{camera_->getImagePoints(pts_3d_tf, img_pts_raw)};
 
     int cols, rows;
     camera_->getImageSize(cols, rows);
     LOG(INFO) << "Image size: " << cols << " x " << rows << " = " << cols * rows;
     std::map<Pixel, PType, PixelLess> projection, projection_tf;
-    for (size_t c = 0; c < in_img.size(); c++) {
-        Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
-        if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
+    for (size_t c = 0; c < in_front.size(); c++) {
+        const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
+        if (in_front[c] && p.inImage(rows, cols)) {
             projection.emplace(p, cloud->points[c]);
             projection_tf.emplace(p, cloud_tf->points[c]);
         }
@@ -74,9 +74,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     int col_min{0}, col_max{cols};
     if (params_.crop_mode == Parameters::CropMode::min_max) {
         LOG(INFO) << "Perform 'min_max' box cropping";
-        row_min = rows - 1;
+        row_min = rows;
         row_max = 0;
-        col_min = cols - 1;
+        col_min = cols;
         col_max = 0;
         for (auto const& el : projection) {
         	const Pixel& p{el.first};
@@ -95,8 +95,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Create ray map";
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
-    for (int row = row_min; row <= row_max; row++) {
-        for (int col = col_min; col <= col_max; col++) {
+    for (int row = row_min; row < row_max + 1; row++) {
+        for (int col = col_min; col < col_max + 1; col++) {
             const Pixel p(col, row, d_.image.at<float>(row, col));
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);

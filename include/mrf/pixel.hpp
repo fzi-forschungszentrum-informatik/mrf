@@ -14,6 +14,10 @@ struct Pixel {
         return os;
     }
 
+    inline bool inImage(const int& rows, const int& cols) const {
+        return row > 0 && row < rows && col > 0 && col < cols;
+    }
+
     const int row, col;
     const double x, y;
     double val;

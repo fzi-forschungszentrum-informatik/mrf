@@ -46,7 +46,8 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
         const Pixel p(ref_img.x(), ref_img.y());
         if (ref_3d.z() < 0 || !in_front[c] || (p.col < 0) || (p.col >= cols) || (p.row < 0) ||
             (p.row >= rows)) {
-            LOG(INFO) << "Not in image: " << ref_3d.transpose() << ", " << ref_img.transpose();
+            //            LOG(INFO) << "Not in image: " << ref_3d.transpose() << ", " <<
+            //            ref_img.transpose();
             continue;
         }
         q.ref_distances_evaluated++;

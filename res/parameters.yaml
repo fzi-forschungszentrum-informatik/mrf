@@ -24,7 +24,7 @@ smoothness_weight_min: 1e-6
 estimate_normals: true
 
 # Radius in which the normal estimation is performed
-radius_normal_estimation: 0.3
+radius_normal_estimation: 0.5
 
 # Number of neighbors to search for during initialization
 neighbor_search: 10
