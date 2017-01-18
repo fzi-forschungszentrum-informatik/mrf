@@ -31,7 +31,7 @@ cv::Mat edge(const cv::Mat& in, const bool normalize) {
     }
 
     if (normalize) {
-    	cv::normalize(out, out, 0, 1, NORM_MINMAX);
+        cv::normalize(out, out, 0, 1, NORM_MINMAX);
     }
     return out;
 }

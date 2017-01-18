@@ -9,8 +9,7 @@ namespace mrf {
 
 template <typename T, typename U>
 const typename pcl::PointCloud<U>::Ptr estimateNormals(
-    const typename pcl::PointCloud<T>::ConstPtr& in,
-    const double& radius,
+    const typename pcl::PointCloud<T>::ConstPtr& in, const double& radius,
     const bool remove_invalid = true) {
     using namespace pcl;
     const typename PointCloud<U>::Ptr out{new PointCloud<U>};
