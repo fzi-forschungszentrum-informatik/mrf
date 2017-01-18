@@ -60,12 +60,14 @@ use_nonmonotonic_steps: false
 function_tolerance: 1e-5
 
 use_functor_distance: true
-use_functor_normal: true
-use_functor_normal_distance: true
+use_functor_normal: false
+use_functor_normal_distance: false
 use_functor_smoothness_normal: false
-use_functor_smoothness_distance: false
+use_functor_smoothness_distance: true
 
 pin_normals: true
 pin_distances: true
 
-estimate_covariances: false
+estimate_covariances: true
+use_covariance_filter: true
+covariance_filter_treshold: 0.2

@@ -21,15 +21,14 @@ const typename pcl::PointCloud<U>::Ptr estimateNormals(
     ne.compute(cl_normals);
     concatenateFields(*in, cl_normals, *out);
 
-    const typename PointCloud<U>::Ptr tmp{new PointCloud<U>};
+    PointCloud<U> tmp;
     if (remove_invalid) {
         std::vector<int> indices;
-        pcl::removeNaNNormalsFromPointCloud(*out, *tmp, indices);
-        const size_t points_removed{out->size() - tmp->size()};
+        pcl::removeNaNNormalsFromPointCloud(*out, tmp, indices);
+        const size_t points_removed{out->size() - tmp.size()};
         LOG(INFO) << "Detected " << points_removed << " invalid normal points";
         if (!points_removed) {
-            out->height = in->height;
-            out->width = in->width;
+            out->height = in->size() / in->width;
         } else {
             for (auto const& idx : indices)
                 out->at(idx).getNormalVector3fMap() = -out->at(idx).getVector3fMap().normalized();

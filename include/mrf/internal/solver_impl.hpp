@@ -37,6 +37,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     if (params_.estimate_normals) {
         d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
+//        d_.cloud->width = d_.cloud->size();
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
     }
 
@@ -303,6 +304,27 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                           &(info.covariance_depth(p.row, p.col)));
         }
         info.has_covariance_depth = true;
+
+        if (params_.use_covariance_filter) {
+            LOG(INFO) << "Remove points with high covariances";
+            std::vector<int> indices_to_keep;
+            double cov_max{-std::numeric_limits<double>::max()};
+            double cov_min{std::numeric_limits<double>::max()};
+            for (size_t r = 0; r < out.cloud->height; r++) {
+                for (size_t c = 0; c < out.cloud->width; c++) {
+
+                    if (info.covariance_depth(r, c) > cov_max)
+                        cov_max = info.covariance_depth(r, c);
+                    else if (info.covariance_depth(r, c) < cov_min)
+                        cov_min = info.covariance_depth(r, c);
+
+                    if (info.covariance_depth(r, c) < params_.covariance_filter_treshold)
+                        indices_to_keep.emplace_back(r * out.cloud->width + c);
+                }
+            }
+            LOG(INFO) << "cov_min: " << cov_min << ", cov_max: " << cov_max;
+            pcl::copyPointCloud(*out.cloud, indices_to_keep, *out.cloud);
+        }
     }
     return info;
 }

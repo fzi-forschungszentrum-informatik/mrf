@@ -16,13 +16,13 @@ struct Parameters {
     enum class Initialization { none, nearest_neighbor, triangles, mean_depth };
     enum class Limits { none, custom, adaptive };
     enum class SmoothnessWeighting { none = 0, step, linear, exponential, sigmoid };
-    enum class CropMode {none = 0, min_max};
+    enum class CropMode { none = 0, min_max };
 
     inline Parameters(const std::string& file_name = std::string()) {
         using namespace ceres;
         problem.cost_function_ownership = DO_NOT_TAKE_OWNERSHIP;
         problem.loss_function_ownership = DO_NOT_TAKE_OWNERSHIP;
-        solver.max_num_iterations = 25;
+        solver.max_num_iterations = 50;
         solver.minimizer_progress_to_stdout = true;
         solver.num_threads = 8;
         solver.num_linear_solver_threads = 8;
@@ -32,7 +32,7 @@ struct Parameters {
         solver.function_tolerance = 1e-5;
         solver.minimizer_type = MinimizerType::TRUST_REGION;
         solver.linear_solver_type = LinearSolverType::CGNR;
-//        solver.use_postordering = true;
+        //        solver.use_postordering = true;
 
         if (file_name.size())
             fromConfig(file_name);
@@ -77,7 +77,9 @@ struct Parameters {
             << "initialization" << del
 			<< "neighborhood" << del
 			<< "estimate_covariances" << del
-			<< "crop_mode";
+			<< "crop_mode" << del
+			<< "use_covariance_filter" << del
+			<< "covariance_filter_treshold";
         // clang-format on
         return oss.str();
     }
@@ -114,7 +116,9 @@ struct Parameters {
                 << static_cast<int>(p.initialization) << del
 				<< static_cast<int>(p.neighborhood) << del
 				<< p.estimate_covariances << del
-				<< static_cast<int>(p.crop_mode);
+				<< static_cast<int>(p.crop_mode) << del
+				<< p.use_covariance_filter << del
+				<< p.covariance_filter_treshold;
         // clang-format on
     }
 
@@ -146,6 +150,8 @@ struct Parameters {
     ceres::Problem::Options problem;
     std::shared_ptr<ceres::LossFunction> loss_function{new ceres::TrivialLoss};
     CropMode crop_mode{CropMode::none};
+    bool use_covariance_filter{false};
+    double covariance_filter_treshold{0.1};
 
 private:
     void fromConfig(const std::string& file_name);
