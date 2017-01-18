@@ -40,7 +40,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
     }
-
+    LOG(INFO) << "New Cloud size: " << d_.cloud->height << " x " << d_.cloud->width << " = "
+                 << d_.cloud->size();
     using PType = pcl_ceres::Point<double>;
     using ClType = pcl_ceres::PointCloud<PType>;
     const ClType::Ptr cloud{ClType::create()};
@@ -98,7 +99,6 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
     for (int row = row_min; row < row_max + 1; row++) {
         for (int col = col_min; col < col_max + 1; col++) {
-            const Pixel p(col, row, d_.image.at<float>(row, col));
             Eigen::Vector3d support, direction;
             const Pixel p(col, row, in.image);
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
@@ -316,6 +316,7 @@ const std::chrono::duration<double> t_diff_prior = Clock::now() - start;
             std::vector<int> indices_to_keep;
             double cov_max{-std::numeric_limits<double>::max()};
             double cov_min{std::numeric_limits<double>::max()};
+            int points_removed{0};
             for (size_t r = 0; r < out.cloud->height; r++) {
                 for (size_t c = 0; c < out.cloud->width; c++) {
                     if (info.covariance_depth(r, c) > cov_max)
@@ -326,9 +327,11 @@ const std::chrono::duration<double> t_diff_prior = Clock::now() - start;
                         out.cloud->at(c, r).x = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).y = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).z = std::numeric_limits<float>::quiet_NaN();
+                        points_removed++;
                     }
                 }
             }
+            LOG(INFO) << "Points removed: "<< points_removed;
             LOG(INFO) << "cov_min: " << cov_min << ", cov_max: " << cov_max;
         }
     }

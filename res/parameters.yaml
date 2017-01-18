@@ -9,7 +9,7 @@ kn: 1
 
 # Smoothness weighting type
 # Available options: none, step, linear, exponential
-smoothness_weighting: exponential
+smoothness_weighting: step
 
 # Threshold at which smoothness weighting starts to decrease
 discontinuity_threshold: 0.1
@@ -65,9 +65,9 @@ use_functor_normal_distance: false
 use_functor_smoothness_normal: false
 use_functor_smoothness_distance: true
 
-pin_normals: true
-pin_distances: true
+pin_normals: false
+pin_distances: false
 
-estimate_covariances: true
+estimate_covariances: false
 use_covariance_filter: true
 covariance_filter_treshold: 2
