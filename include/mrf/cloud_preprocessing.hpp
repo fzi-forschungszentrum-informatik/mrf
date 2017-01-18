@@ -32,6 +32,7 @@ const typename pcl::PointCloud<U>::Ptr estimateNormals(
         } else {
             for (auto const& idx : indices)
                 out->at(idx).getNormalVector3fMap() = -out->at(idx).getVector3fMap().normalized();
+            out->width = in->size();
         }
     }
     return out;
