@@ -41,6 +41,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
     }
+    LOG(INFO) << "New Cloud size: " << d_.cloud->height << " x " << d_.cloud->width << " = "
+                  << d_.cloud->size();
 
     using PType = pcl_ceres::Point<double>;
     using ClType = pcl_ceres::PointCloud<PType>;

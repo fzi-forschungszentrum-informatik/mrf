@@ -13,9 +13,9 @@ namespace mrf {
 struct Parameters {
 
     enum class Neighborhood { two = 2, four = 4, eight = 8 };
-    enum class Initialization { none, nearest_neighbor, triangles, mean_depth };
+    enum class Initialization { none =0 , nearest_neighbor=1, triangles=2, mean_depth=3 };
     enum class Limits { none, custom, adaptive };
-    enum class SmoothnessWeighting { none = 0, step, linear, exponential, sigmoid };
+    enum class SmoothnessWeighting { none = 0, step = 1, linear = 2, exponential = 3, sigmoid = 4 };
 
     inline Parameters(const std::string& file_name = std::string()) {
         problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
@@ -45,7 +45,6 @@ struct Parameters {
 			<< "kn" << del
 			<< "discontinuity_threshold" << del
             << "limits" << del
-			<< "discontinuity_threshold"<< del
 			<< "custom_depth_limit_min" << del
 			<< "custom_depth_limit_max" << del
 			<< "smoothness_weighting" << del
