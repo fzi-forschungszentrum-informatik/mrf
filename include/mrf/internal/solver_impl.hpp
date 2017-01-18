@@ -29,6 +29,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Preprocess image";
     d_.image = edge(in.image);
+    LOG(INFO) << "Image size: " << d_.image.cols << " x " << d_.image.rows << " = "
+              << d_.image.cols * d_.image.rows;
 
     LOG(INFO) << "Preprocess and transform cloud";
     pcl::copyPointCloud<T, PointT>(*(in.cloud), *d_.cloud);
@@ -58,7 +60,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     int cols, rows;
     camera_->getImageSize(cols, rows);
-    LOG(INFO) << "Image size: " << cols << " x " << rows << " = " << cols * rows;
+    LOG(INFO) << "Camera image size: " << cols << " x " << rows << " = " << cols * rows;
     std::map<Pixel, PType, PixelLess> projection, projection_tf;
     for (size_t c = 0; c < in_front.size(); c++) {
         const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
@@ -88,14 +90,14 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             else if (p.row > row_max)
                 row_max = p.row;
         }
-        LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
-                  << ", col_max: " << col_max;
     }
+    LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
+                      << ", col_max: " << col_max;
 
     LOG(INFO) << "Create ray map";
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
-    for (int row = row_min; row < row_max + 1; row++) {
-        for (int col = col_min; col < col_max + 1; col++) {
+    for (int row = row_min; row <= row_max; row++) {
+        for (int col = col_min; col <= col_max; col++) {
             const Pixel p(col, row, d_.image.at<float>(row, col));
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
