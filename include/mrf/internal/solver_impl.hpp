@@ -70,8 +70,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
     LOG(INFO) << "Number of projections: " << projection.size();
 
-    int row_min{0}, row_max{rows};
-    int col_min{0}, col_max{cols};
+    int row_min{0}, row_max{rows - 1};
+    int col_min{0}, col_max{cols - 1};
     if (params_.crop_mode == Parameters::CropMode::min_max) {
         LOG(INFO) << "Perform 'min_max' box cropping";
         row_min = rows;
@@ -79,7 +79,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         col_min = cols;
         col_max = 0;
         for (auto const& el : projection) {
-        	const Pixel& p{el.first};
+            const Pixel& p{el.first};
             if (p.col < col_min)
                 col_min = p.col;
             else if (p.col > col_max)
@@ -146,7 +146,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     ids_functor_distance.reserve(projection.size());
     ids_functor_normal.reserve(projection.size());
     for (auto const& el : projection) {
-        if (params_.use_functor_distance) {
+        if (params_.use_functor_distance && !params_.pin_distances) {
             ids_functor_distance.emplace_back(problem.AddResidualBlock(
                 FunctorDistance::create(el.second.position, rays.at(el.first)),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
@@ -154,7 +154,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 rotation.coeffs().data(),
                 translation.data()));
         }
-        if (params_.use_functor_normal) {
+        if (params_.use_functor_normal && !params_.pin_normals) {
             ids_functor_normal.emplace_back(problem.AddResidualBlock(
                 FunctorNormal::create(el.second.normal),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
