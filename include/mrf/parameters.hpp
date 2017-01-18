@@ -16,11 +16,13 @@ struct Parameters {
     enum class Initialization { none =0 , nearest_neighbor=1, triangles=2, mean_depth=3 };
     enum class Limits { none, custom, adaptive };
     enum class SmoothnessWeighting { none = 0, step = 1, linear = 2, exponential = 3, sigmoid = 4 };
+	enum class CropMode { none = 0, min_max };
 
     inline Parameters(const std::string& file_name = std::string()) {
-        problem.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-        problem.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
-        solver.max_num_iterations = 25;
+        using namespace ceres;
+        problem.cost_function_ownership = DO_NOT_TAKE_OWNERSHIP;
+        problem.loss_function_ownership = DO_NOT_TAKE_OWNERSHIP;
+        solver.max_num_iterations = 50;
         solver.minimizer_progress_to_stdout = true;
         solver.num_threads = 8;
         solver.num_linear_solver_threads = 8;
@@ -28,10 +30,13 @@ struct Parameters {
         solver.use_inner_iterations = true;
         solver.use_nonmonotonic_steps = true;
         solver.function_tolerance = 1e-5;
+        solver.minimizer_type = MinimizerType::TRUST_REGION;
+        solver.linear_solver_type = LinearSolverType::CGNR;
+        solver.sparse_linear_algebra_library_type = SparseLinearAlgebraLibraryType::SUITE_SPARSE;
 
-        if (file_name.size()) {
+        if (file_name.size())
             fromConfig(file_name);
-        }
+
         LOG(INFO) << header();
         LOG(INFO) << *this;
     }
@@ -70,7 +75,10 @@ struct Parameters {
 			<< "loss_function_scale" << del
             << "initialization" << del
 			<< "neighborhood" << del
-			<< "estimate_covariances";
+			<< "estimate_covariances" << del
+			<< "crop_mode" << del
+			<< "use_covariance_filter" << del
+			<< "covariance_filter_treshold";
         // clang-format on
         return oss.str();
     }
@@ -106,7 +114,10 @@ struct Parameters {
 				<< p.loss_function_scale << del
                 << static_cast<int>(p.initialization) << del
 				<< static_cast<int>(p.neighborhood) << del
-				<< p.estimate_covariances;
+				<< p.estimate_covariances << del
+				<< static_cast<int>(p.crop_mode) << del
+				<< p.use_covariance_filter << del
+				<< p.covariance_filter_treshold;
         // clang-format on
     }
 
@@ -137,6 +148,9 @@ struct Parameters {
     bool estimate_covariances{false};
     ceres::Problem::Options problem;
     std::shared_ptr<ceres::LossFunction> loss_function{new ceres::TrivialLoss};
+    CropMode crop_mode{CropMode::none};
+    bool use_covariance_filter{false};
+    double covariance_filter_treshold{0.1};
 
 private:
     void fromConfig(const std::string& file_name);

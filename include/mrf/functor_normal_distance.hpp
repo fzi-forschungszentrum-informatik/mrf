@@ -22,9 +22,9 @@ struct FunctorNormalDistance {
                            const T* const normal_this,
                            T* res) const {
         using namespace Eigen;
-        const Hyperplane<T, 3> plane_this(Map<const Vector3<T>>(normal_this),
-                                          ray_this_.cast<T>().pointAt(depth_this[0]));
-        res[0] = plane_this.signedDistance(ray_nn_.cast<T>().pointAt(depth_nn[0]));
+        res[0] = Hyperplane<T, 3>(Map<const Vector3<T>>(normal_this),
+                                  ray_this_.cast<T>().pointAt(depth_this[0]))
+                     .signedDistance(ray_nn_.cast<T>().pointAt(depth_nn[0]));
         return true;
     }
 

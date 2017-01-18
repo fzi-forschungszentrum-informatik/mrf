@@ -120,8 +120,7 @@ void addSeedPoints(const RayMapT& rays,
         certainty(p.row, p.col) = 1;
         const Eigen::ParametrizedLine<double, 3>& ray{rays.at(p)};
         const Eigen::Hyperplane<double, 3> plane(ray.direction(), el.second.position);
-        depth_est(p.row, p.col) =
-            (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
+        depth_est(p.row, p.col) = (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
         cl->at(p.col, p.row).normal = el.second.normal;
     }
 }
