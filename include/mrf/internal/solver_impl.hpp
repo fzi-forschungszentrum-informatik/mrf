@@ -37,7 +37,6 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     if (params_.estimate_normals) {
         d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
-//        d_.cloud->width = d_.cloud->size();
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
     }
 
@@ -52,9 +51,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
     const ClType::Ptr cloud_tf = pcl_ceres::transform<PType>(cloud, in.transform);
 
-    LOG(INFO) << "Compute point projection in camera image";
+    LOG(INFO) << "Compute point projections in camera image";
     const Eigen::Matrix3Xd pts_3d_tf{cloud_tf->getMatrixPoints()};
-
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, cloud->size())};
     const std::vector<bool> in_front{camera_->getImagePoints(pts_3d_tf, img_pts_raw)};
 
@@ -312,18 +310,18 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             double cov_min{std::numeric_limits<double>::max()};
             for (size_t r = 0; r < out.cloud->height; r++) {
                 for (size_t c = 0; c < out.cloud->width; c++) {
-
                     if (info.covariance_depth(r, c) > cov_max)
                         cov_max = info.covariance_depth(r, c);
                     else if (info.covariance_depth(r, c) < cov_min)
                         cov_min = info.covariance_depth(r, c);
-
-                    if (info.covariance_depth(r, c) < params_.covariance_filter_treshold)
-                        indices_to_keep.emplace_back(r * out.cloud->width + c);
+                    if (info.covariance_depth(r, c) > params_.covariance_filter_treshold) {
+                        out.cloud->at(c, r).x = std::numeric_limits<float>::quiet_NaN();
+                        out.cloud->at(c, r).y = std::numeric_limits<float>::quiet_NaN();
+                        out.cloud->at(c, r).z = std::numeric_limits<float>::quiet_NaN();
+                    }
                 }
             }
             LOG(INFO) << "cov_min: " << cov_min << ", cov_max: " << cov_max;
-            pcl::copyPointCloud(*out.cloud, indices_to_keep, *out.cloud);
         }
     }
     return info;

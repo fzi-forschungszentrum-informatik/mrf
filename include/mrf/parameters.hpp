@@ -32,7 +32,7 @@ struct Parameters {
         solver.function_tolerance = 1e-5;
         solver.minimizer_type = MinimizerType::TRUST_REGION;
         solver.linear_solver_type = LinearSolverType::CGNR;
-        //        solver.use_postordering = true;
+        solver.sparse_linear_algebra_library_type = SparseLinearAlgebraLibraryType::SUITE_SPARSE;
 
         if (file_name.size())
             fromConfig(file_name);

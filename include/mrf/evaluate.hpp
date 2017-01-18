@@ -66,8 +66,10 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
         /**
          * Depth errors
          */
+        const U& p_est{est.cloud->at(p.col, p.row)};
         const double distance_error{est.image.template at<double>(p.row, p.col) - distance_ref};
-        if (!std::isfinite(distance_error)) {
+        if (!std::isfinite(distance_error) || !std::isfinite(p_est.x) || !std::isfinite(p_est.y) ||
+            !std::isfinite(p_est.z)) {
             q.ref_distances_evaluated--;
             continue;
         }
@@ -87,8 +89,8 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
             continue;
         q.ref_normals_evaluated++;
         const Eigen::Vector3d n_ref_eigen{p_ref.getNormalVector3fMap().template cast<double>()};
-        const Eigen::Vector3d n_est{
-            est.cloud->at(p.col, p.row).getNormalVector3fMap().template cast<double>()};
+
+        const Eigen::Vector3d n_est{p_est.getNormalVector3fMap().template cast<double>()};
         const Eigen::Vector3d delta{n_est - n_ref_eigen};
         const double dot_product{n_est.dot(n_ref_eigen)};
         q.normal_error_mean = q.normal_error_mean + delta;

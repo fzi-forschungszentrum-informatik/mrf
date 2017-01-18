@@ -117,5 +117,9 @@ void Parameters::fromConfig(const std::string& file_name) {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
+    getParam(cfg, "use_covariance_filter", use_covariance_filter);
+    getParam(cfg, "covariance_filter_treshold", covariance_filter_treshold);
+
+
 }
 }

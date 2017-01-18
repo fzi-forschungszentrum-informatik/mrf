@@ -70,4 +70,4 @@ pin_distances: true
 
 estimate_covariances: true
 use_covariance_filter: true
-covariance_filter_treshold: 0.2
+covariance_filter_treshold: 2
