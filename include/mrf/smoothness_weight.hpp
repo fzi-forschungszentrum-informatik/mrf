@@ -6,6 +6,7 @@
 namespace mrf {
 
 double smoothnessWeight(const Pixel& p,
+                        const Pixel& neighbor,
                         const double& threshold,
                         const double& weight_min,
                         const Parameters::SmoothnessWeighting&,

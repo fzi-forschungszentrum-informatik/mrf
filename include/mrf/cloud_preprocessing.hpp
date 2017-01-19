@@ -9,7 +9,8 @@ namespace mrf {
 
 template <typename T, typename U>
 const typename pcl::PointCloud<U>::Ptr estimateNormals(
-    const typename pcl::PointCloud<T>::ConstPtr& in, const double& radius,
+    const typename pcl::PointCloud<T>::ConstPtr& in,
+    const double& radius,
     const bool remove_invalid = true) {
     using namespace pcl;
     const typename PointCloud<U>::Ptr out{new PointCloud<U>};
@@ -20,15 +21,21 @@ const typename pcl::PointCloud<U>::Ptr estimateNormals(
     ne.compute(cl_normals);
     concatenateFields(*in, cl_normals, *out);
 
+    PointCloud<U> tmp;
     if (remove_invalid) {
-        std::vector<int> indices;
-        pcl::removeNaNNormalsFromPointCloud(*out, *out, indices);
-        const size_t points_removed{in->size() - out->size()};
-        LOG(INFO) << "Removed " << points_removed << " invalid normal points";
-        if (!points_removed) {
-            out->height = in->height;
-            out->width = in->width;
+        size_t invalid_points{0};
+        for (auto& p : out->points) {
+            if (!pcl_isfinite(p.normal_x) || !pcl_isfinite(p.normal_y) ||
+                !pcl_isfinite(p.normal_z)) {
+                p.getNormalVector3fMap() = -p.getVector3fMap().normalized();
+                invalid_points++;
+            }
         }
+        LOG(INFO) << "Detected " << invalid_points << " invalid normal points";
+        if (!invalid_points)
+            out->height = in->size() / in->width;
+        else
+            out->width = in->size();
     }
     return out;
 }

@@ -78,6 +78,8 @@ void Parameters::fromConfig(const std::string& file_name) {
             initialization = Initialization::mean_depth;
         } else if (tmp == "triangles") {
             initialization = Initialization::triangles;
+        } else if (tmp == "weighted_neighbor") {
+            initialization = Initialization::weighted_neighbor;
         } else {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
@@ -107,6 +109,17 @@ void Parameters::fromConfig(const std::string& file_name) {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
-}
 
+    if (getParam(cfg, "crop_mode", tmp)) {
+        if (tmp == "none") {
+            crop_mode = CropMode::none;
+        } else if (tmp == "min_max") {
+            crop_mode = CropMode::min_max;
+        } else {
+            LOG(WARNING) << "No parameter " << tmp << " available.";
+        }
+    }
+    getParam(cfg, "use_covariance_filter", use_covariance_filter);
+    getParam(cfg, "covariance_filter_treshold", covariance_filter_treshold);
+}
 }

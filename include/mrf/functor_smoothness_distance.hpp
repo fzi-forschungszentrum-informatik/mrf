@@ -16,8 +16,9 @@ struct FunctorSmoothnessDistance {
     }
 
     inline static ceres::CostFunction* create() {
-        return new ceres::AutoDiffCostFunction<FunctorSmoothnessDistance, DimResidual, DimDepth,
-                                               DimDepth>(new FunctorSmoothnessDistance());
+        return new ceres::
+            AutoDiffCostFunction<FunctorSmoothnessDistance, DimResidual, DimDepth, DimDepth>(
+                new FunctorSmoothnessDistance());
     }
 };
 }

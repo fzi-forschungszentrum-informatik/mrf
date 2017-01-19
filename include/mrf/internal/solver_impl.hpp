@@ -1,3 +1,4 @@
+#include <chrono>
 #include <map>
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
@@ -12,6 +13,7 @@
 #include <pcl/common/transforms.h>
 
 #include "../cloud_preprocessing.hpp"
+#include "../cv_helper.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
 #include "../functor_normal_distance.hpp"
@@ -29,6 +31,10 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Preprocess image";
     d_.image = edge(in.image);
+
+    cv::Mat image{norm_color(in.image, true)};
+    LOG(INFO) << "Image size: " << d_.image.cols << " x " << d_.image.rows << " = "
+              << d_.image.cols * d_.image.rows;
 
     LOG(INFO) << "Preprocess and transform cloud";
     pcl::copyPointCloud<T, PointT>(*(in.cloud), *d_.cloud);
@@ -51,49 +57,68 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
     const ClType::Ptr cloud_tf = pcl_ceres::transform<PType>(cloud, in.transform);
 
-    LOG(INFO) << "Compute point projection in camera image";
+    LOG(INFO) << "Compute point projections in camera image";
     const Eigen::Matrix3Xd pts_3d_tf{cloud_tf->getMatrixPoints()};
-
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, cloud->size())};
-    const std::vector<bool> in_img{camera_->getImagePoints(pts_3d_tf, img_pts_raw)};
+    const std::vector<bool> in_front{camera_->getImagePoints(pts_3d_tf, img_pts_raw)};
 
     int cols, rows;
     camera_->getImageSize(cols, rows);
     LOG(INFO) << "Image size: " << cols << " x " << rows << " = " << cols * rows;
     std::map<Pixel, PType, PixelLess> projection, projection_tf;
-    for (size_t c = 0; c < in_img.size(); c++) {
-        Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
-        if (in_img[c] && (p.row > 0) && (p.row < rows) && (p.col > 0) && (p.col < cols)) {
-            projection.insert(std::make_pair(p, cloud->points[c]));
-            projection_tf.insert(std::make_pair(p, cloud_tf->points[c]));
+    for (size_t c = 0; c < in_front.size(); c++) {
+        const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
+        if (in_front[c] && p.inImage(rows, cols)) {
+            projection.emplace(p, cloud->points[c]);
+            projection_tf.emplace(p, cloud_tf->points[c]);
         }
     }
     LOG(INFO) << "Number of projections: " << projection.size();
 
+    int row_min{0}, row_max{rows - 1};
+    int col_min{0}, col_max{cols - 1};
+    if (params_.crop_mode == Parameters::CropMode::min_max) {
+        LOG(INFO) << "Perform 'min_max' box cropping";
+        row_min = rows;
+        row_max = 0;
+        col_min = cols;
+        col_max = 0;
+        for (auto const& el : projection) {
+            const Pixel& p{el.first};
+            if (p.col < col_min)
+                col_min = p.col;
+            else if (p.col > col_max)
+                col_max = p.col;
+            if (p.row < row_min)
+                row_min = p.row;
+            else if (p.row > row_max)
+                row_max = p.row;
+        }
+        LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
+                  << ", col_max: " << col_max;
+    }
+
     LOG(INFO) << "Create ray map";
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
-    for (int row = 0; row < rows; row++) {
-        for (int col = 0; col < cols; col++) {
+    for (int row = row_min; row < row_max + 1; row++) {
+        for (int col = col_min; col < col_max + 1; col++) {
+            const Pixel p(col, row, getVector<float>(image, row, col));
             Eigen::Vector3d support, direction;
-            const Pixel p(col, row, d_.image.at<float>(row, col));
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
-            rays.insert(std::make_pair(p, Eigen::ParametrizedLine<double, 3>(support, direction)));
+            rays.emplace(p, Eigen::ParametrizedLine<double, 3>(support, direction));
         }
     }
 
+    using Clock = std::chrono::high_resolution_clock;
+    auto start = Clock::now();
     LOG(INFO) << "Estimate prior";
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
     const ClType::Ptr cloud_est{ClType::create(rows, cols)};
-    estimatePrior(rays,
-                  projection_tf,
-                  rows,
-                  cols,
-                  params_.initialization,
-                  params_.neighbor_search,
-                  depth_est,
-                  certainty,
-                  cloud_est);
+    const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
+                               params_.use_functor_smoothness_normal};
+    estimatePrior(rays, projection_tf, rows, cols, params_, depth_est, certainty, cloud_est);
+    const std::chrono::duration<double> t_diff_prior = Clock::now() - start;
 
     LOG(INFO) << "Create optimization problem";
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -105,7 +130,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                               new util_ceres::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
-    LOG(INFO) << "Adding parameter blocks";
+    LOG(INFO) << "Add parameter blocks";
     for (auto const& el : rays)
         problem.AddParameterBlock(&depth_est(el.first.row, el.first.col),
                                   FunctorDistance::DimDistance);
@@ -114,14 +139,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     ids_functor_distance.reserve(projection.size());
     ids_functor_normal.reserve(projection.size());
     for (auto const& el : projection) {
-        if (params_.use_functor_distance) {
+        if (params_.use_functor_distance && !params_.pin_distances)
             ids_functor_distance.emplace_back(problem.AddResidualBlock(
                 FunctorDistance::create(el.second.position, rays.at(el.first)),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
                 &depth_est(el.first.row, el.first.col),
                 rotation.coeffs().data(),
                 translation.data()));
-        }
         if (params_.use_functor_normal) {
             const OptimizationData optimization_data(OptimizationData::create(
                 el.first, rays, getNeighbors(el.first, d_.image, params_.neighborhood)));
@@ -266,9 +290,12 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Create result info";
     ResultInfo info;
+    info.t_prior = t_diff_prior.count();
+    info.t_solver = summary.total_time_in_seconds;
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rays.size();
+    info.iterations_used = summary.iterations.size();
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";
@@ -291,6 +318,30 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                           &(info.covariance_depth(p.row, p.col)));
         }
         info.has_covariance_depth = true;
+
+        if (params_.use_covariance_filter) {
+            LOG(INFO) << "Remove points with high covariances";
+            std::vector<int> indices_to_keep;
+            double cov_max{-std::numeric_limits<double>::max()};
+            double cov_min{std::numeric_limits<double>::max()};
+            int points_removed{0};
+            for (size_t r = 0; r < out.cloud->height; r++) {
+                for (size_t c = 0; c < out.cloud->width; c++) {
+                    if (info.covariance_depth(r, c) > cov_max)
+                        cov_max = info.covariance_depth(r, c);
+                    else if (info.covariance_depth(r, c) < cov_min)
+                        cov_min = info.covariance_depth(r, c);
+                    if (info.covariance_depth(r, c) > params_.covariance_filter_treshold) {
+                        out.cloud->at(c, r).x = std::numeric_limits<float>::quiet_NaN();
+                        out.cloud->at(c, r).y = std::numeric_limits<float>::quiet_NaN();
+                        out.cloud->at(c, r).z = std::numeric_limits<float>::quiet_NaN();
+                        points_removed++;
+                    }
+                }
+            }
+            LOG(INFO) << "Points removed: " << points_removed;
+            LOG(INFO) << "cov_min: " << cov_min << ", cov_max: " << cov_max;
+        }
     }
     return info;
 }

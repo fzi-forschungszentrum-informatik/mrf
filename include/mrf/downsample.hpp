@@ -7,7 +7,8 @@ namespace mrf {
 
 template <typename T>
 const typename pcl::PointCloud<T>::Ptr downsampleEquidistant(
-    const typename pcl::PointCloud<T>::ConstPtr& in, const size_t& skip_cols,
+    const typename pcl::PointCloud<T>::ConstPtr& in,
+    const size_t& skip_cols,
     const size_t& skip_rows = 1) {
     const typename pcl::PointCloud<T>::Ptr out{new typename pcl::PointCloud<T>};
     out->reserve(in->size());
@@ -29,12 +30,13 @@ const typename pcl::PointCloud<T>::Ptr downsampleEquidistant(
 
 template <typename T>
 const typename pcl::PointCloud<T>::Ptr downsampleRandom(
-    const typename pcl::PointCloud<T>::ConstPtr& in, const size_t& number_of_points) {
+    const typename pcl::PointCloud<T>::ConstPtr& in, const size_t& random_rate) {
     const typename pcl::PointCloud<T>::Ptr out{new typename pcl::PointCloud<T>};
-    out->reserve(number_of_points);
+    const size_t num_points{random_rate * in->size() / 100};
+    out->reserve(num_points);
 
     std::srand(std::time(0));
-    for (size_t c = 0; c < number_of_points; c++) {
+    for (size_t c = 0; c < num_points; c++) {
         out->push_back(in->points[(std::rand() % in->size())]);
     }
     return out;

@@ -1,16 +1,18 @@
 #pragma once
 
-#include <cmath>
 #include <ostream>
-#include <stddef.h>
+#include <cmath>
+#include <Eigen/Eigen>
 
 namespace mrf {
 struct Pixel {
-    inline Pixel(const double& x_, const double& y_, const double& val_ = 0)
+    inline Pixel(const double& x_,
+                 const double& y_,
+                 const Eigen::VectorXf& val_ = Eigen::VectorXf::Zero(1))
             : x{x_}, y{y_}, val{val_}, row(std::round(y_)), col(std::round(x_)){};
 
     inline friend std::ostream& operator<<(std::ostream& os, const Pixel& p) {
-        os << "x: " << p.x << ", y: " << p.y << ", val: " << p.val << ", row: " << p.row
+        os << "x: " << p.x << ", y: " << p.y << ", val: " << p.val.transpose() << ", row: " << p.row
            << ", col:" << p.col;
         return os;
     }
@@ -25,7 +27,7 @@ struct Pixel {
 
     int row, col;
     double x, y;
-    double val;
+    Eigen::VectorXf val;
 };
 
 struct PixelLess {

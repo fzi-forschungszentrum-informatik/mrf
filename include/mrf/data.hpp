@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <pcl/point_cloud.h>
-#include <Eigen/src/Geometry/Transform.h>
+#include <Eigen/Geometry>
 #include <opencv2/core/core.hpp>
 
 namespace mrf {
@@ -16,11 +16,13 @@ struct Data {
     using Transform = Eigen::Affine3d;
 
     inline Data() : cloud{new Cloud}, transform{Transform::Identity()} {};
-    inline Data(const typename Cloud::Ptr& cl, const Image& img,
+    inline Data(const typename Cloud::Ptr& cl,
+                const Image& img,
                 const Transform& tf = Transform::Identity())
             : cloud{cl}, image{img}, transform{tf} {};
 
-    inline static Ptr create(const typename Cloud::Ptr& cl, const Image& img,
+    inline static Ptr create(const typename Cloud::Ptr& cl,
+                             const Image& img,
                              const Transform& tf = Transform::Identity()) {
         return std::make_shared<Data>(cl, img, tf);
     }
