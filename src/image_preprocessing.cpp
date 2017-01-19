@@ -41,4 +41,32 @@ cv::Mat blur(const cv::Mat& in, const size_t& kernel_size) {
     cv::GaussianBlur(in, out, cv::Size(kernel_size, kernel_size), 0);
     return out;
 }
+
+cv::Mat norm_color(const cv::Mat& in, const bool use_instance) {
+    using namespace cv;
+    const int channels{in.channels()};
+    std::vector<Mat> in_split(in.channels());
+    std::vector<Mat> out_split;
+    Mat out;
+    split(in, in_split);
+    for (size_t i = 0; i < in.channels(); i++) {
+        double minVal;
+        double maxVal;
+        Point minLoc;
+        Point maxLoc;
+
+        minMaxLoc(in_split[i], &minVal, &maxVal, &minLoc, &maxLoc);
+        LOG(INFO) << "Channel " << i << " min + max values: " << minVal << " + " << maxVal;
+        normalize(in_split[i], in_split[i], 0, 1, cv::NORM_MINMAX);
+    }
+    for (size_t i = 0; i < in.channels() - 1; i++) { //> -1 only color channels
+        out_split.emplace_back(in_split[i]);
+    }
+    LOG(INFO) << "Use Instance: " << use_instance;
+    if (use_instance) {
+        out_split.emplace_back(in_split.back()); //> because instance is always the last channel
+    }
+    merge(out_split, out);
+    return out;
+}
 }

@@ -31,18 +31,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << "Preprocess image";
     d_.image = edge(in.image);
 
-    std::vector<cv::Mat> channels(in.image.channels());
-    cv::split(in.image, channels);
-    for (size_t i = 0; i < in.image.channels(); i++) {
-        double minVal;
-        double maxVal;
-        cv::Point minLoc;
-        cv::Point maxLoc;
-
-        minMaxLoc(channels[i], &minVal, &maxVal, &minLoc, &maxLoc);
-        LOG(INFO) << "Channel " << i << " min + max values: " << minVal << " + " << maxVal;
-    }
-    cv::normalize(in.image, in.image, 0, 1, cv::NORM_MINMAX);
+    cv::Mat image{norm_color(in.image, true)};
 
     LOG(INFO) << "Preprocess and transform cloud";
     pcl::copyPointCloud<T, PointT>(*(in.cloud), *d_.cloud);
@@ -113,7 +102,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (int row = row_min; row < row_max + 1; row++) {
         for (int col = col_min; col < col_max + 1; col++) {
             Eigen::Vector3d support, direction;
-            const Pixel p(col, row, in.image);
+            const Pixel p(col, row, image);
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
             rays.emplace(p, Eigen::ParametrizedLine<double, 3>(support, direction));
         }
@@ -187,7 +176,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     ids_functor_smoothness_distance.reserve(8 * rays.size());
     ids_functor_normal_distance.reserve(8 * rays.size());
     for (auto const& el : rays) {
-        const std::vector<Pixel> neighbors{getNeighbors(el.first, in.image, params_.neighborhood)};
+        const std::vector<Pixel> neighbors{getNeighbors(el.first, image, params_.neighborhood)};
         for (auto const& n : neighbors) {
             const double w{smoothnessWeight(el.first,
                                             n,
@@ -301,6 +290,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rays.size();
+    info.iterations_used = summary.iterations.size();
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";
