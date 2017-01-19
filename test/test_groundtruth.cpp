@@ -101,8 +101,8 @@ TEST(Groundtruth, solve) {
     typename Data<PointT>::Cloud::Ptr sparse{new typename Data<PointT>::Cloud};
     if (params.equidistant) {
         LOG(INFO) << "Equidistant downsampling";
-        sparse = downsampleEquidistant<PointT>(gt_data.cloud, params.rows_inbetween,
-                                               params.cols_inbetween);
+        sparse = downsampleEquidistant<PointT>(
+            gt_data.cloud, params.rows_inbetween, params.cols_inbetween);
     } else {
         LOG(INFO) << "Random downsampling";
         sparse = downsampleRandom<PointT>(gt_data.cloud, params.seedpoint_number);
@@ -110,8 +110,8 @@ TEST(Groundtruth, solve) {
 
     if (params.addCloudNoise) {
         LOG(INFO) << "Add Noise";
-        sparse = addNoise<PointT>(gt_data.cloud, params.noise_sigma, params.noise_sigma,
-                                  params.noise_sigma);
+        sparse = addNoise<PointT>(
+            gt_data.cloud, params.noise_sigma, params.noise_sigma, params.noise_sigma);
     }
 
     LOG(INFO) << "Solve";

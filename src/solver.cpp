@@ -4,7 +4,8 @@
 
 namespace mrf {
 
-std::vector<double> smoothnessWeights(const int p, const std::vector<int>& neighbors,
+std::vector<double> smoothnessWeights(const int p,
+                                      const std::vector<int>& neighbors,
                                       const cv::Mat& img) {
 
     const int width{img.rows};

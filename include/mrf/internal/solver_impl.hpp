@@ -1,3 +1,4 @@
+#include <chrono>
 #include <map>
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
@@ -29,6 +30,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Preprocess image";
     d_.image = edge(in.image);
+
+    cv::Mat image{norm_color(in.image, true)};
     LOG(INFO) << "Image size: " << d_.image.cols << " x " << d_.image.rows << " = "
               << d_.image.cols * d_.image.rows;
 
@@ -60,7 +63,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     int cols, rows;
     camera_->getImageSize(cols, rows);
-    LOG(INFO) << "Camera image size: " << cols << " x " << rows << " = " << cols * rows;
+    LOG(INFO) << "Image size: " << cols << " x " << rows << " = " << cols * rows;
     std::map<Pixel, PType, PixelLess> projection, projection_tf;
     for (size_t c = 0; c < in_front.size(); c++) {
         const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
@@ -90,36 +93,31 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             else if (p.row > row_max)
                 row_max = p.row;
         }
+        LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
+                  << ", col_max: " << col_max;
     }
-    LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
-                      << ", col_max: " << col_max;
 
     LOG(INFO) << "Create ray map";
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
-    for (int row = row_min; row <= row_max; row++) {
-        for (int col = col_min; col <= col_max; col++) {
-            const Pixel p(col, row, d_.image.at<float>(row, col));
+    for (int row = row_min; row < row_max + 1; row++) {
+        for (int col = col_min; col < col_max + 1; col++) {
+            const Pixel p(col, row, image);
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
             rays.emplace(p, Eigen::ParametrizedLine<double, 3>(support, direction));
         }
     }
 
+    using Clock = std::chrono::high_resolution_clock;
+    auto start = Clock::now();
     LOG(INFO) << "Estimate prior";
     Eigen::MatrixXd depth_est{Eigen::MatrixXd::Zero(rows, cols)};
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
     const ClType::Ptr cloud_est{ClType::create(rows, cols)};
     const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
                                params_.use_functor_smoothness_normal};
-    estimatePrior(rays,
-                  projection_tf,
-                  rows,
-                  cols,
-                  params_.initialization,
-                  params_.neighbor_search,
-                  depth_est,
-                  certainty,
-                  cloud_est);
+    estimatePrior(rays, projection_tf, rows, cols, params_, depth_est, certainty, cloud_est);
+    const std::chrono::duration<double> t_diff_prior = Clock::now() - start;
 
     LOG(INFO) << "Create optimization problem";
     Eigen::Quaterniond rotation{in.transform.rotation()};
@@ -170,7 +168,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     ids_functor_smoothness_distance.reserve(8 * rays.size());
     ids_functor_normal_distance.reserve(8 * rays.size());
     for (auto const& el : rays) {
-        const std::vector<Pixel> neighbors{getNeighbors(el.first, d_.image, params_.neighborhood)};
+        const std::vector<Pixel> neighbors{getNeighbors(el.first, image, params_.neighborhood)};
         for (auto const& n : neighbors) {
             const double w{smoothnessWeight(el.first,
                                             n,
@@ -279,9 +277,12 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Create result info";
     ResultInfo info;
+    info.t_prior = t_diff_prior.count();
+    info.t_solver = summary.total_time_in_seconds;
     info.optimization_successful = summary.IsSolutionUsable();
     info.number_of_3d_points = projection.size();
     info.number_of_image_points = rays.size();
+    info.iterations_used = summary.iterations.size();
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";
@@ -310,6 +311,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             std::vector<int> indices_to_keep;
             double cov_max{-std::numeric_limits<double>::max()};
             double cov_min{std::numeric_limits<double>::max()};
+            int points_removed{0};
             for (size_t r = 0; r < out.cloud->height; r++) {
                 for (size_t c = 0; c < out.cloud->width; c++) {
                     if (info.covariance_depth(r, c) > cov_max)
@@ -320,9 +322,11 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                         out.cloud->at(c, r).x = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).y = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).z = std::numeric_limits<float>::quiet_NaN();
+                        points_removed++;
                     }
                 }
             }
+            LOG(INFO) << "Points removed: " << points_removed;
             LOG(INFO) << "cov_min: " << cov_min << ", cov_max: " << cov_max;
         }
     }

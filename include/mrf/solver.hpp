@@ -23,7 +23,7 @@ public:
     ResultInfo solve(const Data<T>&, Data<PointT>&, const bool pin_transform = true);
 
     inline Data<PointT> getDebugInfo() const {
-    	return d_;
+        return d_;
     }
 
     inline static Ptr create(const std::shared_ptr<CameraModel>& cam,
