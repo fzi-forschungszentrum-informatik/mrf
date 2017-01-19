@@ -7,6 +7,7 @@
 
 namespace mrf {
 
-std::vector<Pixel> getNeighbors(const Pixel& p, const cv::Mat& img,
+std::vector<Pixel> getNeighbors(const Pixel& p,
+                                const cv::Mat& img,
                                 const Parameters::Neighborhood& mode);
 }

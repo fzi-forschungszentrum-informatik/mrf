@@ -9,7 +9,7 @@ kn: 1
 
 # Smoothness weighting type
 # Available options: none, step, linear, exponential
-smoothness_weighting: step
+smoothness_weighting: exponential
 
 # Threshold at which smoothness weighting starts to decrease
 discontinuity_threshold: 0.1

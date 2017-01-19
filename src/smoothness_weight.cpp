@@ -6,10 +6,13 @@ double sigmoid(const double& x, const double& alpha, const double& beta) {
     return 0;
 }
 
-double smoothnessWeight(const Pixel& p, const Pixel& neighbor, const double& threshold,
+double smoothnessWeight(const Pixel& p,
+                        const Pixel& neighbor,
+                        const double& threshold,
                         const double& weight_min,
                         const Parameters::SmoothnessWeighting& smoothness_weighting,
-                        const double& alpha, const double& beta) {
+                        const double& alpha,
+                        const double& beta) {
 
     const double diff_abs = (p.val - neighbor.val).norm();
     if (diff_abs < threshold) {
