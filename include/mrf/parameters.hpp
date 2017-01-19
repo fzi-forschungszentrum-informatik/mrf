@@ -13,7 +13,13 @@ namespace mrf {
 struct Parameters {
 
     enum class Neighborhood { two = 2, four = 4, eight = 8 };
-    enum class Initialization { none = 0, nearest_neighbor = 1, triangles = 2, mean_depth = 3 };
+    enum class Initialization {
+        none = 0,
+        nearest_neighbor = 1,
+        triangles = 2,
+        mean_depth = 3,
+        weighted_neighbor = 4
+    };
     enum class Limits { none, custom, adaptive };
     enum class SmoothnessWeighting { none = 0, step = 1, linear = 2, exponential = 3, sigmoid = 4 };
     enum class CropMode { none = 0, min_max };

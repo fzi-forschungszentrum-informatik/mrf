@@ -9,10 +9,10 @@ kn: 1
 
 # Smoothness weighting type
 # Available options: none, step, linear, exponential
-smoothness_weighting: exponential
+smoothness_weighting: step
 
 # Threshold at which smoothness weighting starts to decrease
-discontinuity_threshold: 0.1
+discontinuity_threshold: 0.03
 
 # Decrease rate of smoothness weighting
 smoothness_rate: 2.5
@@ -35,7 +35,7 @@ limits: adaptive
 custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
-# Available options: none, nearest_neighbor, triangles, mean_depth
+# Available options: none, nearest_neighbor, triangles, mean_depth, weighted_neighbor
 initialization: triangles
 
 # Neighborhood for each pixel to consider

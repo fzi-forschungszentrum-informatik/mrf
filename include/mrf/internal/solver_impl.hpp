@@ -116,15 +116,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     const ClType::Ptr cloud_est{ClType::create(rows, cols)};
     const bool use_any_normals{params_.use_functor_normal || params_.use_functor_normal_distance ||
                                params_.use_functor_smoothness_normal};
-    estimatePrior(rays,
-                  projection_tf,
-                  rows,
-                  cols,
-                  params_.initialization,
-                  params_.neighbor_search,
-                  depth_est,
-                  certainty,
-                  cloud_est);
+    estimatePrior(rays, projection_tf, rows, cols, params_, depth_est, certainty, cloud_est);
     const std::chrono::duration<double> t_diff_prior = Clock::now() - start;
 
     LOG(INFO) << "Create optimization problem";

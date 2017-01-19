@@ -1,6 +1,7 @@
 #include "prior.hpp"
 
 #include <flann/flann.h>
+#include "smoothness_weight.hpp"
 
 namespace mrf {
 
@@ -97,6 +98,23 @@ std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates,
     return indices_vec[0];
 }
 
+std::vector<int> getNeighbours(const Eigen::Matrix2Xi& coordinates,
+                               std::vector<DataType>& distances,
+                               const treeT& tree,
+                               const Pixel& p,
+                               const int num_neigh) {
+    DistanceType::ElementType queryData[] = {static_cast<DistanceType::ElementType>(p.col),
+                                             static_cast<DistanceType::ElementType>(p.row)};
+
+    const flann::Matrix<DistanceType::ElementType> query(queryData, 1, 2);
+    std::vector<std::vector<int>> indices_vec;
+    std::vector<std::vector<DataType>> dist_vec;
+    tree->knnSearch(query, indices_vec, dist_vec, num_neigh, flann::SearchParams(32));
+    distances = dist_vec[0];
+    return indices_vec[0];
+}
+
+
 double pointIntersection(const Eigen::ParametrizedLine<double, 3>& ray,
                          const std::vector<Eigen::Vector3d>& neighbours) {
 
@@ -130,12 +148,11 @@ void estimatePrior(const RayMapT& rays,
                    const PixelMapT& projection,
                    const size_t& rows,
                    const size_t& cols,
-                   const Parameters::Initialization& type,
-                   const int neighborsearch,
+                   const Parameters& param,
                    Eigen::MatrixXd& depth_est,
                    Eigen::MatrixXd& certainty,
                    const pcl_ceres::PointCloud<Point>::Ptr& cl) {
-    if (type == Parameters::Initialization::none) {
+    if (param.initialization == Parameters::Initialization::none) {
         LOG(INFO) << "Estimate prior via 'none' method";
         addSeedPoints(rays, projection, depth_est, certainty, cl);
 
@@ -163,7 +180,7 @@ void estimatePrior(const RayMapT& rays,
         }
     }
 
-    if (type == Parameters::Initialization::mean_depth) {
+    if (param.initialization == Parameters::Initialization::mean_depth) {
         LOG(INFO) << "Estimate prior via 'mean_depth' method";
         double mean_depth{sum / projection.size()};
         LOG(INFO) << "mean depth is " << mean_depth;
@@ -184,7 +201,7 @@ void estimatePrior(const RayMapT& rays,
         std::make_unique<flann::Index<DistanceType>>(flann_dataset, flann::KDTreeIndexParams(8));
     kd_index_ptr_->buildIndex(flann_dataset);
 
-    if (type == Parameters::Initialization::nearest_neighbor) {
+    if (param.initialization == Parameters::Initialization::nearest_neighbor) {
         LOG(INFO) << "Estimate prior via 'nearest_neighbor' method";
         for (auto const& el : rays) {
             const Pixel& p{el.first};
@@ -201,13 +218,53 @@ void estimatePrior(const RayMapT& rays,
         return;
     }
 
-    if (type == Parameters::Initialization::triangles) {
+    if (param.initialization == Parameters::Initialization::weighted_neighbor) {
+        LOG(INFO) << "Estimate prior via 'weighted neighbors' method";
+        for (auto const& el : rays) {
+            const Pixel& p{el.first};
+            std::vector<double> dist_neighbors;
+            std::vector<int> all_neighbours{
+                getNeighbours(coordinates, dist_neighbors, kd_index_ptr_, p, 4)};
+            double w_sum{0};
+            double d_sum{0};
+            std::vector<double> w_vector;
+            std::vector<Pixel> nn_vector;
+            for (size_t n = 0; n < all_neighbours.size(); n++) {
+                const Pixel nn(coordinates(0, all_neighbours[n]),
+                               coordinates(1, all_neighbours[n]));
+                nn_vector.emplace_back(nn);
+                double w{smoothnessWeight(p,
+                                          nn,
+                                          param.discontinuity_threshold,
+                                          param.smoothness_weight_min,
+                                          param.smoothness_weighting,
+                                          param.smoothness_rate)};
+                w_sum += w;
+                w_vector.emplace_back(w);
+                d_sum += dist_neighbors[n];
+            }
+            double alpha{0}, beta{0};
+            for (size_t n = 0; n < all_neighbours.size(); n++) {
+                const Eigen::ParametrizedLine<double, 3>& ray{rays.at(nn_vector[n])};
+                double depth_nn{(projection.at(nn_vector[n]).position - ray.origin()).norm()};
+                alpha += (1 - dist_neighbors[n] / d_sum) / 3 * depth_nn;
+                beta += w_vector[n] / w_sum * depth_nn;
+            }
+            depth_est(p.row, p.col) = (alpha + beta) / 2;
+            const Pixel nn(coordinates(0, all_neighbours[0]), coordinates(1, all_neighbours[0]));
+            cl->at(p.col, p.row).normal = projection.at(nn).normal;
+        }
+        addSeedPoints(rays, projection, depth_est, certainty, cl);
+    }
+
+
+    if (param.initialization == Parameters::Initialization::triangles) {
         LOG(INFO) << "Estimate prior via 'triangles' method";
 
         for (auto const& el : rays) {
             const Pixel& p{el.first};
             std::vector<int> all_neighbours{
-                getNeighbours(coordinates, kd_index_ptr_, p, neighborsearch)};
+                getNeighbours(coordinates, kd_index_ptr_, p, param.neighbor_search)};
             std::vector<int> triangle_neighbours(3);
             const bool found_triangle{
                 getTriangleNeighbours(all_neighbours, coordinates, p, triangle_neighbours)};
