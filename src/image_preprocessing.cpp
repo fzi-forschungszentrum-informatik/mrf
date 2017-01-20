@@ -3,6 +3,8 @@
 #include <glog/logging.h>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "cv_helper.hpp"
+
 namespace mrf {
 
 cv::Mat edge(const cv::Mat& in, const bool normalize) {
@@ -14,25 +16,16 @@ cv::Mat edge(const cv::Mat& in, const bool normalize) {
 
     Mat normalized;
     addWeighted(abs(grad_x), 0.5, abs(grad_y), 0.5, 0, normalized);
-    if (normalize) {
+    if (normalize)
         cv::normalize(normalized, normalized, 0, 1, NORM_MINMAX);
-    }
 
     Mat out{Mat::zeros(normalized.rows, normalized.cols, DataType<float>::type)};
-    const int channels{normalized.channels()};
-    float* ptr;
-    for (int r = 0; r < normalized.rows; r++) {
-        ptr = normalized.ptr<float>(r);
-        for (int c = 0; c < normalized.cols; c++) {
-            for (int d = 0; d < channels; d++) {
-                out.at<float>(r, c) += ptr[c * channels + d];
-            }
-        }
-    }
+    for (int r = 0; r < normalized.rows; r++)
+        for (int c = 0; c < normalized.cols; c++)
+            out.at<float>(r, c) = getVector<float>(normalized, r, c).sum();
 
-    if (normalize) {
+    if (normalize)
         cv::normalize(out, out, 0, 1, NORM_MINMAX);
-    }
     return out;
 }
 
