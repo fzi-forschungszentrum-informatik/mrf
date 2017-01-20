@@ -35,7 +35,7 @@ limits: adaptive
 custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
-# Available options: none, nearest_neighbor, triangles, mean_depth, weighted_neighbor
+# Available options: none, mean_depth, nearest_neighbor, triangles, weighted_neighbor
 initialization: triangles
 
 # Neighborhood for each pixel to consider
@@ -60,10 +60,10 @@ use_nonmonotonic_steps: false
 function_tolerance: 1e-5
 
 use_functor_distance: true
-use_functor_normal: false
-use_functor_normal_distance: false
-use_functor_smoothness_normal: false
-use_functor_smoothness_distance: true
+use_functor_normal: true
+use_functor_normal_distance: true
+use_functor_smoothness_normal: true
+use_functor_smoothness_distance: false
 
 pin_normals: false
 pin_distances: false
