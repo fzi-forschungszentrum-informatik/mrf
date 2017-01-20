@@ -1,5 +1,5 @@
 # Distance weight
-kd: 1
+kd: 10
 
 # Smoothness weight (within discontinuity threshold)
 ks: 1
@@ -50,7 +50,7 @@ crop_mode: none
 # Available options: trivial, huber, cauchy
 loss_function: trivial
 loss_function_scale: 0.1
-max_num_iterations: 75
+max_num_iterations: 10000
 minimizer_progress_to_stdout: true
 num_threads: 8
 num_linear_solver_threads: 8
