@@ -6,7 +6,6 @@
 #include <pcl_ceres/point.hpp>
 #include <pcl_ceres/point_cloud.hpp>
 #include <pcl_ceres/transforms.hpp>
-#include <util_ceres/constant_length_parameterization.h>
 #include <util_ceres/eigen_quaternion_parameterization.h>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -18,7 +17,6 @@
 #include "../functor_normal.hpp"
 #include "../functor_normal_distance.hpp"
 #include "../functor_smoothness_distance.hpp"
-#include "../functor_smoothness_normal.hpp"
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../prior.hpp"
@@ -61,7 +59,6 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     const Eigen::Matrix3Xd pts_3d_tf{cloud_tf->getMatrixPoints()};
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, cloud->size())};
     const std::vector<bool> in_front{camera_->getImagePoints(pts_3d_tf, img_pts_raw)};
-
     int cols, rows;
     camera_->getImageSize(cols, rows);
     LOG(INFO) << "Image size: " << cols << " x " << rows << " = " << cols * rows;
@@ -138,86 +135,137 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     std::vector<ResidualBlockId> ids_functor_distance, ids_functor_normal;
     ids_functor_distance.reserve(projection.size());
     ids_functor_normal.reserve(projection.size());
-    for (auto const& el : projection) {
+    for (auto const& el_projection : projection) {
+        const Pixel& p{el_projection.first};
         if (params_.use_functor_distance && !params_.pin_distances)
             ids_functor_distance.emplace_back(problem.AddResidualBlock(
-                FunctorDistance::create(el.second.position, rays.at(el.first)),
+                FunctorDistance::create(el_projection.second.position, rays.at(p)),
                 new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
-                &depth_est(el.first.row, el.first.col),
+                &depth_est(p.row, p.col),
                 rotation.coeffs().data(),
                 translation.data()));
+
         if (params_.use_functor_normal) {
-            const OptimizationData optimization_data(OptimizationData::create(
-                el.first, rays, getNeighbors(el.first, d_.image, params_.neighborhood)));
-            std::vector<double*> parameters;
-            parameters.push_back(rotation.coeffs().data());
-            for (auto const& el : optimization_data.rays)
-                parameters.emplace_back(&depth_est(el.first.row, el.first.col));
-            ids_functor_normal.emplace_back(problem.AddResidualBlock(
-                FunctorNormal::create(el.second.normal, optimization_data),
-                new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
-                parameters));
+            const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood)};
+            if (neighbors.size() < 3) {
+                ids_functor_normal.emplace_back(problem.AddResidualBlock(
+                    FunctorNormalCorner::create(el_projection.second.normal,
+                                                rays.at(p),
+                                                rays.at(neighbors[0]),
+                                                rays.at(neighbors[1])),
+                    new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
+                    rotation.coeffs().data(),
+                    &depth_est(p.row, p.col),
+                    &depth_est(neighbors[0].row, neighbors[0].col),
+                    &depth_est(neighbors[1].row, neighbors[1].col)));
+            } else if (neighbors.size() < 4) {
+                ids_functor_normal.emplace_back(problem.AddResidualBlock(
+                    FunctorNormalSide::create(el_projection.second.normal,
+                                              rays.at(p),
+                                              rays.at(neighbors[0]),
+                                              rays.at(neighbors[1]),
+                                              rays.at(neighbors[2])),
+                    new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
+                    rotation.coeffs().data(),
+                    &depth_est(p.row, p.col),
+                    &depth_est(neighbors[0].row, neighbors[0].col),
+                    &depth_est(neighbors[1].row, neighbors[1].col),
+                    &depth_est(neighbors[2].row, neighbors[2].col)));
+            } else {
+                ids_functor_normal.emplace_back(problem.AddResidualBlock(
+                    FunctorNormalFull::create(el_projection.second.normal,
+                                              rays.at(p),
+                                              rays.at(neighbors[0]),
+                                              rays.at(neighbors[1]),
+                                              rays.at(neighbors[2]),
+                                              rays.at(neighbors[3])),
+                    new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
+                    rotation.coeffs().data(),
+                    &depth_est(p.row, p.col),
+                    &depth_est(neighbors[0].row, neighbors[0].col),
+                    &depth_est(neighbors[1].row, neighbors[1].col),
+                    &depth_est(neighbors[2].row, neighbors[2].col),
+                    &depth_est(neighbors[3].row, neighbors[3].col)));
+            }
         }
     }
 
     std::vector<ResidualBlockId> ids_functor_smoothness_normal, ids_functor_smoothness_distance,
         ids_functor_normal_distance;
-    ids_functor_smoothness_normal.reserve(8 * rays.size());
-    ids_functor_smoothness_distance.reserve(8 * rays.size());
-    ids_functor_normal_distance.reserve(8 * rays.size());
+    ids_functor_smoothness_normal.reserve(rays.size());
+    ids_functor_smoothness_distance.reserve(rays.size());
+    ids_functor_normal_distance.reserve(rays.size());
     for (auto const& el_ray : rays) {
-        const std::map<NeighborRelation, Pixel> neighbors{
-            getNeighbors(el_ray.first, d_.image, params_.neighborhood)};
-        const OptimizationData optimization_data(
-            OptimizationData::create(el_ray.first, rays, neighbors));
-        std::vector<double*> parameters;
-        for (auto const& el : optimization_data.rays)
-            parameters.emplace_back(&depth_est(el.first.row, el.first.col));
-        const double w{smoothnessWeight(el_ray.first,
-                                        params_.discontinuity_threshold,
-                                        params_.smoothness_weight_min,
-                                        params_.smoothness_weighting,
-                                        params_.smoothness_rate) *
-                       params_.ks / optimization_data.rays.size()};
-        if (params_.use_functor_normal_distance) {
-            ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
-                FunctorNormalDistance::create(optimization_data),
-                new ScaledLoss(params_.loss_function.get(), w * params_.kn, TAKE_OWNERSHIP),
-                parameters));
+        const Pixel& p{el_ray.first};
+        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood)};
+        std::vector<double> weights;
+        for (auto const& n : neighbors) {
+            weights.emplace_back(smoothnessWeight(p,
+                                                  n,
+                                                  params_.discontinuity_threshold,
+                                                  params_.smoothness_weight_min,
+                                                  params_.smoothness_weighting,
+                                                  params_.smoothness_rate,
+                                                  1) *
+                                 params_.ks);
         }
 
-        if (params_.use_functor_smoothness_normal) {
-            for (auto const& el_neighbor : neighbors) {
-                const std::map<NeighborRelation, Pixel> neighbors2{
-                    getNeighbors(el_neighbor.second, d_.image, params_.neighborhood)};
-                std::map<Pixel, std::map<NeighborRelation, Pixel>, PixelLess> neighbor_mappings;
-                neighbor_mappings.emplace(el_ray.first, neighbors);
-                neighbor_mappings.emplace(el_neighbor.second, neighbors2);
-                std::vector<Pixel> refs;
-                refs.emplace_back(el_ray.first);
-                refs.emplace_back(el_neighbor.second);
-                const OptimizationData optimization_data2(
-                    OptimizationData::create(refs, rays, neighbor_mappings));
-                std::vector<double*> parameters2;
-                for (auto const& el : optimization_data2.rays)
-                    parameters2.emplace_back(&depth_est(el.first.row, el.first.col));
-                ids_functor_smoothness_normal.emplace_back(
-                    problem.AddResidualBlock(FunctorSmoothnessNormal::create(optimization_data2),
-                                             new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
-                                             parameters2));
+        if (params_.use_functor_normal_distance) {
+            if (neighbors.size() < 3) {
+                ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
+                    FunctorNormalDistanceCorner::create(rays.at(p),
+                                                        rays.at(neighbors[0]),
+                                                        weights[0],
+                                                        rays.at(neighbors[1]),
+                                                        weights[1]),
+                    new TrivialLoss,
+                    &depth_est(p.row, p.col),
+                    &depth_est(neighbors[0].row, neighbors[0].col),
+                    &depth_est(neighbors[1].row, neighbors[1].col)));
+            } else if (neighbors.size() < 4) {
+                ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
+                    FunctorNormalDistanceSide::create(rays.at(p),
+                                                      rays.at(neighbors[0]),
+                                                      weights[0],
+                                                      rays.at(neighbors[1]),
+                                                      weights[1],
+                                                      rays.at(neighbors[2]),
+                                                      weights[2]),
+                    new TrivialLoss,
+                    &depth_est(p.row, p.col),
+                    &depth_est(neighbors[0].row, neighbors[0].col),
+                    &depth_est(neighbors[1].row, neighbors[1].col),
+                    &depth_est(neighbors[2].row, neighbors[2].col)));
+            } else {
+                ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
+                    FunctorNormalDistanceFull::create(rays.at(p),
+                                                      rays.at(neighbors[0]),
+                                                      weights[0],
+                                                      rays.at(neighbors[1]),
+                                                      weights[1],
+                                                      rays.at(neighbors[2]),
+                                                      weights[2],
+                                                      rays.at(neighbors[3]),
+                                                      weights[3]),
+                    new TrivialLoss,
+                    &depth_est(p.row, p.col),
+                    &depth_est(neighbors[0].row, neighbors[0].col),
+                    &depth_est(neighbors[1].row, neighbors[1].col),
+                    &depth_est(neighbors[2].row, neighbors[2].col),
+                    &depth_est(neighbors[3].row, neighbors[3].col)));
             }
         }
 
         if (params_.use_functor_smoothness_distance) {
-            for (auto const& el_neighbor : neighbors) {
+            for (size_t c = 0; c < neighbors.size(); c++)
                 ids_functor_smoothness_distance.emplace_back(problem.AddResidualBlock(
                     FunctorSmoothnessDistance::create(),
-                    new ScaledLoss(new TrivialLoss, w, TAKE_OWNERSHIP),
-                    &depth_est(el_ray.first.row, el_ray.first.col),
-                    &depth_est(el_neighbor.second.row, el_neighbor.second.col)));
-            }
+                    new ScaledLoss(new TrivialLoss, weights[c], TAKE_OWNERSHIP),
+                    &depth_est(p.row, p.col),
+                    &depth_est(neighbors[c].row, neighbors[c].col)));
         }
     }
+
 
     if (params_.limits != Parameters::Limits::none) {
         double ub{0}, lb{0};
@@ -275,16 +323,48 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     for (auto const& el : rays) {
         const Pixel& p{el.first};
-        const OptimizationData optimization_data(
-            OptimizationData::create(p, rays, getNeighbors(p, d_.image, params_.neighborhood)));
-        std::map<Pixel, double, PixelLess> depths;
-        for (auto const& nb : optimization_data.rays)
-            depths[nb.first] = depth_est(nb.first.row, nb.first.col);
+        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood)};
+
+        if (neighbors.size() < 3) {
+            out.cloud->at(p.col, p.row).getNormalVector3fMap() =
+                estimateNormal1(depth_est(p.row, p.col),
+                                rays.at(p),
+                                depth_est(neighbors[0].row, neighbors[0].col),
+                                rays.at(neighbors[0]),
+                                depth_est(neighbors[1].row, neighbors[1].col),
+                                rays.at(neighbors[1]),
+                                0.1)
+                    .cast<float>();
+        } else if (neighbors.size() < 4) {
+            out.cloud->at(p.col, p.row).getNormalVector3fMap() =
+                estimateNormal2(depth_est(p.row, p.col),
+                                rays.at(p),
+                                depth_est(neighbors[0].row, neighbors[0].col),
+                                rays.at(neighbors[0]),
+                                depth_est(neighbors[1].row, neighbors[1].col),
+                                rays.at(neighbors[1]),
+                                depth_est(neighbors[2].row, neighbors[2].col),
+                                rays.at(neighbors[2]),
+                                0.1)
+                    .cast<float>();
+        } else {
+            out.cloud->at(p.col, p.row).getNormalVector3fMap() =
+                estimateNormal4(depth_est(p.row, p.col),
+                                rays.at(p),
+                                depth_est(neighbors[0].row, neighbors[0].col),
+                                rays.at(neighbors[0]),
+                                depth_est(neighbors[1].row, neighbors[1].col),
+                                rays.at(neighbors[1]),
+                                depth_est(neighbors[2].row, neighbors[2].col),
+                                rays.at(neighbors[2]),
+                                depth_est(neighbors[3].row, neighbors[3].col),
+                                rays.at(neighbors[3]),
+                                0.1)
+                    .cast<float>();
+        }
         out.cloud->at(p.col, p.row).getVector3fMap() =
             el.second.pointAt(depth_est(p.row, p.col)).cast<float>();
-        out.cloud->at(p.col, p.row).getNormalVector3fMap() =
-            estimateNormal(p, rays, depths, optimization_data.mapping.at(p), 10.).cast<float>();
-        out.cloud->at(p.col, p.row).intensity = p.val;
+        out.cloud->at(p.col, p.row).intensity = img_intensity.at<float>(p.row, p.col);
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 
@@ -304,10 +384,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         Covariance covariance(options);
         std::vector<std::pair<const double*, const double*>> covariance_blocks;
         covariance_blocks.reserve(rays.size());
-        for (auto const& el : rays) {
+        for (auto const& el : rays)
             covariance_blocks.emplace_back(std::make_pair(&depth_est(el.first.row, el.first.col),
                                                           &depth_est(el.first.row, el.first.col)));
-        }
 
         CHECK(covariance.Compute(covariance_blocks, &problem));
         info.covariance_depth.resize(rows, cols);
