@@ -36,13 +36,13 @@ bool insideTriangle(const Pixel& p,
 
     const int u{(BA[0] * PA[1] - (BA[1] * PA[0]))};
     const int v{(BA[0] * (-1 * AC[1])) - (BA[1] * (-1 * AC[0]))};
-    if (u * v > 0) {
+    if (u * v >= 0) {
         const int u2{(AC[0] * PC[1] - (AC[1] * PC[0]))};
         const int v2{(AC[0] * (-1 * CB[1])) - (AC[1] * (-1 * CB[0]))};
-        if (u2 * v2 > 0) {
+        if (u2 * v2 >= 0) {
             const int u3{(CB[0] * PB[1] - (CB[1] * PB[0]))};
             const int v3{(CB[0] * (-1 * BA[1])) - (CB[1] * (-1 * BA[0]))};
-            if (u3 * v3 > 0) {
+            if (u3 * v3 >= 0) {
                 return true;
             }
         }

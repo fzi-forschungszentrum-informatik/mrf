@@ -85,7 +85,8 @@ struct Parameters {
 			<< "estimate_covariances" << del
 			<< "crop_mode" << del
 			<< "use_covariance_filter" << del
-			<< "covariance_filter_treshold";
+			<< "covariance_filter_treshold" << del
+			<< "sigmoid_scale";
         // clang-format on
         return oss.str();
     }
@@ -124,7 +125,8 @@ struct Parameters {
 				<< p.estimate_covariances << del
 				<< static_cast<int>(p.crop_mode) << del
 				<< p.use_covariance_filter << del
-				<< p.covariance_filter_treshold;
+				<< p.covariance_filter_treshold << del
+				<< p.sigmoid_scale;
         // clang-format on
     }
 
@@ -158,6 +160,7 @@ struct Parameters {
     CropMode crop_mode{CropMode::none};
     bool use_covariance_filter{false};
     double covariance_filter_treshold{0.1};
+    double sigmoid_scale{0.5};
 
 private:
     void fromConfig(const std::string& file_name);

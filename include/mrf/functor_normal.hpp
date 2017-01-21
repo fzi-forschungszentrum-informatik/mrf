@@ -28,13 +28,8 @@ struct FunctorNormalCorner {
                            const T* const d_2,
                            T* res) const {
 
-        const Eigen::Vector3<T> n{estimateNormal1(d_0[0],
-                                                  ray_0_.cast<T>(),
-                                                  d_1[0],
-                                                  ray_1_.cast<T>(),
-                                                  d_2[0],
-                                                  ray_2_.cast<T>(),
-                                                  static_cast<T>(0.1))};
+        const Eigen::Vector3<T> n{estimateNormal1(
+            d_0[0], ray_0_.cast<T>(), d_1[0], ray_1_.cast<T>(), d_2[0], ray_2_.cast<T>())};
         res[0] = n.dot(util_ceres::fromQuaternion(rot) * n_.cast<T>()) - static_cast<T>(1);
         return true;
     }
@@ -71,8 +66,9 @@ struct FunctorNormalSide {
                              const Ray& ray_0,
                              const Ray& ray_1,
                              const Ray& ray_2,
-                             const Ray& ray_3)
-            : n_{n}, ray_0_{ray_0}, ray_1_{ray_1}, ray_2_{ray_2}, ray_3_{ray_3} {};
+                             const Ray& ray_3,
+                             const double& scale)
+            : n_{n}, ray_0_{ray_0}, ray_1_{ray_1}, ray_2_{ray_2}, ray_3_{ray_3}, scale_{scale} {};
 
     template <typename T>
     inline bool operator()(const T* const rot,
@@ -90,7 +86,7 @@ struct FunctorNormalSide {
                                                   ray_2_.cast<T>(),
                                                   d_3[0],
                                                   ray_3_.cast<T>(),
-                                                  static_cast<T>(0.1))};
+                                                  static_cast<T>(scale_))};
         res[0] = n.dot(util_ceres::fromQuaternion(rot) * n_.cast<T>()) - static_cast<T>(1);
         return true;
     }
@@ -99,7 +95,8 @@ struct FunctorNormalSide {
                                               const Ray& ray_0,
                                               const Ray& ray_1,
                                               const Ray& ray_2,
-                                              const Ray& ray_3) {
+                                              const Ray& ray_3,
+                                              const double& scale) {
         return new ceres::AutoDiffCostFunction<FunctorNormalSide,
                                                DimResidual,
                                                DimRotation,
@@ -107,7 +104,7 @@ struct FunctorNormalSide {
                                                DimDepth,
                                                DimDepth,
                                                DimDepth>(
-            new FunctorNormalSide(n, ray_0, ray_1, ray_2, ray_3));
+            new FunctorNormalSide(n, ray_0, ray_1, ray_2, ray_3, scale));
     }
 
 private:
@@ -116,6 +113,7 @@ private:
     const Ray ray_1_;
     const Ray ray_2_;
     const Ray ray_3_;
+    const double& scale_;
 };
 
 struct FunctorNormalFull {
@@ -131,8 +129,10 @@ struct FunctorNormalFull {
                              const Ray& ray_1,
                              const Ray& ray_2,
                              const Ray& ray_3,
-                             const Ray& ray_4)
-            : n_{n}, ray_0_{ray_0}, ray_1_{ray_1}, ray_2_{ray_2}, ray_3_{ray_3}, ray_4_{ray_4} {};
+                             const Ray& ray_4,
+                             const double& scale)
+            : n_{n}, ray_0_{ray_0}, ray_1_{ray_1}, ray_2_{ray_2}, ray_3_{ray_3}, ray_4_{ray_4},
+              scale_{scale} {};
 
     template <typename T>
     inline bool operator()(const T* const rot,
@@ -153,7 +153,7 @@ struct FunctorNormalFull {
                                                   ray_3_.cast<T>(),
                                                   d_4[0],
                                                   ray_4_.cast<T>(),
-                                                  static_cast<T>(0.1))};
+                                                  static_cast<T>(scale_))};
         res[0] = n.dot(util_ceres::fromQuaternion(rot) * n_.cast<T>()) - static_cast<T>(1);
         return true;
     }
@@ -163,7 +163,8 @@ struct FunctorNormalFull {
                                               const Ray& ray_1,
                                               const Ray& ray_2,
                                               const Ray& ray_3,
-                                              const Ray& ray_4) {
+                                              const Ray& ray_4,
+                                              const double& scale) {
         return new ceres::AutoDiffCostFunction<FunctorNormalFull,
                                                DimResidual,
                                                DimRotation,
@@ -172,7 +173,7 @@ struct FunctorNormalFull {
                                                DimDepth,
                                                DimDepth,
                                                DimDepth>(
-            new FunctorNormalFull(n, ray_0, ray_1, ray_2, ray_3, ray_4));
+            new FunctorNormalFull(n, ray_0, ray_1, ray_2, ray_3, ray_4, scale));
     }
 
 private:
@@ -182,5 +183,6 @@ private:
     const Ray ray_2_;
     const Ray ray_3_;
     const Ray ray_4_;
+    const double scale_;
 };
 }

@@ -164,7 +164,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                               rays.at(p),
                                               rays.at(neighbors[0]),
                                               rays.at(neighbors[1]),
-                                              rays.at(neighbors[2])),
+                                              rays.at(neighbors[2]),
+                                              params_.sigmoid_scale),
                     new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
                     rotation.coeffs().data(),
                     &depth_est(p.row, p.col),
@@ -178,7 +179,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                               rays.at(neighbors[0]),
                                               rays.at(neighbors[1]),
                                               rays.at(neighbors[2]),
-                                              rays.at(neighbors[3])),
+                                              rays.at(neighbors[3]),
+                                              params_.sigmoid_scale),
                     new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
                     rotation.coeffs().data(),
                     &depth_est(p.row, p.col),
@@ -190,9 +192,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         }
     }
 
-    std::vector<ResidualBlockId> ids_functor_smoothness_normal, ids_functor_smoothness_distance,
-        ids_functor_normal_distance;
-    ids_functor_smoothness_normal.reserve(rays.size());
+    std::vector<ResidualBlockId> ids_functor_smoothness_distance, ids_functor_normal_distance;
     ids_functor_smoothness_distance.reserve(rays.size());
     ids_functor_normal_distance.reserve(rays.size());
     for (auto const& el_ray : rays) {
@@ -218,7 +218,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                                         weights[0],
                                                         rays.at(neighbors[1]),
                                                         weights[1]),
-                    new TrivialLoss,
+                    new ScaledLoss(params_.loss_function.get(), params_.ks, DO_NOT_TAKE_OWNERSHIP),
                     &depth_est(p.row, p.col),
                     &depth_est(neighbors[0].row, neighbors[0].col),
                     &depth_est(neighbors[1].row, neighbors[1].col)));
@@ -230,8 +230,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                                       rays.at(neighbors[1]),
                                                       weights[1],
                                                       rays.at(neighbors[2]),
-                                                      weights[2]),
-                    new TrivialLoss,
+                                                      weights[2],
+                                                      params_.sigmoid_scale),
+                    new ScaledLoss(params_.loss_function.get(), params_.ks, DO_NOT_TAKE_OWNERSHIP),
                     &depth_est(p.row, p.col),
                     &depth_est(neighbors[0].row, neighbors[0].col),
                     &depth_est(neighbors[1].row, neighbors[1].col),
@@ -246,8 +247,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                                       rays.at(neighbors[2]),
                                                       weights[2],
                                                       rays.at(neighbors[3]),
-                                                      weights[3]),
-                    new TrivialLoss,
+                                                      weights[3],
+                                                      params_.sigmoid_scale),
+                    new ScaledLoss(params_.loss_function.get(), params_.ks, DO_NOT_TAKE_OWNERSHIP),
                     &depth_est(p.row, p.col),
                     &depth_est(neighbors[0].row, neighbors[0].col),
                     &depth_est(neighbors[1].row, neighbors[1].col),
@@ -332,8 +334,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                 depth_est(neighbors[0].row, neighbors[0].col),
                                 rays.at(neighbors[0]),
                                 depth_est(neighbors[1].row, neighbors[1].col),
-                                rays.at(neighbors[1]),
-                                0.1)
+                                rays.at(neighbors[1]))
                     .cast<float>();
         } else if (neighbors.size() < 4) {
             out.cloud->at(p.col, p.row).getNormalVector3fMap() =
