@@ -1,6 +1,7 @@
 #include "prior.hpp"
 
 #include <flann/flann.h>
+
 #include "smoothness_weight.hpp"
 
 namespace mrf {
@@ -36,13 +37,13 @@ bool insideTriangle(const Pixel& p,
 
     const int u{(BA[0] * PA[1] - (BA[1] * PA[0]))};
     const int v{(BA[0] * (-1 * AC[1])) - (BA[1] * (-1 * AC[0]))};
-    if (u * v >= 0) {
+    if (u * v > 0) {
         const int u2{(AC[0] * PC[1] - (AC[1] * PC[0]))};
         const int v2{(AC[0] * (-1 * CB[1])) - (AC[1] * (-1 * CB[0]))};
-        if (u2 * v2 >= 0) {
+        if (u2 * v2 > 0) {
             const int u3{(CB[0] * PB[1] - (CB[1] * PB[0]))};
             const int v3{(CB[0] * (-1 * BA[1])) - (CB[1] * (-1 * BA[0]))};
-            if (u3 * v3 >= 0) {
+            if (u3 * v3 > 0) {
                 return true;
             }
         }
@@ -131,8 +132,7 @@ double pointIntersection(const Eigen::ParametrizedLine<double, 3>& ray,
 void addSeedPoints(const RayMapT& rays,
                    const PixelMapT& projection,
                    Eigen::MatrixXd& depth_est,
-                   Eigen::MatrixXd& certainty,
-                   const pcl_ceres::PointCloud<Point>::Ptr& cl) {
+                   Eigen::MatrixXd& certainty) {
     for (auto const& el : projection) {
         const Pixel& p{el.first};
         certainty(p.row, p.col) = 1;
@@ -140,7 +140,6 @@ void addSeedPoints(const RayMapT& rays,
         const Eigen::Hyperplane<double, 3> plane(ray.direction(), el.second.position);
         depth_est(p.row, p.col) =
             (rays.at(p).intersectionPoint(plane) - rays.at(p).origin()).norm();
-        cl->at(p.col, p.row).normal = el.second.normal;
     }
 }
 
@@ -150,17 +149,10 @@ void estimatePrior(const RayMapT& rays,
                    const size_t& cols,
                    const Parameters& param,
                    Eigen::MatrixXd& depth_est,
-                   Eigen::MatrixXd& certainty,
-                   const pcl_ceres::PointCloud<Point>::Ptr& cl) {
+                   Eigen::MatrixXd& certainty) {
     if (param.initialization == Parameters::Initialization::none) {
         LOG(INFO) << "Estimate prior via 'none' method";
-        addSeedPoints(rays, projection, depth_est, certainty, cl);
-
-        for (auto const& el : rays)
-            cl->at(el.first.col, el.first.row).normal = -rays.at(el.first).direction();
-        for (auto const& el : projection)
-            cl->at(el.first.col, el.first.row).normal = el.second.normal;
-
+        addSeedPoints(rays, projection, depth_est, certainty);
         return;
     }
     double max_depth{0};
@@ -186,11 +178,7 @@ void estimatePrior(const RayMapT& rays,
         LOG(INFO) << "mean depth is " << mean_depth;
         depth_est = mean_depth * Eigen::MatrixXd::Ones(rows, cols);
         certainty = 0 * Eigen::MatrixXd::Ones(rows, cols);
-        addSeedPoints(rays, projection, depth_est, certainty, cl);
-        for (auto const& el : rays)
-            cl->at(el.first.col, el.first.row).normal = -rays.at(el.first).direction();
-        for (auto const& el : projection)
-            cl->at(el.first.col, el.first.row).normal = el.second.normal;
+        addSeedPoints(rays, projection, depth_est, certainty);
         return;
     }
 
@@ -211,10 +199,9 @@ void estimatePrior(const RayMapT& rays,
             const Eigen::Hyperplane<double, 3> plane(ray.direction(), projection.at(nn).position);
             depth_est(p.row, p.col) =
                 (rays.at(nn).intersectionPoint(plane) - rays.at(nn).origin()).norm();
-            cl->at(p.col, p.row).normal = projection.at(nn).normal;
         }
 
-        addSeedPoints(rays, projection, depth_est, certainty, cl);
+        addSeedPoints(rays, projection, depth_est, certainty);
         return;
     }
 
@@ -252,9 +239,8 @@ void estimatePrior(const RayMapT& rays,
             }
             depth_est(p.row, p.col) = (alpha + beta) / 2;
             const Pixel nn(coordinates(0, all_neighbours[0]), coordinates(1, all_neighbours[0]));
-            cl->at(p.col, p.row).normal = projection.at(nn).normal;
         }
-        addSeedPoints(rays, projection, depth_est, certainty, cl);
+        addSeedPoints(rays, projection, depth_est, certainty);
     }
 
 
@@ -284,11 +270,6 @@ void estimatePrior(const RayMapT& rays,
                     sum_dist += dists.back();
                 }
                 depth_est(p.row, p.col) = pointIntersection(rays.at(p), neighbour_points);
-                cl->at(p.col, p.row).normal =
-                    1. / 3 * (dists[0] / sum_dist * projection.at(neighbour_pixels[0]).normal +
-                              dists[1] / sum_dist * projection.at(neighbour_pixels[1]).normal +
-                              dists[2] / sum_dist * projection.at(neighbour_pixels[2]).normal);
-                cl->at(p.col, p.row).normal.normalize();
                 certainty(p.row, p.col) = 0.2;
             }
             if (!found_triangle || depth_est(p.row, p.col) > max_depth ||
@@ -301,10 +282,9 @@ void estimatePrior(const RayMapT& rays,
                 depth_est(p.row, p.col) =
                     (rays.at(nn).intersectionPoint(plane) - rays.at(nn).origin()).norm();
                 certainty(p.row, p.col) = 0;
-                cl->at(p.col, p.row).normal = projection.at(nn).normal;
             }
         }
-        addSeedPoints(rays, projection, depth_est, certainty, cl);
+        addSeedPoints(rays, projection, depth_est, certainty);
     }
 }
 }

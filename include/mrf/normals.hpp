@@ -9,6 +9,14 @@
 
 namespace mrf {
 
+
+template <typename T>
+inline Eigen::Vector3<T> estimateNormal1(const Eigen::Vector3<T>& p_0,
+                                         const Eigen::Vector3<T>& p_1,
+                                         const Eigen::Vector3<T>& p_2) {
+    return (p_1 - p_0).cross(p_2 - p_0).normalized();
+}
+
 template <typename T>
 inline Eigen::Vector3<T> estimateNormal1(const T& d_0,
                                          const Eigen::ParametrizedLine<T, 3>& ray_0,

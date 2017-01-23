@@ -26,6 +26,10 @@ public:
         return d_;
     }
 
+    inline void setGT(const Eigen::MatrixXd& in) {
+    	depth_est_ = in;
+    }
+
     inline static Ptr create(const std::shared_ptr<CameraModel>& cam,
                              const Parameters& p = Parameters()) {
         return std::make_shared<Solver>(cam, p);
@@ -36,6 +40,7 @@ private:
     const std::shared_ptr<CameraModel> camera_;
     Parameters params_;
     Data<PointT> d_;
+    Eigen::MatrixXd depth_est_;
 };
 }
 
