@@ -60,43 +60,56 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     int cols, rows;
     camera_->getImageSize(cols, rows);
     LOG(INFO) << "Image size: " << cols << " x " << rows << " = " << cols * rows;
-    std::map<Pixel, PType, PixelLess> projection, projection_tf;
-    for (size_t c = 0; c < in_front.size(); c++) {
-        const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
-        if (in_front[c] && p.inImage(rows, cols)) {
-            projection.emplace(p, cloud->points[c]);
-            projection_tf.emplace(p, cloud_tf->points[c]);
-        }
-    }
-    LOG(INFO) << "Number of projections: " << projection.size();
 
-    int row_min{0}, row_max{rows - 1};
-    int col_min{0}, col_max{cols - 1};
+    int row_min{0}, row_max{rows};
+    int col_min{0}, col_max{cols};
     if (params_.crop_mode == Parameters::CropMode::min_max) {
         LOG(INFO) << "Perform 'min_max' box cropping";
         row_min = rows;
         row_max = 0;
         col_min = cols;
         col_max = 0;
-        for (auto const& el : projection) {
-            const Pixel& p{el.first};
-            if (p.col < col_min)
-                col_min = p.col;
-            else if (p.col > col_max)
-                col_max = p.col;
-            if (p.row < row_min)
-                row_min = p.row;
-            else if (p.row > row_max)
-                row_max = p.row;
+        for (size_t c = 0; c < in_front.size(); c++) {
+            const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
+            if (in_front[c] && p.inImage(rows, cols)) {
+                if (p.col < col_min)
+                    col_min = p.col;
+                else if (p.col > col_max)
+                    col_max = p.col;
+                if (p.row < row_min)
+                    row_min = p.row;
+                else if (p.row > row_max)
+                    row_max = p.row;
+            }
         }
-        LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
-                  << ", col_max: " << col_max;
+    } else if (params_.crop_mode == Parameters::CropMode::box) {
+        if (params_.box_cropping_row_min > 0)
+            row_min = params_.box_cropping_row_min;
+        if (params_.box_cropping_row_max < row_max)
+            row_max = params_.box_cropping_row_max;
+        if (params_.box_cropping_col_min > 0)
+            col_min = params_.box_cropping_row_min;
+        if (params_.box_cropping_row_max < col_max)
+            col_max = params_.box_cropping_col_max;
     }
+    LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
+              << ", col_max: " << col_max;
+
+    LOG(INFO) << "Create projection map";
+    std::map<Pixel, PType, PixelLess> projection, projection_tf;
+    for (size_t c = 0; c < in_front.size(); c++) {
+        const Pixel p(img_pts_raw(0, c), img_pts_raw(1, c));
+        if (in_front[c] && p.inImage(row_max, col_max, row_min, col_min)) {
+            projection.emplace(p, cloud->points[c]);
+            projection_tf.emplace(p, cloud_tf->points[c]);
+        }
+    }
+    LOG(INFO) << "Number of projections: " << projection.size();
 
     LOG(INFO) << "Create ray map";
     std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess> rays;
-    for (int row = row_min; row < row_max + 1; row++) {
-        for (int col = col_min; col < col_max + 1; col++) {
+    for (int row = row_min; row < row_max; row++) {
+        for (int col = col_min; col < col_max; col++) {
             const Pixel p(col, row, getVector<float>(d_.image, row, col));
             Eigen::Vector3d support, direction;
             camera_->getViewingRay(Eigen::Vector2d(p.x, p.y), support, direction);
@@ -127,6 +140,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         problem.AddParameterBlock(&depth_est_(el.first.row, el.first.col),
                                   FunctorDistance::DimDistance);
 
+    LOG(INFO) << "Add measurement residual blocks";
     std::vector<ResidualBlockId> ids_functor_distance, ids_functor_normal;
     ids_functor_distance.reserve(projection.size());
     ids_functor_normal.reserve(projection.size());
@@ -141,7 +155,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 translation.data()));
 
         if (params_.use_functor_normal)
-            for (auto const& n : getNeighbors(p, d_.image, params_.neighborhood))
+            for (auto const& n : getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min))
                 ids_functor_normal.emplace_back(problem.AddResidualBlock(
                     FunctorNormal::create(el_projection.second.normal, rays.at(p), rays.at(n)),
                     new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
@@ -150,13 +164,14 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                     &depth_est_(n.row, n.col)));
     }
 
+    LOG(INFO) << "Add smoothness residual blocks";
     std::vector<ResidualBlockId> ids_functor_smoothness_distance, ids_functor_normal_distance;
     ids_functor_smoothness_distance.reserve(rays.size());
     ids_functor_normal_distance.reserve(2 * rays.size());
     Eigen::MatrixXd weights{Eigen::MatrixXd::Zero(rows, cols)};
     for (auto const& el_ray : rays) {
         const Pixel& p{el_ray.first};
-        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood)};
+        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
         std::vector<double> weights;
         for (auto const& n : neighbors)
             weights.emplace_back(smoothnessWeight(p,
@@ -256,7 +271,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     for (auto const& el : rays) {
         const Pixel& p{el.first};
-        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood)};
+        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
         weights(p.row, p.col) = smoothnessWeight(p,
                                                  neighbors[0],
                                                  params_.discontinuity_threshold,

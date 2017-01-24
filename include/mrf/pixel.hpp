@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ostream>
 #include <cmath>
+#include <ostream>
 #include <Eigen/Eigen>
 
 namespace mrf {
@@ -21,8 +21,11 @@ struct Pixel {
         return row == other.row && col == other.col;
     }
 
-    inline bool inImage(const int& rows, const int& cols) const {
-        return 0 <= row && row < rows && 0 <= col && col < cols;
+    inline bool inImage(const int& row_max,
+                        const int& col_max,
+                        const int& row_min = 0,
+                        const int& col_min = 0) const {
+        return row_min <= row && row < row_max && col_min <= col && col < col_max;
     }
 
     int row, col;

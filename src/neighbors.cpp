@@ -7,19 +7,23 @@ namespace mrf {
 
 std::vector<Pixel> getNeighbors(const Pixel& p,
                                 const cv::Mat& img,
-                                const Parameters::Neighborhood& mode) {
+                                const Parameters::Neighborhood& mode,
+                                const int& row_max,
+                                const int& col_max,
+                                const int& row_min,
+                                const int& col_min) {
 
     std::map<NeighborRelation, Pixel> neighbors;
-    if (p.row > 0)
+    if (p.row > row_min)
         neighbors.emplace(NeighborRelation::top,
                           Pixel(p.col, p.row - 1, getVector<float>(img, p.row - 1, p.col)));
-    if (p.col > 0)
+    if (p.col > col_min)
         neighbors.emplace(NeighborRelation::left,
                           Pixel(p.col - 1, p.row, getVector<float>(img, p.row, p.col - 1)));
-    if (p.row < img.rows - 1)
+    if (p.row < row_max - 1)
         neighbors.emplace(NeighborRelation::bottom,
                           Pixel(p.col, p.row + 1, getVector<float>(img, p.row + 1, p.col)));
-    if (p.col < img.cols - 1)
+    if (p.col < col_max - 1)
         neighbors.emplace(NeighborRelation::right,
                           Pixel(p.col + 1, p.row, getVector<float>(img, p.row, p.col + 1)));
 

@@ -43,8 +43,13 @@ initialization: triangles
 neighborhood: four
 
 # Box cropping mode to reduce the amount of data
-# Available options: none, min_max
-crop_mode: none
+# Available options: none, min_max, box
+crop_mode: box
+
+box_cropping_row_min: 0
+box_cropping_row_max: 200
+box_cropping_col_min: 0
+box_cropping_col_max: 300
 
 # Optimizer parameters
 # Available options: trivial, huber, cauchy

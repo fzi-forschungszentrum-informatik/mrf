@@ -29,7 +29,6 @@ struct FunctorNormal {
         const Hyperplane<T, 3> plane{util_ceres::fromQuaternion(rot) * n_.cast<T>(), p_0};
 
         res[0] = plane.signedDistance(p_1);
-        //        Map<Vector3<T>>(res, DimResidual) = plane.signedDistance(p_1) * plane.normal();
         return true;
     }
 

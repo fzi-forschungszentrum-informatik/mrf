@@ -22,7 +22,7 @@ struct Parameters {
     };
     enum class Limits { none, custom, adaptive };
     enum class SmoothnessWeighting { none = 0, step = 1, linear = 2, exponential = 3, sigmoid = 4 };
-    enum class CropMode { none = 0, min_max };
+    enum class CropMode { none = 0, min_max, box };
 
     inline Parameters(const std::string& file_name = std::string()) {
         using namespace ceres;
@@ -86,7 +86,11 @@ struct Parameters {
 			<< "crop_mode" << del
 			<< "use_covariance_filter" << del
 			<< "covariance_filter_treshold" << del
-			<< "sigmoid_scale";
+			<< "sigmoid_scale" << del
+			<< "box_cropping_row_min" << del
+			<< "box_cropping_row_max" << del
+			<< "box_cropping_col_min" << del
+			<< "box_cropping_col_max";
         // clang-format on
         return oss.str();
     }
@@ -126,7 +130,11 @@ struct Parameters {
 				<< static_cast<int>(p.crop_mode) << del
 				<< p.use_covariance_filter << del
 				<< p.covariance_filter_treshold << del
-				<< p.sigmoid_scale;
+				<< p.sigmoid_scale << del
+				<< p.box_cropping_row_min << del
+				<< p.box_cropping_row_max << del
+				<< p.box_cropping_col_min << del
+				<< p.box_cropping_col_max;
         // clang-format on
     }
 
@@ -161,6 +169,11 @@ struct Parameters {
     bool use_covariance_filter{false};
     double covariance_filter_treshold{0.1};
     double sigmoid_scale{0.5};
+
+    int box_cropping_row_min{0};
+    int box_cropping_row_max{5000};
+    int box_cropping_col_min{0};
+    int box_cropping_col_max{5000};
 
 private:
     void fromConfig(const std::string& file_name);

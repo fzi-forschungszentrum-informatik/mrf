@@ -29,20 +29,16 @@ struct FunctorNormalDistance {
         const Vector3<T> p_0{ray_0_.cast<T>().pointAt(d_0[0])};
         const Vector3<T> p_1{ray_1_.cast<T>().pointAt(d_1[0])};
         const Vector3<T> p_2{ray_2_.cast<T>().pointAt(d_2[0])};
-        Map<Vector3<T>>(res, DimResidual) = static_cast<T>(w_) * (-p_1 + T(2) * p_0 - p_2);
 
-        //
-        //        const Vector3<T> d_01{(p_0 - p_1).normalized()};
-        //        const Vector3<T> d_20{(p_2 - p_0).normalized()};
-        //
-        //
-        //        if (norm_01 < T(1.e-13) || norm_20 < T(1.e-13))
-        //            std::cerr << "ERROR!!!!";
-        //        Vector3<T> res2{static_cast<T>(w_) * (d_01 / norm_01 - d_20 / norm_20)};
-        //        std::cout << "res2: " << res2[0] << "\n" << res2[1] << "\n" << res2[2] <<
-        //        std::endl;
-        //        Map<Vector3<T>>(res, DimResidual) = static_cast<T>(w_) * (d_01 - d_20);
-        //        res[0] = T(w_) * (T(1) - d_01.dot(d_20));
+        const Vector3<T> p_01{p_0 - p_1};
+        const Vector3<T> p_20{p_2 - p_0};
+
+        Map<Vector3<T>>(res, DimResidual) = static_cast<T>(w_) * (p_01 - p_20);
+
+        //                const T d_01{d_0[0] - d_1[0]};
+        //                const T d_20{d_2[0] - d_0[0]};
+        //        Map<Vector3<T>>(res, DimResidual) = static_cast<T>(w_) * (p_01 - p_20);
+        //        res[0] = static_cast<T>(w_) * (p_01.norm() * p_20.norm() - p_01.dot(p_20));
         return true;
     }
 
