@@ -27,17 +27,21 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
     cam->getImageSize(cols, rows);
     q.depth_error = cv::Mat::zeros(rows, cols, cv::DataType<double>::type);
 
-    const Matrix3Xd refs_3d{est.transform *
-                      ref.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
+    const Matrix3Xd refs_3d{
+        est.transform * ref.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
     Matrix2Xd refs_img(2, refs_3d.cols());
     const std::vector<bool> in_front{cam->getImagePoints(refs_3d, refs_img)};
     std::vector<double> depth_errors, depth_errors_abs;
     depth_errors.reserve(in_front.size());
     depth_errors_abs.reserve(in_front.size());
     for (size_t c = 0; c < in_front.size(); c++) {
+
         const T& p_ref{ref.cloud->points[c]};
         const Vector3d& ref_3d{refs_3d.col(c)};
         const Vector2d& ref_img{refs_img.col(c)};
+
+        if (!in_front[c])
+            continue;
 
         if (!std::isfinite(ref_3d.x()) || !std::isfinite(ref_3d.y()) ||
             !std::isfinite(ref_3d.z()) || !std::isfinite(ref_img.x()) ||
@@ -45,6 +49,9 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
             LOG(INFO) << "NAN point: " << ref_3d.transpose() << ", " << ref_img.transpose();
 
         const Pixel p(ref_img.x(), ref_img.y());
+        if (!p.inImage(rows, cols))
+            continue;
+
         q.ref_distances_evaluated++;
 
         /**
@@ -53,6 +60,7 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
         Vector3d support, direction;
         cam->getViewingRay(ref_img, support, direction);
         const double distance_ref{(ref_3d - support).norm()};
+
         /**
          * Depth errors
          */
