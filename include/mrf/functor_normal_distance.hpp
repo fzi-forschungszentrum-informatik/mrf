@@ -1,41 +1,60 @@
 #pragma once
 
+#include <Eigen/Geometry>
 #include <ceres/autodiff_cost_function.h>
-#include <Eigen/src/Geometry/Hyperplane.h>
-#include <Eigen/src/Geometry/ParametrizedLine.h>
 
 namespace mrf {
 
 struct FunctorNormalDistance {
 
-    static constexpr size_t DimDepth = 1;
-    static constexpr size_t DimResidual = 1;
-    static constexpr size_t DimNormal = 3;
+    template <typename T>
+    using Ray = Eigen::ParametrizedLine<T, 3>;
 
-    inline FunctorNormalDistance(const Eigen::ParametrizedLine<double, 3>& ray_this,
-                                 const Eigen::ParametrizedLine<double, 3>& ray_nn)
-            : ray_this_{ray_this}, ray_nn_{ray_nn} {};
+    static constexpr size_t DimDepth = 1;
+    static constexpr size_t DimResidual = 3;
+
+    inline FunctorNormalDistance(const Ray<double>& ray_0,
+                                 const Ray<double>& ray_1,
+                                 const Ray<double>& ray_2,
+                                 const double& w)
+            : ray_0_{ray_0}, ray_1_{ray_1}, ray_2_{ray_2}, w_{w} {};
 
     template <typename T>
-    inline bool operator()(const T* const depth_this,
-                           const T* const depth_nn,
-                           const T* const normal_this,
+    inline bool operator()(const T* const d_0,
+                           const T* const d_1,
+                           const T* const d_2,
                            T* res) const {
         using namespace Eigen;
-        res[0] = Hyperplane<T, 3>(Map<const Vector3<T>>(normal_this),
-                                  ray_this_.cast<T>().pointAt(depth_this[0]))
-                     .signedDistance(ray_nn_.cast<T>().pointAt(depth_nn[0]));
+
+        const Vector3<T> p_0{ray_0_.cast<T>().pointAt(d_0[0])};
+        const Vector3<T> p_1{ray_1_.cast<T>().pointAt(d_1[0])};
+        const Vector3<T> p_2{ray_2_.cast<T>().pointAt(d_2[0])};
+
+        const Vector3<T> p_01{p_0 - p_1};
+        const Vector3<T> p_20{p_2 - p_0};
+
+        Map<Vector3<T>>(res, DimResidual) = static_cast<T>(w_) * (p_01 - p_20);
+
+        //                const T d_01{d_0[0] - d_1[0]};
+        //                const T d_20{d_2[0] - d_0[0]};
+        //        Map<Vector3<T>>(res, DimResidual) = static_cast<T>(w_) * (p_01 - p_20);
+        //        res[0] = static_cast<T>(w_) * (p_01.norm() * p_20.norm() - p_01.dot(p_20));
         return true;
     }
 
-    inline static ceres::CostFunction* create(const Eigen::ParametrizedLine<double, 3>& ray_this,
-                                              const Eigen::ParametrizedLine<double, 3>& ray_nn) {
+    inline static ceres::CostFunction* create(const Ray<double>& ray_0,
+                                              const Ray<double>& ray_1,
+                                              const Ray<double>& ray_2,
+                                              const double& w) {
         return new ceres::
-            AutoDiffCostFunction<FunctorNormalDistance, DimResidual, DimDepth, DimDepth, DimNormal>(
-                new FunctorNormalDistance(ray_this, ray_nn));
+            AutoDiffCostFunction<FunctorNormalDistance, DimResidual, DimDepth, DimDepth, DimDepth>(
+                new FunctorNormalDistance(ray_0, ray_1, ray_2, w));
     }
 
 private:
-    const Eigen::ParametrizedLine<double, 3> ray_this_, ray_nn_;
+    const Ray<double> ray_0_;
+    const Ray<double> ray_1_;
+    const Ray<double> ray_2_;
+    const double w_;
 };
 }

@@ -3,7 +3,6 @@
 #include <map>
 #include <Eigen/Eigen>
 #include <pcl_ceres/point.hpp>
-#include <pcl_ceres/point_cloud.hpp>
 
 #include "eigen.hpp"
 #include "parameters.hpp"
@@ -17,6 +16,5 @@ void estimatePrior(const std::map<Pixel, Eigen::ParametrizedLine<double, 3>, Pix
                    const size_t& cols,
                    const Parameters&,
                    Eigen::MatrixXd& depth_est,
-                   Eigen::MatrixXd& certainty,
-                   const pcl_ceres::PointCloud<pcl_ceres::Point<double>>::Ptr&);
+                   Eigen::MatrixXd& certainty);
 }

@@ -27,7 +27,7 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
     cam->getImageSize(cols, rows);
     q.depth_error = cv::Mat::zeros(rows, cols, cv::DataType<double>::type);
 
-    Matrix3Xd refs_3d{est.transform *
+    const Matrix3Xd refs_3d{est.transform *
                       ref.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
     Matrix2Xd refs_img(2, refs_3d.cols());
     const std::vector<bool> in_front{cam->getImagePoints(refs_3d, refs_img)};
