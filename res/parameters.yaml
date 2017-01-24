@@ -44,7 +44,7 @@ neighborhood: four
 
 # Box cropping mode to reduce the amount of data
 # Available options: none, min_max, box
-crop_mode: min_max
+crop_mode: none
 
 box_cropping_row_min: 0
 box_cropping_row_max: 200

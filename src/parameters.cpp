@@ -53,17 +53,23 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "custom_depth_limit_min", custom_depth_limit_min);
     getParam(cfg, "custom_depth_limit_max", custom_depth_limit_max);
 
+
     if (getParam(cfg, "smoothness_weighting", tmp)) {
         if (tmp == "none") {
             smoothness_weighting = SmoothnessWeighting::none;
+            LOG(INFO) << "Smoothness weighting: none";
         } else if (tmp == "step") {
             smoothness_weighting = SmoothnessWeighting::step;
+            LOG(INFO) << "Smoothness weighting: step";
         } else if (tmp == "linear") {
             smoothness_weighting = SmoothnessWeighting::linear;
+            LOG(INFO) << "Smoothness weighting: linear";
         } else if (tmp == "exponential") {
             smoothness_weighting = SmoothnessWeighting::exponential;
+            LOG(INFO) << "Smoothness weighting: exponential";
         } else if (tmp == "sigmoid") {
             smoothness_weighting = SmoothnessWeighting::sigmoid;
+            LOG(INFO) << "Smoothness weighting: sigmoid";
         } else {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }

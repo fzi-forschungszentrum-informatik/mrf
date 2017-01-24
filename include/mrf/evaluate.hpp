@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <glog/logging.h>
 #include <opencv2/core/core.hpp>
 
@@ -28,7 +29,7 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
 
     const Matrix3Xd refs_3d{est.transform *
                       ref.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
-    Matrix2Xd refs_img(3, refs_3d.cols());
+    Matrix2Xd refs_img(2, refs_3d.cols());
     const std::vector<bool> in_front{cam->getImagePoints(refs_3d, refs_img)};
     std::vector<double> depth_errors, depth_errors_abs;
     depth_errors.reserve(in_front.size());
@@ -44,12 +45,6 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
             LOG(INFO) << "NAN point: " << ref_3d.transpose() << ", " << ref_img.transpose();
 
         const Pixel p(ref_img.x(), ref_img.y());
-        if (ref_3d.z() < 0 || !in_front[c] || (p.col < 0) || (p.col >= cols) || (p.row < 0) ||
-            (p.row >= rows)) {
-            //            LOG(INFO) << "Not in image: " << ref_3d.transpose() << ", " <<
-            //            ref_img.transpose();
-            continue;
-        }
         q.ref_distances_evaluated++;
 
         /**
@@ -57,12 +52,7 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
          */
         Vector3d support, direction;
         cam->getViewingRay(ref_img, support, direction);
-        const double distance_ref{
-            (ParametrizedLine<double, 3>(support, direction)
-                 .intersectionPoint(Hyperplane<double, 3>(direction, ref_3d)) -
-             support)
-                .norm()};
-
+        const double distance_ref{(ref_3d - support).norm()};
         /**
          * Depth errors
          */
@@ -98,6 +88,12 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
         q.normal_dot_product_mean += dot_product;
         q.normal_dot_product_mean_abs += std::abs(dot_product);
     }
+    if (q.ref_distances_evaluated == 0) {
+        LOG(INFO) << "q.ref_distances_evaluated must be greater than 0! ";
+        q.ref_distances_evaluated = 1;
+    }
+
+
     q.depth_error_mean /= q.ref_distances_evaluated;
     q.depth_error_mean_abs /= q.ref_distances_evaluated;
     q.depth_error_median = median(depth_errors);

@@ -15,9 +15,9 @@ struct Parameters {
     enum class Neighborhood { two = 2, four = 4, eight = 8 };
     enum class Initialization {
         none = 0,
-        nearest_neighbor = 1,
-        triangles = 2,
-        mean_depth = 3,
+        mean_depth = 1,
+        nearest_neighbor = 2,
+        triangles = 3,
         weighted_neighbor = 4
     };
     enum class Limits { none, custom, adaptive };
