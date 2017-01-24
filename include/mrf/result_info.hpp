@@ -43,6 +43,9 @@ struct ResultInfo {
     bool has_normal_distance_costs{false};
     Eigen::MatrixXd normal_distance_costs;
 
+    bool has_weights{false};
+    Eigen::MatrixXd weights;
+
     Eigen::Matrix<double, 7, 7> covariance_transform;
 };
 }

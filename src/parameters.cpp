@@ -53,17 +53,23 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "custom_depth_limit_min", custom_depth_limit_min);
     getParam(cfg, "custom_depth_limit_max", custom_depth_limit_max);
 
+
     if (getParam(cfg, "smoothness_weighting", tmp)) {
         if (tmp == "none") {
             smoothness_weighting = SmoothnessWeighting::none;
+            LOG(INFO) << "Smoothness weighting: none";
         } else if (tmp == "step") {
             smoothness_weighting = SmoothnessWeighting::step;
+            LOG(INFO) << "Smoothness weighting: step";
         } else if (tmp == "linear") {
             smoothness_weighting = SmoothnessWeighting::linear;
+            LOG(INFO) << "Smoothness weighting: linear";
         } else if (tmp == "exponential") {
             smoothness_weighting = SmoothnessWeighting::exponential;
+            LOG(INFO) << "Smoothness weighting: exponential";
         } else if (tmp == "sigmoid") {
             smoothness_weighting = SmoothnessWeighting::sigmoid;
+            LOG(INFO) << "Smoothness weighting: sigmoid";
         } else {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
@@ -115,11 +121,19 @@ void Parameters::fromConfig(const std::string& file_name) {
             crop_mode = CropMode::none;
         } else if (tmp == "min_max") {
             crop_mode = CropMode::min_max;
-        } else {
+        } else if (tmp == "box") {
+            crop_mode = CropMode::box;
+        }  else {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
     getParam(cfg, "use_covariance_filter", use_covariance_filter);
     getParam(cfg, "covariance_filter_treshold", covariance_filter_treshold);
+    getParam(cfg, "sigmoid_scale", sigmoid_scale);
+
+    getParam(cfg, "box_cropping_row_min", box_cropping_row_min);
+    getParam(cfg, "box_cropping_row_max", box_cropping_row_max);
+    getParam(cfg, "box_cropping_col_min", box_cropping_col_min);
+    getParam(cfg, "box_cropping_col_max", box_cropping_col_max);
 }
 }

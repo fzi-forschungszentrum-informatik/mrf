@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ostream>
 #include <cmath>
+#include <ostream>
 #include <Eigen/Eigen>
 
 namespace mrf {
@@ -17,12 +17,19 @@ struct Pixel {
         return os;
     }
 
-    inline bool inImage(const int& rows, const int& cols) const {
-        return row > 0 && row < rows && col > 0 && col < cols;
+    inline bool operator==(const Pixel& other) const {
+        return row == other.row && col == other.col;
     }
 
-    const int row, col;
-    const double x, y;
+    inline bool inImage(const int& row_max,
+                        const int& col_max,
+                        const int& row_min = 0,
+                        const int& col_min = 0) const {
+        return row_min <= row && row < row_max && col_min <= col && col < col_max;
+    }
+
+    int row, col;
+    double x, y;
     Eigen::VectorXf val;
 };
 
