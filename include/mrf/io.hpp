@@ -45,7 +45,7 @@ void exportData(const Data<T>& d, const std::string& p, const bool normalize = t
      */
     file_name = p + "cloud.pcd";
     LOG(INFO) << "Writing cloud to '" << file_name << "'.";
-    pcl::io::savePCDFile<T>(file_name, *(d.cloud));
+    pcl::io::savePCDFile<T>(file_name, *(d.cloud), true);
 }
 
 inline bool inImageRange(const unsigned int width,
