@@ -32,6 +32,10 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << "Image size: " << d_.image.cols << " x " << d_.image.rows << " = "
               << d_.image.cols * d_.image.rows;
 
+    LOG(INFO) << "Get Projection Image";
+    projection_.image = get_gray_image(in.image);
+    cv::cvtColor(projection_.image, projection_.image, CV_GRAY2BGR);
+
     LOG(INFO) << "Preprocess and transform cloud";
     pcl::copyPointCloud<T, PointT>(*(in.cloud), *d_.cloud);
     LOG(INFO) << "Cloud size: " << d_.cloud->height << " x " << d_.cloud->width << " = "
@@ -94,6 +98,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
               << ", col_max: " << col_max;
 
+
     LOG(INFO) << "Create projection map";
     std::map<Pixel, PType, PixelLess> projection, projection_tf;
     for (size_t c = 0; c < in_front.size(); c++) {
@@ -101,6 +106,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         if (in_front[c] && p.inImage(row_max, col_max, row_min, col_min)) {
             projection.emplace(p, cloud->points[c]);
             projection_tf.emplace(p, cloud_tf->points[c]);
+            projection_.image.at<cv::Vec3f>(p.row, p.col)[0] = 0;
+            projection_.image.at<cv::Vec3f>(p.row, p.col)[1] = 255;
+            projection_.image.at<cv::Vec3f>(p.row, p.col)[2] = 255;
         }
     }
     LOG(INFO) << "Number of projections: " << projection.size();
