@@ -56,4 +56,35 @@ cv::Mat norm_color(const cv::Mat& in, const bool use_instance) {
     merge(in_split, out);
     return out;
 }
+
+cv::Mat get_gray_image(const cv::Mat& in) {
+    using namespace cv;
+    const int channels{in.channels()};
+    cv::Mat out;
+    if (channels == 3) {
+        cvtColor(in, out, CV_BGR2GRAY);
+        return out;
+    }
+    if (channels == 1) {
+        return in;
+    }
+    if (channels == 2) {
+        std::vector<Mat> in_split(channels);
+        split(in, in_split);
+        return in_split[0];
+    }
+    if (channels == 4) {
+        std::vector<Mat> in_split(channels);
+        split(in, in_split);
+        std::vector<Mat> out_split;
+        for (size_t c = 0; c < 3; c++) {
+            out_split.emplace_back(in_split[c]);
+        }
+        merge(out_split, out);
+        cvtColor(out, out, CV_BGR2GRAY);
+        return out;
+    }
+
+    return Mat::zeros(in.rows, in.cols, 5);
+}
 }
