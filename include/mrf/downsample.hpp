@@ -30,9 +30,9 @@ const typename pcl::PointCloud<T>::Ptr downsampleEquidistant(
 
 template <typename T>
 const typename pcl::PointCloud<T>::Ptr downsampleRandom(
-    const typename pcl::PointCloud<T>::ConstPtr& in, const size_t& random_rate) {
+    const typename pcl::PointCloud<T>::ConstPtr& in, const double& random_rate) {
     const typename pcl::PointCloud<T>::Ptr out{new typename pcl::PointCloud<T>};
-    const size_t num_points{random_rate * in->size() / 100};
+    const size_t num_points{random_rate * in->size()};
     out->reserve(num_points);
 
     std::srand(std::time(0));
