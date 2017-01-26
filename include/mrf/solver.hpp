@@ -14,7 +14,7 @@ class Solver {
 
 public:
     using Ptr = std::shared_ptr<Solver>;
-    using PointT = pcl::PointXYZINormal;
+    using PointT = pcl::PointXYZRGBNormal;
 
     inline Solver(const std::shared_ptr<CameraModel>& cam, const Parameters& p = Parameters())
             : camera_(cam), params_(p){};

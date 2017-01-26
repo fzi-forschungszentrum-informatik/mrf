@@ -25,12 +25,9 @@ struct FunctorNormalDistance {
                            const T* const d_2,
                            T* res) const {
         using namespace Eigen;
-
         const Vector3<T> p_0{ray_0_.cast<T>().pointAt(d_0[0])};
-        const Vector3<T> p_1{ray_1_.cast<T>().pointAt(d_1[0])};
-        const Vector3<T> p_2{ray_2_.cast<T>().pointAt(d_2[0])};
-        const Vector3<T> p_01{p_0 - p_1};
-        const Vector3<T> p_20{p_2 - p_0};
+        const Vector3<T> p_01{p_0 - ray_1_.cast<T>().pointAt(d_1[0])};
+        const Vector3<T> p_20{ray_2_.cast<T>().pointAt(d_2[0]) - p_0};
         Map<Vector3<T>>(res, DimResidual) =
             static_cast<T>(w_) * (p_20.norm() * p_01 - p_01.norm() * p_20);
         return true;

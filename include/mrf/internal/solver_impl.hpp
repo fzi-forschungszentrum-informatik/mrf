@@ -52,8 +52,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     cloud->points.reserve(d_.cloud->size());
     for (size_t c = 0; c < d_.cloud->size(); c++) {
         cloud->emplace_back(PType(d_.cloud->points[c].getVector3fMap().cast<double>(),
-                                  d_.cloud->points[c].getNormalVector3fMap().cast<double>(),
-                                  d_.cloud->points[c].intensity));
+                                  d_.cloud->points[c].getNormalVector3fMap().cast<double>()));
     }
     const ClType::Ptr cloud_tf = pcl_ceres::transform<PType>(cloud, in.transform);
 
@@ -329,7 +328,11 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
         out.cloud->at(p.col, p.row).getVector3fMap() =
             el.second.pointAt(depth_est_(p.row, p.col)).cast<float>();
-        out.cloud->at(p.col, p.row).intensity = img_intensity.at<float>(p.row, p.col);
+
+        out.cloud->at(p.col, p.row).b = std::numeric_limits<uint8_t>::max() * p.val[0];
+        out.cloud->at(p.col, p.row).g = std::numeric_limits<uint8_t>::max() * p.val[1];
+        out.cloud->at(p.col, p.row).r = std::numeric_limits<uint8_t>::max() * p.val[2];
+        out.cloud->at(p.col, p.row).a = std::numeric_limits<uint8_t>::max();
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 
