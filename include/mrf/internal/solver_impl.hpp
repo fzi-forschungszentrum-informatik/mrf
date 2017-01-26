@@ -48,8 +48,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     cloud->points.reserve(d_.cloud->size());
     for (size_t c = 0; c < d_.cloud->size(); c++) {
         cloud->emplace_back(PType(d_.cloud->points[c].getVector3fMap().cast<double>(),
-                                  d_.cloud->points[c].getNormalVector3fMap().cast<double>(),
-                                  d_.cloud->points[c].intensity));
+                                  d_.cloud->points[c].getNormalVector3fMap().cast<double>()));
     }
     const ClType::Ptr cloud_tf = pcl_ceres::transform<PType>(cloud, in.transform);
 
@@ -155,7 +154,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 translation.data()));
 
         if (params_.use_functor_normal)
-            for (auto const& n : getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min))
+            for (auto const& n : getNeighbors(
+                     p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min))
                 ids_functor_normal.emplace_back(problem.AddResidualBlock(
                     FunctorNormal::create(el_projection.second.normal, rays.at(p), rays.at(n)),
                     new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
@@ -171,7 +171,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     Eigen::MatrixXd weights{Eigen::MatrixXd::Zero(rows, cols)};
     for (auto const& el_ray : rays) {
         const Pixel& p{el_ray.first};
-        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
+        const std::vector<Pixel> neighbors{
+            getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
         std::vector<double> weights;
         for (auto const& n : neighbors)
             weights.emplace_back(smoothnessWeight(p,
@@ -271,7 +272,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     for (auto const& el : rays) {
         const Pixel& p{el.first};
-        const std::vector<Pixel> neighbors{getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
+        const std::vector<Pixel> neighbors{
+            getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
         weights(p.row, p.col) = smoothnessWeight(p,
                                                  neighbors[0],
                                                  params_.discontinuity_threshold,
@@ -318,7 +320,11 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
         out.cloud->at(p.col, p.row).getVector3fMap() =
             el.second.pointAt(depth_est_(p.row, p.col)).cast<float>();
-        out.cloud->at(p.col, p.row).intensity = img_intensity.at<float>(p.row, p.col);
+
+        out.cloud->at(p.col, p.row).b = std::numeric_limits<uint8_t>::max() * p.val[0];
+        out.cloud->at(p.col, p.row).g = std::numeric_limits<uint8_t>::max() * p.val[1];
+        out.cloud->at(p.col, p.row).r = std::numeric_limits<uint8_t>::max() * p.val[2];
+        out.cloud->at(p.col, p.row).a = std::numeric_limits<uint8_t>::max();
     }
     pcl::transformPointCloudWithNormals(*out.cloud, *out.cloud, out.transform.inverse());
 
