@@ -106,7 +106,7 @@ void exportResultInfo(const ResultInfo& info, const std::string& p) {
         cv::Mat out;
         cv::eigen2cv(info.weights, out);
         out = createOutput(out);
-        cv::bitwise_not(out, out);
+        //cv::bitwise_not(out, out);
         cv::applyColorMap(out, out, cv::COLORMAP_HOT);
         cv::imwrite(p + "weights.png", out);
     }
