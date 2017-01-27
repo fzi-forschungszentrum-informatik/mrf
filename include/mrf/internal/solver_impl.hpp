@@ -189,17 +189,15 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                                   params_.smoothness_weight_min,
                                                   params_.smoothness_weighting,
                                                   params_.smoothness_rate,
-                                                  1) *
-                                 params_.ks);
+                                                  1));
 
         if (params_.use_functor_normal_distance) {
             if (neighbors.size() > 2)
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(p),
                                                   rays.at(neighbors[0]),
-                                                  rays.at(neighbors[2]),
-                                                  weights[0] * weights[2]),
-                    new ScaledLoss(params_.loss_function.get(), params_.ks, DO_NOT_TAKE_OWNERSHIP),
+                                                  rays.at(neighbors[2])),
+                    new ScaledLoss(params_.loss_function.get(), params_.ks * weights[0] * weights[2], DO_NOT_TAKE_OWNERSHIP),
                     &depth_est_(p.row, p.col),
                     &depth_est_(neighbors[0].row, neighbors[0].col),
                     &depth_est_(neighbors[2].row, neighbors[2].col)));
@@ -207,9 +205,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
                     FunctorNormalDistance::create(rays.at(p),
                                                   rays.at(neighbors[1]),
-                                                  rays.at(neighbors[3]),
-                                                  weights[1] * weights[3]),
-                    new ScaledLoss(params_.loss_function.get(), params_.ks, DO_NOT_TAKE_OWNERSHIP),
+                                                  rays.at(neighbors[3])),
+                    new ScaledLoss(params_.loss_function.get(), params_.ks * weights[1] * weights[3], DO_NOT_TAKE_OWNERSHIP),
                     &depth_est_(p.row, p.col),
                     &depth_est_(neighbors[1].row, neighbors[1].col),
                     &depth_est_(neighbors[3].row, neighbors[3].col)));

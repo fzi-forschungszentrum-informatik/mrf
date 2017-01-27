@@ -8,6 +8,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <pcl/io/pcd_io.h>
 
 #include "data.hpp"
@@ -17,7 +18,9 @@
 
 namespace mrf {
 
-inline cv::Mat createOutput(const cv::Mat& in, const bool normalize = true) {
+inline cv::Mat createOutput(const cv::Mat& in,
+                            const bool normalize = true,
+                            const bool applyColormap = false) {
     using TargetT = uint8_t;
     cv::Mat out;
     if (normalize) {
@@ -27,11 +30,16 @@ inline cv::Mat createOutput(const cv::Mat& in, const bool normalize = true) {
         in.convertTo(out, cv::DataType<TargetT>::type);
     }
 
+    if (applyColormap)
+        cv::applyColorMap(out, out, cv::COLORMAP_JET);
     return out;
 }
 
 template <typename T>
-void exportData(const Data<T>& d, const std::string& p, const bool normalize = true) {
+void exportData(const Data<T>& d,
+                const std::string& p,
+                const bool normalize = true,
+                const bool applyColormap = false) {
 
     std::string file_name;
 
@@ -40,7 +48,20 @@ void exportData(const Data<T>& d, const std::string& p, const bool normalize = t
      */
     file_name = p + "image.png";
     LOG(INFO) << "Writing image to '" << file_name << "'.";
-    cv::imwrite(file_name, createOutput(d.image, normalize));
+    LOG(INFO) << "image channels: " << d.image.channels();
+    if (d.image.channels() == 4) {
+        std::vector<cv::Mat> in_split, out_split;
+        cv::split(d.image, in_split);
+        for (size_t c = 0; c < 3; c++) {
+            out_split.emplace_back(in_split[c]);
+        }
+        cv::Mat out;
+        cv::merge(out_split, out);
+        cv::imwrite(file_name, createOutput(out, normalize,applyColormap));
+    } else {
+        cv::imwrite(file_name, createOutput(d.image, normalize,applyColormap));
+    }
+
 
     /**
      * Cloud
@@ -106,7 +127,7 @@ void exportResultInfo(const ResultInfo& info, const std::string& p) {
         cv::Mat out;
         cv::eigen2cv(info.weights, out);
         out = createOutput(out);
-        cv::bitwise_not(out, out);
+        // cv::bitwise_not(out, out);
         cv::applyColorMap(out, out, cv::COLORMAP_HOT);
         cv::imwrite(p + "weights.png", out);
     }
