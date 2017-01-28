@@ -26,6 +26,10 @@ public:
         return d_;
     }
 
+    inline Data<PointT> getProjectionInfo() const {
+        return projection_;
+    }
+
     inline static Ptr create(const std::shared_ptr<CameraModel>& cam,
                              const Parameters& p = Parameters()) {
         return std::make_shared<Solver>(cam, p);
@@ -36,6 +40,7 @@ private:
     const std::shared_ptr<CameraModel> camera_;
     Parameters params_;
     Data<PointT> d_;
+    Data<PointT> projection_;
     Eigen::MatrixXd depth_est_;
 };
 }

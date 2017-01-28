@@ -3,6 +3,8 @@
 #include <Eigen/Geometry>
 #include <camera_models/camera_model.h>
 #include <glog/logging.h>
+#include <opencv2/contrib/contrib.hpp>
+#include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
@@ -42,9 +44,11 @@ void exportData(const Data<T>& d, const std::string& p, const bool normalize = t
     /**
      * Cloud
      */
-    file_name = p + "cloud.pcd";
-    LOG(INFO) << "Writing cloud to '" << file_name << "'.";
-    pcl::io::savePCDFile<T>(file_name, *(d.cloud), true);
+    if (!d.cloud->empty()) {
+        file_name = p + "cloud.pcd";
+        LOG(INFO) << "Writing cloud to '" << file_name << "'.";
+        pcl::io::savePCDFile<T>(file_name, *(d.cloud), true);
+    }
 }
 
 inline bool inImageRange(const unsigned int width,
@@ -100,7 +104,10 @@ void exportResultInfo(const ResultInfo& info, const std::string& p) {
     if (info.has_weights) {
         cv::Mat out;
         cv::eigen2cv(info.weights, out);
-        cv::imwrite(p + "weights.png", createOutput(out));
+        out = createOutput(out);
+        cv::bitwise_not(out, out);
+        cv::applyColorMap(out, out, cv::COLORMAP_HOT);
+        cv::imwrite(p + "weights.png", out);
     }
 }
 }

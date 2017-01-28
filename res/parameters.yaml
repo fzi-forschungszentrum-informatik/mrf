@@ -31,7 +31,7 @@ neighbor_search: 5
 
 # Depth limits that constrain the optimization
 # Available options: none, custom, adaptive
-limits: adaptive
+limits: none
 custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
@@ -70,7 +70,7 @@ use_functor_normal_distance: true
 use_functor_smoothness_normal: false
 use_functor_smoothness_distance: false
 
-pin_distances: true
+pin_distances: false
 pin_normals: false
 
 estimate_covariances: false
