@@ -5,7 +5,7 @@
 
 namespace mrf {
 
-struct FunctorNormalDistance {
+struct FunctorCollinearity {
 
     template <typename T>
     using Ray = Eigen::ParametrizedLine<T, 3>;
@@ -13,10 +13,10 @@ struct FunctorNormalDistance {
     static constexpr size_t DimDepth = 1;
     static constexpr size_t DimResidual = 3;
 
-    inline FunctorNormalDistance(const Ray<double>& ray_0,
-                                 const Ray<double>& ray_1,
-                                 const Ray<double>& ray_2,
-                                 const double& w)
+    inline FunctorCollinearity(const Ray<double>& ray_0,
+                               const Ray<double>& ray_1,
+                               const Ray<double>& ray_2,
+                               const double& w)
             : ray_0_{ray_0}, ray_1_{ray_1}, ray_2_{ray_2}, w_{w} {};
 
     template <typename T>
@@ -38,8 +38,8 @@ struct FunctorNormalDistance {
                                               const Ray<double>& ray_2,
                                               const double& w) {
         return new ceres::
-            AutoDiffCostFunction<FunctorNormalDistance, DimResidual, DimDepth, DimDepth, DimDepth>(
-                new FunctorNormalDistance(ray_0, ray_1, ray_2, w));
+            AutoDiffCostFunction<FunctorCollinearity, DimResidual, DimDepth, DimDepth, DimDepth>(
+                new FunctorCollinearity(ray_0, ray_1, ray_2, w));
     }
 
 private:

@@ -33,6 +33,7 @@ double smoothnessWeight(const Pixel& p,
     case 4: //> color image, plus instance
         diff_color = (p.val.topRows<3>() - neighbor.val.topRows<3>()).norm();
         diff_instance = p.val[3] - neighbor.val[3];
+        diff_instance = 1;
         break;
     default:
         diff_color = (p.val - neighbor.val).norm();
@@ -42,6 +43,7 @@ double smoothnessWeight(const Pixel& p,
     double color_term{1}, instance_term{1};
     if (std::abs(diff_instance) > 0) {
         instance_term = w_min;
+        instance_term = std::max<double>(p.val[3] * neighbor.val[3], w_min);
     }
 
     if (diff_color > threshold) {
@@ -62,8 +64,6 @@ double smoothnessWeight(const Pixel& p,
             break;
         }
     }
-
-//    return (color_term * w_color + instance_term * w_instance) / (w_instance + w_color);
     return color_term * instance_term;
 }
 }

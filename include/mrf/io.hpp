@@ -1,9 +1,8 @@
 #pragma once
 
+#include <Eigen/Geometry>
 #include <camera_models/camera_model.h>
 #include <glog/logging.h>
-#include <Eigen/src/Geometry/Hyperplane.h>
-#include <Eigen/src/Geometry/ParametrizedLine.h>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
