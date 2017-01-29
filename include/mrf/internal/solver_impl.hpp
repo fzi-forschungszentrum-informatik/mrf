@@ -264,6 +264,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Write output data";
     out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
+    const float depth_est_min{depth_est_.minCoeff()};
+    const float depth_est_max{depth_est_.maxCoeff()};
     cv::eigen2cv(depth_est_, out.image);
     out.cloud->width = cols;
     out.cloud->height = rows;
@@ -343,6 +345,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     info.iterations_used = summary.iterations.size();
     info.has_weights = true;
     info.weights = weights;
+    info.out_depth_max = depth_est_max;
+    info.out_depth_min = depth_est_min;
+
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";

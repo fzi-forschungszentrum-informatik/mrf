@@ -55,11 +55,11 @@ box_cropping_col_max: 300
 # Available options: trivial, huber, cauchy
 loss_function: trivial
 loss_function_scale: 0.1
-max_num_iterations: 50
+max_num_iterations: 200
 minimizer_progress_to_stdout: true
 num_threads: 8
 num_linear_solver_threads: 8
-max_solver_time_in_seconds: 600
+max_solver_time_in_seconds: 900
 use_inner_iterations: false
 use_nonmonotonic_steps: false
 function_tolerance: 1e-5
@@ -70,7 +70,7 @@ use_functor_normal_distance: true
 use_functor_smoothness_normal: false
 use_functor_smoothness_distance: false
 
-pin_distances: false
+pin_distances: true
 pin_normals: false
 
 estimate_covariances: false
