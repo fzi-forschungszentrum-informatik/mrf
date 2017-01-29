@@ -13,12 +13,13 @@
 
 #include "../cloud_preprocessing.hpp"
 #include "../cv_helper.hpp"
+#include "../functor_collinearity.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
-#include "../functor_normal_distance.hpp"
 #include "../functor_smoothness_distance.hpp"
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
+#include "../normals.hpp"
 #include "../prior.hpp"
 #include "../smoothness_weight.hpp"
 
@@ -91,8 +92,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         if (params_.box_cropping_row_max < row_max)
             row_max = params_.box_cropping_row_max;
         if (params_.box_cropping_col_min > 0)
-            col_min = params_.box_cropping_row_min;
-        if (params_.box_cropping_row_max < col_max)
+            col_min = params_.box_cropping_col_min;
+        if (params_.box_cropping_col_max < col_max)
             col_max = params_.box_cropping_col_max;
     }
     LOG(INFO) << "row_min: " << row_min << ", row_max: " << row_max << ", col_min: " << col_min
@@ -194,7 +195,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         if (params_.use_functor_normal_distance) {
             if (neighbors.size() > 2)
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
-                    FunctorNormalDistance::create(rays.at(p),
+                    FunctorCollinearity::create(rays.at(p),
                                                   rays.at(neighbors[0]),
                                                   rays.at(neighbors[2])),
                     new ScaledLoss(params_.loss_function.get(), params_.ks * weights[0] * weights[2], DO_NOT_TAKE_OWNERSHIP),
@@ -203,7 +204,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                     &depth_est_(neighbors[2].row, neighbors[2].col)));
             if (neighbors.size() > 3)
                 ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
-                    FunctorNormalDistance::create(rays.at(p),
+                    FunctorCollinearity::create(rays.at(p),
                                                   rays.at(neighbors[1]),
                                                   rays.at(neighbors[3])),
                     new ScaledLoss(params_.loss_function.get(), params_.ks * weights[1] * weights[3], DO_NOT_TAKE_OWNERSHIP),

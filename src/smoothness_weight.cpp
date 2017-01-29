@@ -15,35 +15,34 @@ double smoothnessWeight(const Pixel& p,
                         const Parameters::SmoothnessWeighting& smoothness_weighting,
                         const double& alpha,
                         const double& beta) {
-    int w_instance{1}, w_color{1};
     double diff_color, diff_instance{0};
     switch (p.val.rows()) {
-    case 1: //> gray image, no instance
+    case 1: ///> gray image, no instance
         diff_color = std::abs(p.val[0] - neighbor.val[0]);
-        w_instance = 0;
         break;
-    case 2: //> gray image, plus instance
+    case 2: ///> gray image, plus instance
         diff_color = std::abs(p.val[0] - neighbor.val[0]);
         diff_instance = p.val[1] - neighbor.val[1];
         break;
-    case 3: //> color image, no instance
+    case 3: ///> color image, no instance
         diff_color = (p.val - neighbor.val).norm();
-        w_instance = 0;
         break;
-    case 4: //> color image, plus instance
+    case 4: ///> color image, plus instance
         diff_color = (p.val.topRows<3>() - neighbor.val.topRows<3>()).norm();
         diff_instance = p.val[3] - neighbor.val[3];
+        //        diff_instance = 1;
         break;
     default:
         diff_color = (p.val - neighbor.val).norm();
-        w_instance = 0;
         break;
     }
-    double color_term{1}, instance_term{1};
+    double instance_term{1};
     if (std::abs(diff_instance) > 0) {
         instance_term = w_min;
+        //        instance_term = std::max<double>(p.val[3] * neighbor.val[3], w_min);
     }
 
+    double color_term{1};
     if (diff_color > threshold) {
         switch (smoothness_weighting) {
         case Parameters::SmoothnessWeighting::none:
@@ -62,8 +61,6 @@ double smoothnessWeight(const Pixel& p,
             break;
         }
     }
-
-//    return (color_term * w_color + instance_term * w_instance) / (w_instance + w_color);
     return color_term * instance_term;
 }
 }

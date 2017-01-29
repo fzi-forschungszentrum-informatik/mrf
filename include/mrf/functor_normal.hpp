@@ -3,8 +3,6 @@
 #include <ceres/autodiff_cost_function.h>
 #include <util_ceres/eigen.h>
 
-#include "normals.hpp"
-
 namespace mrf {
 
 struct FunctorNormal {
@@ -23,12 +21,9 @@ struct FunctorNormal {
                            const T* const d_0,
                            const T* const d_1,
                            T* res) const {
-        using namespace Eigen;
-        const Vector3<T> p_0{ray_0_.cast<T>().pointAt(d_0[0])};
-        const Vector3<T> p_1{ray_1_.cast<T>().pointAt(d_1[0])};
-        const Hyperplane<T, 3> plane{util_ceres::fromQuaternion(rot) * n_.cast<T>(), p_0};
-
-        res[0] = plane.signedDistance(p_1);
+        res[0] = Eigen::Hyperplane<T, 3>{util_ceres::fromQuaternion(rot) * n_.cast<T>(),
+                                         ray_0_.cast<T>().pointAt(d_0[0])}
+                     .signedDistance(ray_1_.cast<T>().pointAt(d_1[0]));
         return true;
     }
 
