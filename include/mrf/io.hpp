@@ -104,8 +104,8 @@ void exportOverlay(const Data<T>& d,
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     const std::vector<bool> in_front{cam->getImagePoints(pts_3d, img_pts_raw)};
 
-    const double d_max{40};
-    const double d_min{3};
+    const double d_max{35};
+    const double d_min{7};
     for (size_t c = 0; c < in_front.size(); c++) {
         const Pixel p{img_pts_raw(0, c), img_pts_raw(1, c)};
         if (p.inImage(rows, cols) && in_front[c]) {

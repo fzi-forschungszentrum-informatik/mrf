@@ -6,8 +6,6 @@ namespace mrf {
 
 Parameters::Parameters(const std::string& file_name) {
     using namespace ceres;
-    problem.cost_function_ownership = DO_NOT_TAKE_OWNERSHIP;
-    problem.loss_function_ownership = DO_NOT_TAKE_OWNERSHIP;
     solver.max_num_iterations = 50;
     solver.minimizer_progress_to_stdout = true;
     solver.num_threads = 8;
@@ -212,17 +210,7 @@ void Parameters::fromConfig(const std::string& file_name) {
     }
 
     getParam(cfg, "loss_function_scale", loss_function_scale);
-    if (getParam(cfg, "loss_function", tmp)) {
-        if (tmp == "trivial") {
-            loss_function = std::make_shared<ceres::TrivialLoss>();
-        } else if (tmp == "huber") {
-            loss_function = std::make_shared<ceres::HuberLoss>(loss_function_scale);
-        } else if (tmp == "cauchy") {
-            loss_function = std::make_shared<ceres::CauchyLoss>(loss_function_scale);
-        } else {
-            LOG(WARNING) << "No parameter " << tmp << " available.";
-        }
-    }
+    getParam(cfg, "loss_function", loss_function);
 
     if (getParam(cfg, "crop_mode", tmp)) {
         if (tmp == "none") {
@@ -243,5 +231,14 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "box_cropping_row_max", box_cropping_row_max);
     getParam(cfg, "box_cropping_col_min", box_cropping_col_min);
     getParam(cfg, "box_cropping_col_max", box_cropping_col_max);
+}
+
+ceres::LossFunction* Parameters::createLossFunction() const {
+    if (loss_function == "huber") {
+        return new ceres::HuberLoss(loss_function_scale);
+    } else if (loss_function == "cauchy") {
+        return new ceres::CauchyLoss(loss_function_scale);
+    }
+    return new ceres::TrivialLoss;
 }
 }
