@@ -103,11 +103,17 @@ void exportOverlay(const Data<T>& d,
 
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     const std::vector<bool> in_front{cam->getImagePoints(pts_3d, img_pts_raw)};
+
+    const double d_max{40};
+    const double d_min{3};
     for (size_t c = 0; c < in_front.size(); c++) {
         const Pixel p{img_pts_raw(0, c), img_pts_raw(1, c)};
         if (p.inImage(rows, cols) && in_front[c]) {
-            const double d{pts_3d.col(c).norm()};
-            cv::circle(img, cv::Point(p.col, p.row), 2, cv::Scalar(255 - 2 * d, 0, 2 * d), -1);
+            double d{pts_3d.col(c).norm()};
+            d = std::min(d, d_max);
+            d = std::max(d, d_min);
+            const double d_rel{(d - d_min) / (d_max - d_min)};
+            cv::circle(img, cv::Point(p.col, p.row), 2, cv::Scalar(255 * d_rel, 0, 255 * (1 - d_rel)), -1);
         }
     }
     exportImage(createOutput(img, normalize), p + "depth_", normalize);
