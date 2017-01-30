@@ -4,6 +4,112 @@
 
 namespace mrf {
 
+Parameters::Parameters(const std::string& file_name) {
+    using namespace ceres;
+    solver.max_num_iterations = 50;
+    solver.minimizer_progress_to_stdout = true;
+    solver.num_threads = 8;
+    solver.num_linear_solver_threads = 8;
+    solver.max_solver_time_in_seconds = 600;
+
+    if (file_name.size())
+        fromConfig(file_name);
+
+    LOG(INFO) << header() << std::endl << toString();
+}
+
+std::string Parameters::header() {
+    std::ostringstream oss;
+    // clang-format off
+	oss << "ks" << del
+		<< "kd" << del
+		<< "kn" << del
+		<< "discontinuity_threshold" << del
+		<< "limits" << del
+		<< "custom_depth_limit_min" << del
+		<< "custom_depth_limit_max" << del
+		<< "smoothness_weighting" << del
+		<< "smoothness_rate" << del
+		<< "smoothness_weight_min" << del
+		<< "radius_normal_estimation" << del
+		<< "neighbor_search" << del
+		<< "max_iterations" << del
+		<< "minimizer_progress_to_stdout" << del
+		<< "num_threads" << del
+		<< "num_linear_solver_threads" << del
+		<< "max_solver_time_in_seconds" << del
+		<< "use_inner_iterations" << del
+		<< "use_nonmonotonic_steps" << del
+		<< "estimate_normals" << del
+		<< "use_functor_distance" << del
+		<< "use_functor_normal" << del
+		<< "use_functor_normal_distance" << del
+		<< "use_functor_smoothness_normal" << del
+		<< "use_functor_smoothness_distance" << del
+		<< "pin_normals" << del
+		<< "pin_distances" << del
+		<< "loss_function_scale" << del
+		<< "initialization" << del
+		<< "neighborhood" << del
+		<< "estimate_covariances" << del
+		<< "crop_mode" << del
+		<< "use_covariance_filter" << del
+		<< "covariance_filter_treshold" << del
+		<< "sigmoid_scale" << del
+		<< "box_cropping_row_min" << del
+		<< "box_cropping_row_max" << del
+		<< "box_cropping_col_min" << del
+		<< "box_cropping_col_max";
+    // clang-format on
+    return oss.str();
+}
+
+std::string Parameters::toString() const {
+    std::ostringstream oss;
+    // clang-format off
+	oss << ks << del
+		<< kd << del
+		<< kn << del
+		<< discontinuity_threshold << del
+		<< static_cast<int>(limits) << del
+		<< custom_depth_limit_min << del
+		<< custom_depth_limit_max << del
+		<< static_cast<int>(smoothness_weighting) << del
+		<< smoothness_rate << del
+		<< smoothness_weight_min << del
+		<< radius_normal_estimation << del
+		<< neighbor_search << del
+		<< solver.max_num_iterations << del
+		<< solver.minimizer_progress_to_stdout << del
+		<< solver.num_threads << del
+		<< solver.num_linear_solver_threads << del
+		<< solver.max_solver_time_in_seconds << del
+		<< solver.use_inner_iterations << del
+		<< solver.use_nonmonotonic_steps << del
+		<< estimate_normals << del
+		<< use_functor_distance << del
+		<< use_functor_normal << del
+		<< use_functor_normal_distance << del
+		<< use_functor_smoothness_normal << del
+		<< use_functor_smoothness_distance << del
+		<< pin_normals << del
+		<< pin_distances << del
+		<< loss_function_scale << del
+		<< static_cast<int>(initialization) << del
+		<< static_cast<int>(neighborhood) << del
+		<< estimate_covariances << del
+		<< static_cast<int>(crop_mode) << del
+		<< use_covariance_filter << del
+		<< covariance_filter_treshold << del
+		<< sigmoid_scale << del
+		<< box_cropping_row_min << del
+		<< box_cropping_row_max << del
+		<< box_cropping_col_min << del
+		<< box_cropping_col_max;
+    // clang-format on
+    return oss.str();
+}
+
 void Parameters::fromConfig(const std::string& file_name) {
     const YAML::Node cfg{YAML::LoadFile(file_name)};
 
@@ -104,17 +210,7 @@ void Parameters::fromConfig(const std::string& file_name) {
     }
 
     getParam(cfg, "loss_function_scale", loss_function_scale);
-    if (getParam(cfg, "loss_function", tmp)) {
-        if (tmp == "trivial") {
-            loss_function = std::make_shared<ceres::TrivialLoss>();
-        } else if (tmp == "huber") {
-            loss_function = std::make_shared<ceres::HuberLoss>(loss_function_scale);
-        } else if (tmp == "cauchy") {
-            loss_function = std::make_shared<ceres::CauchyLoss>(loss_function_scale);
-        } else {
-            LOG(WARNING) << "No parameter " << tmp << " available.";
-        }
-    }
+    getParam(cfg, "loss_function", loss_function);
 
     if (getParam(cfg, "crop_mode", tmp)) {
         if (tmp == "none") {
@@ -123,7 +219,7 @@ void Parameters::fromConfig(const std::string& file_name) {
             crop_mode = CropMode::min_max;
         } else if (tmp == "box") {
             crop_mode = CropMode::box;
-        }  else {
+        } else {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
@@ -135,5 +231,14 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "box_cropping_row_max", box_cropping_row_max);
     getParam(cfg, "box_cropping_col_min", box_cropping_col_min);
     getParam(cfg, "box_cropping_col_max", box_cropping_col_max);
+}
+
+ceres::LossFunction* Parameters::createLossFunction() const {
+    if (loss_function == "huber") {
+        return new ceres::HuberLoss(loss_function_scale);
+    } else if (loss_function == "cauchy") {
+        return new ceres::CauchyLoss(loss_function_scale);
+    }
+    return new ceres::TrivialLoss;
 }
 }

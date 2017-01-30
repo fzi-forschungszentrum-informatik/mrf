@@ -4,7 +4,6 @@
 #include <Eigen/Eigen>
 #include <pcl_ceres/point.hpp>
 
-#include "eigen.hpp"
 #include "parameters.hpp"
 #include "pixel.hpp"
 
