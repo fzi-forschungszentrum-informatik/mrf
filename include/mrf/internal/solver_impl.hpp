@@ -128,7 +128,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     using Clock = std::chrono::high_resolution_clock;
     LOG(INFO) << "Estimate prior";
     auto start = Clock::now();
-    depth_est_.conservativeResize(rows, cols);
+    //    depth_est_.conservativeResize(rows, cols);
+    depth_est_ = 10 * Eigen::MatrixXd::Ones(rows, cols);
     Eigen::MatrixXd certainty{Eigen::MatrixXd::Zero(rows, cols)};
     estimatePrior(rays, projection_tf, rows, cols, params_, depth_est_, certainty);
     const std::chrono::duration<double> t_diff_prior = Clock::now() - start;
@@ -287,18 +288,16 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                                  params_.smoothness_rate,
                                                  1);
 
+        Eigen::Vector3d n;
         if (neighbors.size() < 3)
-            out.cloud->at(p.col, p.row).getNormalVector3fMap() =
-                estimateNormal1(depth_est_(p.row, p.col),
+            n = estimateNormal1(depth_est_(p.row, p.col),
                                 rays.at(p),
                                 depth_est_(neighbors[0].row, neighbors[0].col),
                                 rays.at(neighbors[0]),
                                 depth_est_(neighbors[1].row, neighbors[1].col),
-                                rays.at(neighbors[1]))
-                    .cast<float>();
+                                rays.at(neighbors[1]));
         else if (neighbors.size() < 4)
-            out.cloud->at(p.col, p.row).getNormalVector3fMap() =
-                estimateNormal2(depth_est_(p.row, p.col),
+            n = estimateNormal2(depth_est_(p.row, p.col),
                                 rays.at(p),
                                 depth_est_(neighbors[0].row, neighbors[0].col),
                                 rays.at(neighbors[0]),
@@ -306,11 +305,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                 rays.at(neighbors[1]),
                                 depth_est_(neighbors[2].row, neighbors[2].col),
                                 rays.at(neighbors[2]),
-                                0.1)
-                    .cast<float>();
+                                0.1);
         else
-            out.cloud->at(p.col, p.row).getNormalVector3fMap() =
-                estimateNormal4(depth_est_(p.row, p.col),
+            n = estimateNormal4(depth_est_(p.row, p.col),
                                 rays.at(p),
                                 depth_est_(neighbors[0].row, neighbors[0].col),
                                 rays.at(neighbors[0]),
@@ -320,9 +317,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                                 rays.at(neighbors[2]),
                                 depth_est_(neighbors[3].row, neighbors[3].col),
                                 rays.at(neighbors[3]),
-                                0.1)
-                    .cast<float>();
+                                0.1);
 
+        out.cloud->at(p.col, p.row).getNormalVector3fMap() = n.cast<float>();
         out.cloud->at(p.col, p.row).getVector3fMap() =
             el.second.pointAt(depth_est_(p.row, p.col)).cast<float>();
 
