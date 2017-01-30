@@ -157,7 +157,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         if (params_.use_functor_distance && !params_.pin_distances)
             ids_functor_distance.emplace_back(problem.AddResidualBlock(
                 FunctorDistance::create(el_projection.second.position, rays.at(p)),
-                new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
+                new ScaledLoss(params_.createLossFunction(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
                 &depth_est_(p.row, p.col),
                 rotation.coeffs().data(),
                 translation.data()));
@@ -167,16 +167,13 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                      p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min))
                 ids_functor_normal.emplace_back(problem.AddResidualBlock(
                     FunctorNormal::create(el_projection.second.normal, rays.at(p), rays.at(n)),
-                    new ScaledLoss(params_.loss_function.get(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
+                    new ScaledLoss(params_.createLossFunction(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
                     rotation.coeffs().data(),
                     &depth_est_(p.row, p.col),
                     &depth_est_(n.row, n.col)));
     }
 
     LOG(INFO) << "Add smoothness residual blocks";
-    std::vector<ResidualBlockId> ids_functor_smoothness_distance, ids_functor_normal_distance;
-    ids_functor_smoothness_distance.reserve(rays.size());
-    ids_functor_normal_distance.reserve(2 * rays.size());
     Eigen::MatrixXd weights{Eigen::MatrixXd::Zero(rows, cols)};
     for (auto const& el_ray : rays) {
         const Pixel& p{el_ray.first};
@@ -194,32 +191,34 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
         if (params_.use_functor_normal_distance) {
             if (neighbors.size() > 2)
-                ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
-                    FunctorCollinearity::create(rays.at(p),
-                                                  rays.at(neighbors[0]),
-                                                  rays.at(neighbors[2])),
-                    new ScaledLoss(params_.loss_function.get(), params_.ks * weights[0] * weights[2], DO_NOT_TAKE_OWNERSHIP),
-                    &depth_est_(p.row, p.col),
-                    &depth_est_(neighbors[0].row, neighbors[0].col),
-                    &depth_est_(neighbors[2].row, neighbors[2].col)));
+                problem.AddResidualBlock(FunctorCollinearity::create(rays.at(p),
+                                                                     rays.at(neighbors[0]),
+                                                                     rays.at(neighbors[2])),
+                                         new ScaledLoss(params_.createLossFunction(),
+                                                        params_.ks * weights[0] * weights[2],
+                                                        DO_NOT_TAKE_OWNERSHIP),
+                                         &depth_est_(p.row, p.col),
+                                         &depth_est_(neighbors[0].row, neighbors[0].col),
+                                         &depth_est_(neighbors[2].row, neighbors[2].col));
             if (neighbors.size() > 3)
-                ids_functor_normal_distance.emplace_back(problem.AddResidualBlock(
-                    FunctorCollinearity::create(rays.at(p),
-                                                  rays.at(neighbors[1]),
-                                                  rays.at(neighbors[3])),
-                    new ScaledLoss(params_.loss_function.get(), params_.ks * weights[1] * weights[3], DO_NOT_TAKE_OWNERSHIP),
-                    &depth_est_(p.row, p.col),
-                    &depth_est_(neighbors[1].row, neighbors[1].col),
-                    &depth_est_(neighbors[3].row, neighbors[3].col)));
+                problem.AddResidualBlock(FunctorCollinearity::create(rays.at(p),
+                                                                     rays.at(neighbors[1]),
+                                                                     rays.at(neighbors[3])),
+                                         new ScaledLoss(params_.createLossFunction(),
+                                                        params_.ks * weights[1] * weights[3],
+                                                        DO_NOT_TAKE_OWNERSHIP),
+                                         &depth_est_(p.row, p.col),
+                                         &depth_est_(neighbors[1].row, neighbors[1].col),
+                                         &depth_est_(neighbors[3].row, neighbors[3].col));
         }
 
         if (params_.use_functor_smoothness_distance)
             for (size_t c = 0; c < neighbors.size(); c++)
-                ids_functor_smoothness_distance.emplace_back(problem.AddResidualBlock(
+                problem.AddResidualBlock(
                     FunctorSmoothnessDistance::create(),
                     new ScaledLoss(new TrivialLoss, weights[c], TAKE_OWNERSHIP),
                     &depth_est_(p.row, p.col),
-                    &depth_est_(neighbors[c].row, neighbors[c].col)));
+                    &depth_est_(neighbors[c].row, neighbors[c].col));
     }
 
     if (params_.limits != Parameters::Limits::none) {

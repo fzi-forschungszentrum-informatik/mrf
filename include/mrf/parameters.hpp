@@ -33,6 +33,8 @@ struct Parameters {
         return os << p.toString();
     }
 
+    ceres::LossFunction* createLossFunction() const;
+
     double ks{1};
     double kd{1};
     double kn{1};
@@ -59,7 +61,7 @@ struct Parameters {
     Neighborhood neighborhood{Neighborhood::eight};
     bool estimate_covariances{false};
     ceres::Problem::Options problem;
-    std::shared_ptr<ceres::LossFunction> loss_function{new ceres::TrivialLoss};
+    std::string loss_function{"trivial"};
     CropMode crop_mode{CropMode::none};
     bool use_covariance_filter{false};
     double covariance_filter_treshold{0.1};
