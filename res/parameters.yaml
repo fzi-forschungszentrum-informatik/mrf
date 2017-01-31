@@ -2,7 +2,7 @@
 kd: 1
 
 # Smoothness weight (within discontinuity threshold)
-ks: 5
+ks: 1
 
 # Smoothness weighting type
 # Available options: none, step, linear, exponential
@@ -12,8 +12,8 @@ smoothness_weighting: exponential
 discontinuity_threshold: 0.0
 
 # Decrease rate of smoothness weighting
-smoothness_rate: 15
-smoothness_weight_min: 1e-3
+smoothness_rate: 2
+smoothness_weight_min: 1e-5
 
 # Sigmoid scale
 sigmoid_scale: 1
@@ -21,7 +21,7 @@ sigmoid_scale: 1
 # Whether normal estimation is performed as a preprocessing step
 # This parameter can be set to false if normals are not needed or provided
 # otherwise
-estimate_normals: false
+estimate_normals: true
 
 # Radius in which the normal estimation is performed
 radius_normal_estimation: 0.25
@@ -31,25 +31,29 @@ neighbor_search: 5
 
 # Depth limits that constrain the optimization
 # Available options: none, custom, adaptive
-limits: adaptive
+limits: none
 custom_depth_limit_min: 0
 custom_depth_limit_max: 1
 
 # Available options: none, nearest_neighbor, triangles, mean_depth, weighted_neighbor
 initialization: triangles
 
+# Neighborhood for each pixel to consider
+# Available options: two, four, eight
+neighborhood: four
+
 # Box cropping mode to reduce the amount of data
 # Available options: none, min_max, box
 crop_mode: none
 
-box_cropping_row_min: 400
-box_cropping_row_max: 1300
-box_cropping_col_min: 600
-box_cropping_col_max: 3400
+box_cropping_row_min: 0
+box_cropping_row_max: 200
+box_cropping_col_min: 0
+box_cropping_col_max: 300
 
 # Optimizer parameters
 # Available options: trivial, huber, cauchy
-loss_function: none
+loss_function: trivial
 loss_function_scale: 0.1
 max_num_iterations: 50
 minimizer_progress_to_stdout: true
