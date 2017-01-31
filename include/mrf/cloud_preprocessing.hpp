@@ -22,8 +22,8 @@ const typename pcl::PointCloud<U>::Ptr estimateNormals(
     concatenateFields(*in, cl_normals, *out);
 
     PointCloud<U> tmp;
+    size_t invalid_points{0};
     if (remove_invalid) {
-        size_t invalid_points{0};
         for (auto& p : out->points) {
             if (!pcl_isfinite(p.normal_x) || !pcl_isfinite(p.normal_y) ||
                 !pcl_isfinite(p.normal_z)) {
@@ -32,11 +32,12 @@ const typename pcl::PointCloud<U>::Ptr estimateNormals(
             }
         }
         LOG(INFO) << "Detected " << invalid_points << " invalid normal points";
-        if (!invalid_points)
-            out->height = in->size() / in->width;
-        else
-            out->width = in->size();
     }
+    if (!invalid_points)
+        out->height = in->size() / in->width;
+    else
+        out->width = in->size();
+
     return out;
 }
 }
