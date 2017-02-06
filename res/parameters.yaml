@@ -6,10 +6,10 @@ ks: 1
 
 # Smoothness weighting type
 # Available options: none, step, linear, exponential
-smoothness_weighting: exponential
+smoothness_weighting: linear
 
 # Threshold at which smoothness weighting starts to decrease
-discontinuity_threshold: 0.0
+discontinuity_threshold: 0.03
 
 # Decrease rate of smoothness weighting
 smoothness_rate: 2
@@ -55,7 +55,7 @@ box_cropping_col_max: 300
 # Available options: trivial, huber, cauchy
 loss_function: trivial
 loss_function_scale: 0.1
-max_num_iterations: 100
+max_num_iterations: 200
 minimizer_progress_to_stdout: true
 num_threads: 8
 num_linear_solver_threads: 8

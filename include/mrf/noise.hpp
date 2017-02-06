@@ -2,6 +2,7 @@
 
 #include <pcl/common/transforms.h>
 #include <random>
+#include <chrono>
 
 namespace mrf {
 
@@ -25,6 +26,7 @@ const typename pcl::PointCloud<T>::Ptr addCalibrationNoise(
     const float& sigma_rot) {
     using namespace Eigen;
     std::default_random_engine generator;
+    generator.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     std::normal_distribution<float> distribution_rot(0, sigma_rot);
     std::normal_distribution<float> distribution_trans(0, sigma_trans);
     const float err_rotation{distribution_rot(generator)};
