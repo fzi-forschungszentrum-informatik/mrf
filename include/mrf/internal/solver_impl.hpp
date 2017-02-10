@@ -216,7 +216,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             for (size_t c = 0; c < neighbors.size(); c++)
                 problem.AddResidualBlock(
                     FunctorSmoothnessDistance::create(),
-                    new ScaledLoss(new TrivialLoss, weights[c], TAKE_OWNERSHIP),
+                    new ScaledLoss(new TrivialLoss, params_.ks * weights[c], TAKE_OWNERSHIP),
                     &depth_est_(p.row, p.col),
                     &depth_est_(neighbors[c].row, neighbors[c].col));
     }
