@@ -39,7 +39,7 @@ inline void exportImage(const cv::Mat& img,
         cv::bitwise_not(out, out);
 
     if (apply_color_map)
-        cv::applyColorMap(out, out, cv::COLORMAP_HOT);
+        cv::applyColorMap(out, out, cv::COLORMAP_BONE);
 
     cv::imwrite(file_name, out);
 }
@@ -89,6 +89,31 @@ void exportDepthImage(const Data<T>& d,
         createOutput(img_depth, normalize), p + "depth_", normalize, invert, apply_color_map);
 }
 
+inline double interpolate(double val, double y0, double x0, double y1, double x1) {
+    return (val - x0) * (y1 - y0) / (x1 - x0) + y0;
+}
+double base(double val) {
+    if (val <= -0.75)
+        return 0;
+    else if (val <= -0.25)
+        return interpolate(val, 0.0, -0.75, 1.0, -0.25);
+    else if (val <= 0.25)
+        return 1.0;
+    else if (val <= 0.75)
+        return interpolate(val, 1.0, 0.25, 0.0, 0.75);
+    else
+        return 0.0;
+}
+inline double red(double gray) {
+    return base(gray - 0.5);
+}
+inline double green(double gray) {
+    return base(gray);
+}
+inline double blue(double gray) {
+    return base(gray + 0.5);
+}
+
 template <typename T>
 void exportOverlay(const Data<T>& d,
                    const std::shared_ptr<CameraModel>& cam,
@@ -105,20 +130,24 @@ void exportOverlay(const Data<T>& d,
     const std::vector<bool> in_front{cam->getImagePoints(pts_3d, img_pts_raw)};
 
     const double d_max{35};
-    const double d_min{7};
+    const double d_min{5};
     for (size_t c = 0; c < in_front.size(); c++) {
         const Pixel p{img_pts_raw(0, c), img_pts_raw(1, c)};
         if (p.inImage(rows, cols) && in_front[c]) {
             double d{pts_3d.col(c).norm()};
             d = std::min(d, d_max);
             d = std::max(d, d_min);
-            const double d_rel{(d - d_min) / (d_max - d_min)};
-            cv::circle(img, cv::Point(p.col, p.row), 2, cv::Scalar(255 * d_rel, 0, 255 * (1 - d_rel)), -1);
+            const double d_rel{2 * ((d - d_min) / (d_max - d_min) - 0.5)};
+            cv::circle(
+                img,
+                cv::Point(p.col, p.row),
+                2,
+                cv::Scalar(255 * (1 - blue(d_rel)), 255 * green(d_rel), 255 * (1 - red(d_rel))),
+                -1);
         }
     }
     exportImage(createOutput(img, normalize), p + "depth_", normalize);
 }
-
 
 void exportResultInfo(const ResultInfo& info, const std::string& p) {
     if (info.has_covariance_depth) {
