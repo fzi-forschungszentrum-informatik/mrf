@@ -264,8 +264,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Write output data";
     out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
-    const float depth_est_min{depth_est_.minCoeff()};
-    const float depth_est_max{depth_est_.maxCoeff()};
+    const float depth_est_min{static_cast<float>(depth_est_.minCoeff())};
+    const float depth_est_max{static_cast<float>(depth_est_.maxCoeff())};
     cv::eigen2cv(depth_est_, out.image);
     out.cloud->width = cols;
     out.cloud->height = rows;
