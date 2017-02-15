@@ -38,10 +38,6 @@ custom_depth_limit_max: 1
 # Available options: none, nearest_neighbor, triangles, mean_depth, weighted_neighbor
 initialization: triangles
 
-# Neighborhood for each pixel to consider
-# Available options: two, four, eight
-neighborhood: four
-
 # Box cropping mode to reduce the amount of data
 # Available options: none, min_max, box
 crop_mode: none
