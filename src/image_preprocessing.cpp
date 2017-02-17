@@ -42,7 +42,7 @@ cv::Mat norm_color(const cv::Mat& in, const bool use_instance) {
     std::vector<Mat> out_split;
     Mat out;
     split(in, in_split);
-    for (size_t i = 0; i < in.channels(); i++) {
+    for (int i = 0; i < in.channels(); i++) {
         double minVal;
         double maxVal;
         Point minLoc;
