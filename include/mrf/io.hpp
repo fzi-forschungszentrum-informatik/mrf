@@ -3,7 +3,8 @@
 #include <Eigen/Geometry>
 #include <camera_models/camera_model.h>
 #include <glog/logging.h>
-#include <opencv2/contrib/contrib.hpp>
+//#include <opencv2/contrib/contrib.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
