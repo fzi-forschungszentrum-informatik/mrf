@@ -15,26 +15,16 @@ struct ResultInfo {
      */
     inline static std::string header() {
         std::ostringstream oss;
-        // clang-format off
-        oss << "optimization_successful" << del
-        		<< "number_of_3d_points" << del
-				    << "number_of_image_points" << del
-				    << "time_diff_prior" << del
-				    << "time_diff_solver" << del
-				    << "iterations_used";
-        // clang-format on
+        oss << "optimization_successful" << del << "number_of_3d_points" << del
+            << "number_of_image_points" << del << "time_diff_prior" << del << "time_diff_solver"
+            << del << "iterations_used" << del << "depth_max" << del << "depth_min";
         return oss.str();
     }
 
     inline friend std::ostream& operator<<(std::ostream& os, const ResultInfo& o) {
-    	// clang-format off
-      return os << o.optimization_successful << del
-      		<< o.number_of_3d_points << del
-          << o.number_of_image_points << del
-	        << o.t_prior << del
-			    << o.t_solver << del
-          << o.iterations_used;
-        // clang-format on
+        return os << o.optimization_successful << del << o.number_of_3d_points << del
+                  << o.number_of_image_points << del << o.t_prior << del << o.t_solver << del
+                  << o.iterations_used << del << o.out_depth_max << del << o.out_depth_min;
     }
 
     double t_prior{0};
@@ -55,6 +45,9 @@ struct ResultInfo {
 
     bool has_weights{false};
     Eigen::MatrixXd weights;
+
+    float out_depth_min{0};
+    float out_depth_max{0};
 
     Eigen::Matrix<double, 7, 7> covariance_transform;
 };

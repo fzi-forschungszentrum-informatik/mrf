@@ -216,7 +216,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             for (size_t c = 0; c < neighbors.size(); c++)
                 problem.AddResidualBlock(
                     FunctorSmoothnessDistance::create(),
-                    new ScaledLoss(new TrivialLoss, weights[c], TAKE_OWNERSHIP),
+                    new ScaledLoss(new TrivialLoss, params_.ks * weights[c], TAKE_OWNERSHIP),
                     &depth_est_(p.row, p.col),
                     &depth_est_(neighbors[c].row, neighbors[c].col));
     }
@@ -264,6 +264,8 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
 
     LOG(INFO) << "Write output data";
     out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
+    const float depth_est_min{static_cast<float>(depth_est_.minCoeff())};
+    const float depth_est_max{static_cast<float>(depth_est_.maxCoeff())};
     cv::eigen2cv(depth_est_, out.image);
     out.cloud->width = cols;
     out.cloud->height = rows;
@@ -339,6 +341,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     info.iterations_used = summary.iterations.size();
     info.has_weights = true;
     info.weights = weights;
+    info.out_depth_max = depth_est_max;
+    info.out_depth_min = depth_est_min;
+
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";

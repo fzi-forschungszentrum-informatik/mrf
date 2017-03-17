@@ -50,9 +50,9 @@ struct Parameters {
     ceres::Solver::Options solver;
     bool estimate_normals{true};
     bool use_functor_distance{true};
-    bool use_functor_normal{true};
+    bool use_functor_normal{false};
     bool use_functor_normal_distance{true};
-    bool use_functor_smoothness_normal{true};
+    bool use_functor_smoothness_normal{false};
     bool use_functor_smoothness_distance{false};
     bool pin_normals{false};
     bool pin_distances{false};
