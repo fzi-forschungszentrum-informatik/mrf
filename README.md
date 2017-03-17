@@ -1,14 +1,18 @@
 # Project Name
 
-TODO: Write a project description
+mrf - Markov Random Field
+
+A library to solve global optimization problems in the domain of range sensing.
 
 ## Installation
 
-TODO: Describe the installation process
+Install the [Ceres Solver](http://ceres-solver.org/).
+Resolve dependencies to other mrt packages.
 
 ## Usage
 
-TODO: Write usage instructions
+A generic library to solve global optimization problems in the domain of dense surface representations.
+It is usually combined with the 'mrf_tool' to preprocess input data and use the output.
 
 ## Contributing
 
@@ -20,11 +24,14 @@ TODO: Write usage instructions
 
 ## History
 
-TODO: Write history
+Created in 2016 for the Master Thesis of Björn Roxin 'Generating Dense Surface Representatinos based on Lidar and Camera Data'.
 
 ## Credits
 
-TODO: Write credits
+Sascha Wirges <sascha.wirges@kit.edu>  
+Björn Roxin
+
+Based on the work of James Diebel and Sebastian Thrun, Stanford University.
 
 ## License
 
