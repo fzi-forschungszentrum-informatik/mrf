@@ -7,11 +7,17 @@
 
 namespace mrf {
 
+/** @brief Estimate normals of a given PointCloud
+ *  @param in Input Pointcloud
+ *  @param radius Search radius for neighbors
+ *  @param remove_invalid Check if normals have infinite values
+ *  @return Pointcloud with normals */
 template <typename T, typename U>
 const typename pcl::PointCloud<U>::Ptr estimateNormals(
     const typename pcl::PointCloud<T>::ConstPtr& in,
     const double& radius,
     const bool remove_invalid = true) {
+
     using namespace pcl;
     const typename PointCloud<U>::Ptr out{new PointCloud<U>};
     NormalEstimationOMP<T, pcl::Normal> ne;

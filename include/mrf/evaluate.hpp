@@ -10,6 +10,9 @@
 
 namespace mrf {
 
+/** @brief Returns the median of a given vector of doubles.
+ *  @param in Input vector
+ *  @return Median value */
 inline double median(std::vector<double>& in) {
     auto median = begin(in);
     std::advance(median, in.size() / 2);
@@ -17,6 +20,12 @@ inline double median(std::vector<double>& in) {
     return *median;
 }
 
+/** @brief Evaluates the quality of a solved optimization problem.
+ *  Evaluates the depth error and the normal error of a reference dataset and the estimated depth an normals.
+ *  @param ref Reference dataset
+ *  @param est Estimated dataset
+ *  @param cam Camera model
+ *  @return Quality result. */
 template <typename T, typename U>
 Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<CameraModel> cam) {
 
@@ -27,6 +36,9 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
     cam->getImageSize(cols, rows);
     q.depth_error = cv::Mat::zeros(rows, cols, cv::DataType<double>::type);
 
+    /**
+     * Get 3D points that are in front of the image.
+     */
     const Matrix3Xd refs_3d{
         est.transform * ref.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
     Matrix2Xd refs_img(2, refs_3d.cols());
@@ -97,7 +109,7 @@ Quality evaluate(const Data<T>& ref, const Data<U>& est, const std::shared_ptr<C
         q.normal_dot_product_mean_abs += std::abs(dot_product);
     }
     if (q.ref_distances_evaluated == 0) {
-        LOG(INFO) << "q.ref_distances_evaluated must be greater than 0! ";
+        LOG(WARNING) << "q.ref_distances_evaluated must be greater than 0! ";
         q.ref_distances_evaluated = 1;
     }
 

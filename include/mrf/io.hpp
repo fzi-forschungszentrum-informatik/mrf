@@ -3,7 +3,6 @@
 #include <Eigen/Geometry>
 #include <camera_models/camera_model.h>
 #include <glog/logging.h>
-//#include <opencv2/contrib/contrib.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
@@ -17,6 +16,11 @@
 
 namespace mrf {
 
+
+/** @brief Converts image to fixed target type (e.g. uint8_t).
+ *  @param in Input image
+ *  @param normalize Normalize image
+ *  @return Converted image */
 inline cv::Mat createOutput(const cv::Mat& in, const bool normalize = true) {
     using TargetT = uint8_t;
     cv::Mat out;
@@ -28,6 +32,12 @@ inline cv::Mat createOutput(const cv::Mat& in, const bool normalize = true) {
     return out;
 }
 
+/** @brief Writes image to a file.
+ *  @param img Input image
+ *  @param p File name. Will be complemented with "image.png"
+ *  @param normalize Normalize image
+ *  @param invert Invert image
+ *  @param apply_color_map Apply color map "cv::COLORMAP_BONE" */
 inline void exportImage(const cv::Mat& img,
                         const std::string& p,
                         const bool normalize = true,
@@ -45,6 +55,9 @@ inline void exportImage(const cv::Mat& img,
     cv::imwrite(file_name, out);
 }
 
+/** @brief Writes pointcloud to a file.
+ *  @param cl Input pointcloud
+ *  @param p File name. Will be complemented with "cloud.pcd" */
 template <typename T>
 inline void exportCloud(const typename pcl::PointCloud<T>::ConstPtr& cl, const std::string& p) {
     if (!cl->empty()) {
@@ -54,12 +67,25 @@ inline void exportCloud(const typename pcl::PointCloud<T>::ConstPtr& cl, const s
     }
 }
 
+/** @brief Writes image and pointcloud to a file.
+ *  @param d Input data with pointcloud and image
+ *  @param p File name that will be complemented by type and extension
+ *  @param Normalize Normalize image
+ *  @see exportCloud exportImage */
 template <typename T>
 void exportData(const Data<T>& d, const std::string& p, const bool normalize = true) {
     exportImage(createOutput(d.image, normalize), p);
     exportCloud<T>(d.cloud, p);
 }
 
+/** @brief Export pointcloud as depth image.
+ *  @param d Input data with pointcloud and image
+ *  @param cam Camera model
+ *  @param p File name that will be complemented by "depth_"
+ *  @param normalize Normalize image
+ *  @param invert Invert image
+ *  @param apply_color_map Apply color map to saved image
+ *  @see exportImage */
 template <typename T>
 void exportDepthImage(const Data<T>& d,
                       const std::shared_ptr<CameraModel>& cam,
@@ -90,9 +116,11 @@ void exportDepthImage(const Data<T>& d,
         createOutput(img_depth, normalize), p + "depth_", normalize, invert, apply_color_map);
 }
 
+/** @brief Simple interpolation. */
 inline double interpolate(double val, double y0, double x0, double y1, double x1) {
     return (val - x0) * (y1 - y0) / (x1 - x0) + y0;
 }
+
 double base(double val) {
     if (val <= -0.75)
         return 0;
@@ -115,6 +143,13 @@ inline double blue(double gray) {
     return base(gray + 0.5);
 }
 
+/** @brief Writes a camera image with laserpoint overlay to a file.
+ *  Renders laser measurements on the color image. Laser measurements will be coloured according to their depth.
+ *  @param d Input data with pointcloud and image
+ *  @param cam Camera model
+ *  @param p File name that will be complemented
+ *  @param normalize Normalize image
+ *  @see exportImage */
 template <typename T>
 void exportOverlay(const Data<T>& d,
                    const std::shared_ptr<CameraModel>& cam,
@@ -150,6 +185,10 @@ void exportOverlay(const Data<T>& d,
     exportImage(createOutput(img, normalize), p + "depth_", normalize);
 }
 
+/** @brief Writes results with covariance depth and weights to a file.
+ *  @param info Input results
+ *  @param p File name that will be complemented
+ *  @see exportImage */
 void exportResultInfo(const ResultInfo& info, const std::string& p) {
     if (info.has_covariance_depth) {
         cv::Mat out;
