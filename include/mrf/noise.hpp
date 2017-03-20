@@ -6,6 +6,10 @@
 
 namespace mrf {
 
+/** @brief Add Gaussian depth noise to a given pointcloud.
+ *  @param in Input pointcloud
+ *  @param sigma Standard derivation of the normal distribution
+ *  @return Pointcloud with depth noise */
 template <typename T>
 const typename pcl::PointCloud<T>::Ptr addDepthNoise(
     const typename pcl::PointCloud<T>::ConstPtr& in, const float& sigma) {
@@ -19,6 +23,11 @@ const typename pcl::PointCloud<T>::Ptr addDepthNoise(
     return out;
 }
 
+/** @brief Add Gaussian calibration noise to a given pointcloud
+ *  @param in Input pointcloud
+ *  @param sigma_trans Standard derivation of the translation
+ *  @param sigma_rot Standard derivation of the rotation
+ *  @return Pointcloud with calibration noise */
 template <typename T>
 const typename pcl::PointCloud<T>::Ptr addCalibrationNoise(
     const typename pcl::PointCloud<T>::ConstPtr& in,

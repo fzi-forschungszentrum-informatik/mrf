@@ -31,7 +31,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << "Normalize image";
     cv::normalize(in.image, d_.image, 0, 1, cv::NORM_MINMAX);
     LOG(INFO) << "Image size: " << d_.image.cols << " x " << d_.image.rows << " = "
-              << d_.image.cols * d_.image.rows;
+              << d_.image.cols * d_.image.rows << ". Channels: " << d_.image.channels();
 
     LOG(INFO) << "Get Projection Image";
     projection_.image = get_gray_image(in.image);

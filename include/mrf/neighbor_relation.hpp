@@ -2,6 +2,7 @@
 
 namespace mrf {
 
+//! @brief Definition of an eight neighbor neighboorhood
 enum class NeighborRelation {
     left,
     top,

@@ -5,6 +5,7 @@
 #include <Eigen/Eigen>
 
 namespace mrf {
+/** @brief The Pixel struct that stores image color information for one pixel. */
 struct Pixel {
     inline Pixel(const double& x_,
                  const double& y_,
@@ -28,9 +29,9 @@ struct Pixel {
         return row_min <= row && row < row_max && col_min <= col && col < col_max;
     }
 
-    int row, col;
-    double x, y;
-    Eigen::VectorXf val;
+    int row, col;           //!< Row and column derived from x,y
+    double x, y;            //!< Position of the pixel
+    Eigen::VectorXf val;    //!< Color information
 };
 
 struct PixelLess {

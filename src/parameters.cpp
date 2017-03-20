@@ -1,6 +1,6 @@
-#include "parameters.hpp"
-
 #include <yaml-cpp/yaml.h>
+
+#include "parameters.hpp"
 
 namespace mrf {
 

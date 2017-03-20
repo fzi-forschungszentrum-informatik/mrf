@@ -1,6 +1,6 @@
-#include "smoothness_weight.hpp"
-
 #include <cmath>
+
+#include "smoothness_weight.hpp"
 
 namespace mrf {
 
