@@ -10,6 +10,7 @@
 
 namespace mrf {
 
+/// @brief Interface to Ceres that holds information and calls the optimization
 class Solver {
 
 public:
@@ -37,11 +38,11 @@ public:
 
 private:
     void getNNdepths(Eigen::VectorXd& depth_est);
-    const std::shared_ptr<CameraModel> camera_;
-    Parameters params_;
-    Data<PointT> d_;
-    Data<PointT> projection_;
-    Eigen::MatrixXd depth_est_;
+    const std::shared_ptr<CameraModel> camera_;     ///< Information about the camera
+    Parameters params_;                             ///< Parameters for the optimization
+    Data<PointT> d_;                                ///< Debug pointcloud used for tests
+    Data<PointT> projection_;                       ///<
+    Eigen::MatrixXd depth_est_;                     ///<
 };
 }
 

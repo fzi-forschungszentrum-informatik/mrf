@@ -10,10 +10,8 @@ struct Quality {
 
     static constexpr char del = ','; ///< Delimiter
 
-    /**
-     * Get the parameter names and their order as string
-     * @return
-     */
+    /** @brief Get the parameter names and their order as string
+     *  @return Quality raw values seperated by a delimiter */
     inline static std::string header() {
         std::ostringstream oss;
         // clang-format off
@@ -56,19 +54,19 @@ struct Quality {
         // clang-format on;
     }
 
-    cv::Mat depth_error;
-    double depth_error_mean{0};
-    double depth_error_mean_abs{0};
-    double depth_error_median{0};
-    double depth_error_median_abs{0};
-    double depth_error_rms{0};
+    cv::Mat depth_error;                ///< Image with the depth error
+    double depth_error_mean{0};         ///< Mean depth error of all points
+    double depth_error_mean_abs{0};     ///< Mean absolute depth error of all points
+    double depth_error_median{0};       ///< Median depth error of all points
+    double depth_error_median_abs{0};   ///< Median absolute depth error of all points
+    double depth_error_rms{0};          ///< Root mean-square error of all points
 
-    Eigen::Vector3d normal_error_mean{Eigen::Vector3d::Zero()};
-    Eigen::Vector3d normal_error_mean_abs{Eigen::Vector3d::Zero()};
-    double normal_dot_product_mean{0};
-    double normal_dot_product_mean_abs{0};
+    Eigen::Vector3d normal_error_mean{Eigen::Vector3d::Zero()};     ///<
+    Eigen::Vector3d normal_error_mean_abs{Eigen::Vector3d::Zero()}; ///<
+    double normal_dot_product_mean{0};          ///< Mean of the dot product of all estimated and calculated normals
+    double normal_dot_product_mean_abs{0};      ///< Absolute mean of the dot product of all estimated and calculated normals
 
-    size_t ref_distances_evaluated{0};
-    size_t ref_normals_evaluated{0};
+    size_t ref_distances_evaluated{0};          ///< Number of points evaluated
+    size_t ref_normals_evaluated{0};            ///< Numebr of normals evaluated
 };
 }

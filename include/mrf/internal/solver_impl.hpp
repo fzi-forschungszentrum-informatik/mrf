@@ -25,6 +25,9 @@
 
 namespace mrf {
 
+/** @brief Implementation of the whole optimization procedure
+ *
+ */
 template <typename T>
 ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_transform) {
 
