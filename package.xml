@@ -14,7 +14,6 @@
   <test_depend>gtest</test_depend>
 
   <depend>boost</depend>
-  <depend>camera_models</depend>
   <depend>eigen</depend>
   <depend>mrt_ceres</depend>
   <depend>mrt_opencv</depend>
