@@ -1,13 +1,13 @@
 #include <flann/flann.h>
 
-#include "smoothness_weight.hpp"
 #include "prior.hpp"
+#include "smoothness_weight.hpp"
 
 namespace mrf {
 
 using DataType = double;
-using Point = pcl_ceres::Point<DataType>;
-using PixelMapT = std::map<Pixel, Point, PixelLess>;
+using PointT = Point<DataType>;
+using PixelMapT = std::map<Pixel, PointT, PixelLess>;
 using RayMapT = std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess>;
 using treeT = std::unique_ptr<flann::Index<flann::L2_Simple<DataType>>>;
 using EigenT = Eigen::Matrix<DataType, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
@@ -75,9 +75,9 @@ bool insideTriangle(const Pixel& p,
  *  @param triangle_neighbors
  *  @return */
 bool getTriangleNeighbors(const std::vector<int>& neighbors_in,
-                           const Eigen::Matrix2Xi& coordinates,
-                           const Pixel& p,
-                           std::vector<int>& triangle_neighbors) {
+                          const Eigen::Matrix2Xi& coordinates,
+                          const Pixel& p,
+                          std::vector<int>& triangle_neighbors) {
     if (neighbors_in.size() < 3) {
         return false;
     }
@@ -115,12 +115,12 @@ bool getTriangleNeighbors(const std::vector<int>& neighbors_in,
  *  @param num_neigh Number of neighbors to find
  *  @return Vector of indizes */
 std::vector<int> getNeighbors(const Eigen::Matrix2Xi& coordinates,
-                               const treeT& tree,
-                               const Pixel& p,
-                               const int num_neigh) {
+                              const treeT& tree,
+                              const Pixel& p,
+                              const int num_neigh) {
     // TODO: Why doesn't this work:
-//    std::vector<DataType> distances;
-//    return getNeighbors(coordinates, distances, tree, p, num_neigh);
+    //    std::vector<DataType> distances;
+    //    return getNeighbors(coordinates, distances, tree, p, num_neigh);
 
     DistanceType::ElementType queryData[] = {static_cast<DistanceType::ElementType>(p.col),
                                              static_cast<DistanceType::ElementType>(p.row)};
@@ -128,7 +128,11 @@ std::vector<int> getNeighbors(const Eigen::Matrix2Xi& coordinates,
     const flann::Matrix<DistanceType::ElementType> query(queryData, 1, 2);
     std::vector<std::vector<int>> indices_vec;
     std::vector<std::vector<DataType>> dist_vec;
-    tree->knnSearch(query, indices_vec, dist_vec, num_neigh, flann::SearchParams(32)); ///< 32 is the number of searches
+    tree->knnSearch(query,
+                    indices_vec,
+                    dist_vec,
+                    num_neigh,
+                    flann::SearchParams(32)); ///< 32 is the number of searches
     return indices_vec[0];
 }
 
@@ -141,10 +145,10 @@ std::vector<int> getNeighbors(const Eigen::Matrix2Xi& coordinates,
  *  @param num_neigh Number of neighbors to find
  *  @return Vector of indizes of the neighbors */
 std::vector<int> getNeighbors(const Eigen::Matrix2Xi& coordinates,
-                               std::vector<DataType>& distances,
-                               const treeT& tree,
-                               const Pixel& p,
-                               const int num_neigh) {
+                              std::vector<DataType>& distances,
+                              const treeT& tree,
+                              const Pixel& p,
+                              const int num_neigh) {
     DistanceType::ElementType queryData[] = {static_cast<DistanceType::ElementType>(p.col),
                                              static_cast<DistanceType::ElementType>(p.row)};
 
@@ -267,8 +271,7 @@ void estimatePrior(const RayMapT& rays,
             std::vector<double> w_vector;
             std::vector<Pixel> nn_vector;
             for (size_t n = 0; n < all_neighbors.size(); n++) {
-                const Pixel nn(coordinates(0, all_neighbors[n]),
-                               coordinates(1, all_neighbors[n]));
+                const Pixel nn(coordinates(0, all_neighbors[n]), coordinates(1, all_neighbors[n]));
                 nn_vector.emplace_back(nn);
                 double w{smoothnessWeight(p,
                                           nn,
@@ -325,7 +328,8 @@ void estimatePrior(const RayMapT& rays,
                 certainty(p.row, p.col) = 0.2;
             }
             if (!found_triangle || depth_est(p.row, p.col) > max_depth ||
-                depth_est(p.row, p.col) < min_depth || depth_est(p.row, p.col) != depth_est(p.row, p.col) ||
+                depth_est(p.row, p.col) < min_depth ||
+                depth_est(p.row, p.col) != depth_est(p.row, p.col) ||
                 std::isinf(depth_est(p.row, p.col))) {
                 Pixel nn(coordinates(0, all_neighbors[0]), coordinates(1, all_neighbors[0]));
                 const Eigen::ParametrizedLine<double, 3>& ray{rays.at(nn)};

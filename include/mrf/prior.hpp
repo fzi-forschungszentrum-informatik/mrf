@@ -2,15 +2,40 @@
 
 #include <map>
 #include <Eigen/Eigen>
-#include <pcl_ceres/point.hpp>
 
 #include "parameters.hpp"
 #include "pixel.hpp"
 
+namespace Eigen {
+template <typename T>
+using Affine3 = Transform<T, 3, Affine>;
+
+template <typename T>
+using Vector3 = Matrix<T, 3, 1>;
+}
+
 namespace mrf {
 
+template <typename T>
+struct Point {
+
+    using ScalarT = T;
+
+    inline Point()
+            : position{Eigen::Vector3<T>::Zero()}, normal{Eigen::Vector3<T>::Zero()},
+              intensity{0} {};
+    inline Point(const Eigen::Vector3<T>& position_,
+                 const Eigen::Vector3<T>& normal_,
+                 const T& intensity_ = 0)
+            : position{position_}, normal{normal_}, intensity{intensity_} {};
+
+    Eigen::Vector3<T> position;
+    Eigen::Vector3<T> normal;
+    T intensity;
+};
+
 void estimatePrior(const std::map<Pixel, Eigen::ParametrizedLine<double, 3>, PixelLess>&,
-                   const std::map<Pixel, pcl_ceres::Point<double>, PixelLess>&,
+                   const std::map<Pixel, Point<double>, PixelLess>&,
                    const size_t& rows,
                    const size_t& cols,
                    const Parameters&,

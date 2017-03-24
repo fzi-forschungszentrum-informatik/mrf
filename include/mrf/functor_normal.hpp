@@ -1,7 +1,15 @@
 #pragma once
 
+#include <Eigen/Geometry>
 #include <ceres/autodiff_cost_function.h>
-#include <util_ceres/eigen.h>
+
+namespace Eigen {
+template <typename T>
+using Affine3 = Transform<T, 3, Affine>;
+
+template <typename T>
+using Vector3 = Matrix<T, 3, 1>;
+}
 
 namespace mrf {
 
