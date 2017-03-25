@@ -3,16 +3,13 @@
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
 #include <glog/logging.h>
-#include <pcl_ceres/point.hpp>
-#include <pcl_ceres/point_cloud.hpp>
-#include <pcl_ceres/transforms.hpp>
-#include <util_ceres/eigen_quaternion_parameterization.h>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <pcl/common/transforms.h>
 
 #include "../cloud_preprocessing.hpp"
 #include "../cv_helper.hpp"
+#include "../eigen_quaternion_parameterization.hpp"
 #include "../functor_collinearity.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
@@ -20,8 +17,11 @@
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../normals.hpp"
+#include "../point.hpp"
+#include "../point_cloud.hpp"
 #include "../prior.hpp"
 #include "../smoothness_weight.hpp"
+#include "../transforms.hpp"
 
 namespace mrf {
 

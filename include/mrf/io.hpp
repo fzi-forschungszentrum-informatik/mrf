@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Eigen/Geometry>
-#include <camera_models/camera_model.h>
 #include <glog/logging.h>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/core.hpp>
@@ -9,6 +8,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <pcl/io/pcd_io.h>
 
+#include "camera_model.h"
 #include "data.hpp"
 #include "image_preprocessing.hpp"
 #include "pixel.hpp"
@@ -144,7 +144,8 @@ inline double blue(double gray) {
 }
 
 /** @brief Writes a camera image with laserpoint overlay to a file.
- *  Renders laser measurements on the color image. Laser measurements will be coloured according to their depth.
+ *  Renders laser measurements on the color image. Laser measurements will be coloured according to
+ * their depth.
  *  @param d Input data with pointcloud and image
  *  @param cam Camera model
  *  @param p File name that will be complemented

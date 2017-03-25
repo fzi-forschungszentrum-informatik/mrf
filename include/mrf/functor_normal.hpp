@@ -2,6 +2,7 @@
 
 #include <Eigen/Geometry>
 #include <ceres/autodiff_cost_function.h>
+#include "eigen_quaternion_parameterization.hpp"
 
 namespace Eigen {
 template <typename T>
