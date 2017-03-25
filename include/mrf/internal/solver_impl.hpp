@@ -50,7 +50,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
     }
 
-    using PType = pcl_ceres::Point<double>;
+    using PType = mrf::Point<double>;
     using ClType = pcl_ceres::PointCloud<PType>;
     const ClType::Ptr cloud{ClType::create()};
     cloud->points.reserve(d_.cloud->size());

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <camera_models/camera_model.h>
+#include "camera_model.h"
 #include <pcl/point_types.h>
 
 #include "data.hpp"
