@@ -46,7 +46,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
               << d_.cloud->size();
 
     if (params_.estimate_normals) {
-        d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
+        d_.cloud->height = 1; ///< Make cloud unorganized to suppress warnings
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
     }
 

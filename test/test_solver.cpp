@@ -27,8 +27,8 @@ mrf::Data<pcl::PointXYZINormal> create(const size_t& rows, const size_t& cols) {
     cl->push_back(p);
     pcl::transformPointCloudWithNormals(*cl, *cl, tf);
     cv::Mat img{cv::Mat::eye(rows, cols, cv::DataType<uint8_t>::type)};
-    cv::cvtColor(img,img,CV_GRAY2BGR);
-    return Data<T>(cl,img, tf.inverse());
+    cv::cvtColor(img, img, CV_GRAY2BGR);
+    return Data<T>(cl, img, tf.inverse());
 }
 
 TEST(Solver, Solve) {
@@ -42,7 +42,7 @@ TEST(Solver, Solve) {
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
 
     const Data<pcl::PointXYZINormal> in{create(rows, cols)};
-    Data<pcl::PointXYZINormal> out;
+    Data<pcl::PointXYZRGBNormal> out;
 
     Parameters p("parameters.yaml");
     p.estimate_normals = false;
@@ -50,7 +50,7 @@ TEST(Solver, Solve) {
     p.pin_normals = true;
     Solver solver{cam, p};
     solver.solve(in, out);
-    const Data<pcl::PointXYZINormal> debug {solver.getDebugInfo()};
+    const Data<pcl::PointXYZRGBNormal> debug{solver.getDebugInfo()};
 
     boost::filesystem::path path_name{"/tmp/test/solver/"};
     boost::filesystem::create_directories(path_name);
@@ -58,11 +58,12 @@ TEST(Solver, Solve) {
     exportData(out, path_name.string() + "out_");
     exportData(debug, path_name.string() + "debug_");
 
-    ASSERT_NEAR(pcl::transformPoint(out.cloud->at(cols - 1, 1), out.transform.cast<float>()).z, 0,
-                1e-6);
-    ASSERT_NEAR(pcl::transformPoint(out.cloud->at(1, rows - 1), out.transform.cast<float>()).z, 1,
-                1e-6);
     ASSERT_NEAR(
-        pcl::transformPoint(out.cloud->at(cols - 1, rows / 2), out.transform.cast<float>()).z, 0,
+        pcl::transformPoint(out.cloud->at(cols - 1, 1), out.transform.cast<float>()).z, 0, 1e-6);
+    ASSERT_NEAR(
+        pcl::transformPoint(out.cloud->at(1, rows - 1), out.transform.cast<float>()).z, 1, 1e-6);
+    ASSERT_NEAR(
+        pcl::transformPoint(out.cloud->at(cols - 1, rows / 2), out.transform.cast<float>()).z,
+        0,
         1e-3);
 }
