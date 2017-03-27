@@ -30,7 +30,7 @@ struct FunctorNormal {
                            const T* const d_0,
                            const T* const d_1,
                            T* res) const {
-        res[0] = Eigen::Hyperplane<T, 3>{util_ceres::fromQuaternion(rot) * n_.cast<T>(),
+        res[0] = Eigen::Hyperplane<T, 3>{mrf::fromQuaternion(rot) * n_.cast<T>(),
                                          ray_0_.cast<T>().pointAt(d_0[0])}
                      .signedDistance(ray_1_.cast<T>().pointAt(d_1[0]));
         return true;

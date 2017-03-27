@@ -3,14 +3,14 @@
 #include <pcl/point_types.h>
 
 #include "eigen.hpp"
-#include "point_cloud.hpp"
 #include "point.hpp"
+#include "point_cloud.hpp"
 
-namespace pcl_ceres {
+namespace mrf {
 
 template <typename PointT, typename U = double>
 const typename PointCloud<PointT>::Ptr transform(const typename PointCloud<PointT>::ConstPtr in,
-                                            const Eigen::Affine3<U>& tf) {
+                                                 const Eigen::Affine3<U>& tf) {
     const typename PointCloud<PointT>::Ptr out{PointCloud<PointT>::create(*in)};
     transform<PointT, U>(tf, out);
     return out;

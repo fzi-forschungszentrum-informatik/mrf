@@ -4,7 +4,7 @@
 #include <ceres/rotation.h>
 #include "Eigen/Core"
 
-namespace util_ceres {
+namespace mrf {
 
 // Plus(x, delta) = [cos(|delta|), sin(|delta|) delta / |delta|] * x
 // with * being the quaternion multiplication operator. Here we assume
@@ -15,7 +15,8 @@ public:
     virtual ~EigenQuaternionParameterization() {
     }
 
-    virtual bool Plus(const double* x_raw, const double* delta_raw,
+    virtual bool Plus(const double* x_raw,
+                      const double* delta_raw,
                       double* x_plus_delta_raw) const {
         const Eigen::Map<const Eigen::Quaterniond> x(x_raw);
         const Eigen::Map<const Eigen::Vector3d> delta(delta_raw);
@@ -25,8 +26,10 @@ public:
         const double delta_norm = delta.norm();
         if (delta_norm > 0.0) {
             const double sin_delta_by_delta = sin(delta_norm) / delta_norm;
-            Eigen::Quaterniond tmp(cos(delta_norm), sin_delta_by_delta * delta[0],
-                                   sin_delta_by_delta * delta[1], sin_delta_by_delta * delta[2]);
+            Eigen::Quaterniond tmp(cos(delta_norm),
+                                   sin_delta_by_delta * delta[0],
+                                   sin_delta_by_delta * delta[1],
+                                   sin_delta_by_delta * delta[2]);
 
             x_plus_delta = tmp * x;
         } else {

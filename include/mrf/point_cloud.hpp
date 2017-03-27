@@ -3,7 +3,7 @@
 #include <memory>
 #include "eigen.hpp"
 
-namespace pcl_ceres {
+namespace mrf {
 
 template <typename PointT>
 class PointCloud {

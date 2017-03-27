@@ -51,14 +51,14 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     }
 
     using PType = mrf::Point<double>;
-    using ClType = pcl_ceres::PointCloud<PType>;
+    using ClType = mrf::PointCloud<PType>;
     const ClType::Ptr cloud{ClType::create()};
     cloud->points.reserve(d_.cloud->size());
     for (size_t c = 0; c < d_.cloud->size(); c++) {
         cloud->emplace_back(PType(d_.cloud->points[c].getVector3fMap().cast<double>(),
                                   d_.cloud->points[c].getNormalVector3fMap().cast<double>()));
     }
-    const ClType::Ptr cloud_tf = pcl_ceres::transform<PType>(cloud, in.transform);
+    const ClType::Ptr cloud_tf = mrf::transform<PType>(cloud, in.transform);
 
     LOG(INFO) << "Compute point projections in camera image";
     const Eigen::Matrix3Xd pts_3d_tf{cloud_tf->getMatrixPoints()};
@@ -143,7 +143,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     Problem problem(params_.problem);
     problem.AddParameterBlock(rotation.coeffs().data(),
                               FunctorDistance::DimRotation,
-                              new util_ceres::EigenQuaternionParameterization);
+                              new mrf::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
     LOG(INFO) << "Add " << rays.size() << " parameter blocks";
@@ -266,7 +266,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << summary.FullReport();
 
     LOG(INFO) << "Write output data";
-    out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
+    out.transform = mrf::fromQuaternionTranslation(rotation, translation);
     const float depth_est_min{static_cast<float>(depth_est_.minCoeff())};
     const float depth_est_max{static_cast<float>(depth_est_.maxCoeff())};
     cv::eigen2cv(depth_est_, out.image);

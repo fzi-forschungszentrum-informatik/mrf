@@ -13,14 +13,6 @@ using Vector3 = Matrix<T, 3, 1>;
 
 namespace mrf {
 
-template <typename T, typename U = T>
-inline Eigen::Affine3<U> fromQuaternionTranslation(const T* const q, const T* const t) {
-    using namespace Eigen;
-    Affine3<U> transform_eigen{Eigen::Quaternion<T>(q).template cast<U>()};
-    transform_eigen.translation() = Map<const Vector3<T>>(t).template cast<U>();
-    return transform_eigen;
-}
-
 struct FunctorDistance {
 
     static constexpr size_t DimDistance = 1;

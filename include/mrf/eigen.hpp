@@ -16,7 +16,7 @@ using Matrix3X = Matrix<T, 3, Dynamic>;
 }
 
 
-namespace util_ceres {
+namespace mrf {
 
 template <typename T, typename U>
 inline void toQuaternion(const Eigen::Affine3<T>& transform, U* q) {
