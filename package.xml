@@ -4,7 +4,7 @@
   <version>1.0.0</version>
   <description>Library for interpolating images using Markov Random Fields.</description>
 
-  <license>MRT/FZI</license>
+  <license>TBD</license>
   <maintainer email="sascha.wirges@kit.edu">Sascha Wirges</maintainer>
   <author email="sascha.wirges@kit.edu">Sascha Wirges</author>
   <url type="repository">git@gitlab.mrt.uni-karlsruhe.de:MRT/mrf.git</url>

@@ -7,7 +7,6 @@ A library to solve global optimization problems in the domain of range sensing.
 ## Installation
 
 Install the [Ceres Solver](http://ceres-solver.org/).
-Resolve dependencies to other mrt packages.
 
 ## Usage
 
@@ -35,15 +34,4 @@ Based on the work of James Diebel and Sebastian Thrun, Stanford University.
 
 ## License
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+TBD
