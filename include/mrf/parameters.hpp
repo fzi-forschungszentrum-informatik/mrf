@@ -63,20 +63,21 @@ struct Parameters {
     SmoothnessWeighting smoothness_weighting{
         SmoothnessWeighting::step};      ///< Smoothness weighting scaling function type
     double discontinuity_threshold{0.1}; ///< Smoothness delta before applying scaling functions
-    double smoothness_rate{50};          ///<
-    double smoothness_weight_min{0.001};
-    double sigmoid_scale{0.5};
-    bool estimate_normals{true};
-    double radius_normal_estimation{0.5};
-    int neighbor_search{20};
-    Initialization initialization{Initialization::mean_depth};
-    CropMode crop_mode{CropMode::none};
-    int box_cropping_row_min{0};
-    int box_cropping_row_max{5000};
-    int box_cropping_col_min{0};
-    int box_cropping_col_max{5000};
-    std::string loss_function{"trivial"};
-    double loss_function_scale{1};
+    double smoothness_rate{50};          ///< Decrease rate
+    double smoothness_weight_min{
+        0.001}; ///< Lower threshold for the smoothness weight to prevent isolated areas
+    double sigmoid_scale{0.5};   ///< Sigmoid scale
+    bool estimate_normals{true}; ///< Perform normal estimation. Choose no if normals are provided.
+    double radius_normal_estimation{0.5}; ///< Radius for normal estimation
+    int neighbor_search{20}; ///< Number of neighbors to search for during initialization
+    Initialization initialization{Initialization::mean_depth}; ///< Initialization method
+    CropMode crop_mode{CropMode::none};   ///< Crop mode to reduce the amount of data
+    int box_cropping_row_min{0};          ///< Minimum row value for box cropping
+    int box_cropping_row_max{5000};       ///< Maximum row value for box cropping
+    int box_cropping_col_min{0};          ///< Minimum col value for box cropping
+    int box_cropping_col_max{5000};       ///< Maximum col value for box cropping
+    std::string loss_function{"trivial"}; ///< Type of loss function
+    double loss_function_scale{1};        ///< Scale of loss function
 
     bool use_functor_distance{true};
     bool use_functor_normal{false};
@@ -85,11 +86,12 @@ struct Parameters {
     bool use_functor_smoothness_distance{false};
 
     bool pin_normals{false}; ///< TODO wtf?
-    bool pin_distances{false};
+    bool pin_distances{
+        false}; ///< Pin depth estimation to actual value for pixel with range measurments
     bool pin_transform{true};
-    bool estimate_covariances{false};
-    bool use_covariance_filter{false};
-    double covariance_filter_treshold{0.1};
+    bool estimate_covariances{false};        ///< Calculate covariances in postprocessing
+    bool use_covariance_filter{false};       ///< Perform covariance based filter in postprocessing
+    double covariance_filter_threshold{0.1}; ///< Threshold for covariance filter
 
 private:
     void fromConfig(const std::string&);

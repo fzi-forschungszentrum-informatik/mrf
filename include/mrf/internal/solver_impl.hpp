@@ -380,7 +380,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out) {
                         cov_max = info.covariance_depth(r, c);
                     else if (info.covariance_depth(r, c) < cov_min)
                         cov_min = info.covariance_depth(r, c);
-                    if (info.covariance_depth(r, c) > params_.covariance_filter_treshold) {
+                    if (info.covariance_depth(r, c) > params_.covariance_filter_threshold) {
                         out.cloud->at(c, r).x = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).y = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).z = std::numeric_limits<float>::quiet_NaN();

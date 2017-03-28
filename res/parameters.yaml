@@ -70,4 +70,4 @@ pin_transform: true
 
 estimate_covariances: false
 use_covariance_filter: true
-covariance_filter_treshold: 2
+covariance_filter_threshold: 2

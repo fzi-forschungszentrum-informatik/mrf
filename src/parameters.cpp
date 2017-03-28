@@ -54,7 +54,7 @@ std::string Parameters::header() {
 		<< "estimate_covariances" << del
 		<< "crop_mode" << del
 		<< "use_covariance_filter" << del
-		<< "covariance_filter_treshold" << del
+        << "covariance_filter_threshold" << del
 		<< "sigmoid_scale" << del
 		<< "box_cropping_row_min" << del
 		<< "box_cropping_row_max" << del
@@ -99,7 +99,7 @@ std::string Parameters::toString() const {
 		<< estimate_covariances << del
 		<< static_cast<int>(crop_mode) << del
 		<< use_covariance_filter << del
-		<< covariance_filter_treshold << del
+        << covariance_filter_threshold << del
 		<< sigmoid_scale << del
 		<< box_cropping_row_min << del
 		<< box_cropping_row_max << del
@@ -216,7 +216,7 @@ void Parameters::fromConfig(const std::string& file_name) {
 
     getParam(cfg, "estimate_covariances", estimate_covariances);
     getParam(cfg, "use_covariance_filter", use_covariance_filter);
-    getParam(cfg, "covariance_filter_treshold", covariance_filter_treshold);
+    getParam(cfg, "covariance_filter_threshold", covariance_filter_threshold);
 }
 
 ceres::LossFunction* Parameters::createLossFunction() const {
