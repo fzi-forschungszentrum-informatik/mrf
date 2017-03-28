@@ -117,32 +117,6 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "ks", ks);
     getParam(cfg, "kd", kd);
     getParam(cfg, "kn", kn);
-    getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
-    getParam(cfg, "smoothness_rate", smoothness_rate);
-    getParam(cfg, "smoothness_weight_min", smoothness_weight_min);
-    getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
-    getParam(cfg, "neighbor_search", neighbor_search);
-
-    getParam(cfg, "max_num_iterations", solver.max_num_iterations);
-    getParam(cfg, "minimizer_progress_to_stdout", solver.minimizer_progress_to_stdout);
-    getParam(cfg, "num_threads", solver.num_threads);
-    getParam(cfg, "num_linear_solver_threads", solver.num_linear_solver_threads);
-    getParam(cfg, "max_solver_time_in_seconds", solver.max_solver_time_in_seconds);
-    getParam(cfg, "use_inner_iterations", solver.use_inner_iterations);
-    getParam(cfg, "use_nonmonotonic_steps", solver.use_nonmonotonic_steps);
-    getParam(cfg, "function_tolerance", solver.function_tolerance);
-
-    getParam(cfg, "estimate_normals", estimate_normals);
-    getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);
-    getParam(cfg, "use_functor_smoothness_normal", use_functor_smoothness_normal);
-    getParam(cfg, "use_functor_normal", use_functor_normal);
-    getParam(cfg, "use_functor_distance", use_functor_distance);
-    getParam(cfg, "use_functor_smoothness_distance", use_functor_smoothness_distance);
-
-    getParam(cfg, "pin_normals", pin_normals);
-    getParam(cfg, "pin_distances", pin_distances);
-
-    getParam(cfg, "estimate_covariances", estimate_covariances);
 
     if (getParam(cfg, "limits", tmp)) {
         if (tmp == "none") {
@@ -157,7 +131,6 @@ void Parameters::fromConfig(const std::string& file_name) {
     }
     getParam(cfg, "custom_depth_limit_min", custom_depth_limit_min);
     getParam(cfg, "custom_depth_limit_max", custom_depth_limit_max);
-
 
     if (getParam(cfg, "smoothness_weighting", tmp)) {
         if (tmp == "none") {
@@ -179,6 +152,13 @@ void Parameters::fromConfig(const std::string& file_name) {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
+    getParam(cfg, "discontinuity_threshold", discontinuity_threshold);
+    getParam(cfg, "smoothness_rate", smoothness_rate);
+    getParam(cfg, "smoothness_weight_min", smoothness_weight_min);
+    getParam(cfg, "sigmoid_scale", sigmoid_scale);
+    getParam(cfg, "estimate_normals", estimate_normals);
+    getParam(cfg, "radius_normal_estimation", radius_normal_estimation);
+    getParam(cfg, "neighbor_search", neighbor_search);
 
     if (getParam(cfg, "initialization", tmp)) {
         if (tmp == "none") {
@@ -196,9 +176,6 @@ void Parameters::fromConfig(const std::string& file_name) {
         }
     }
 
-    getParam(cfg, "loss_function_scale", loss_function_scale);
-    getParam(cfg, "loss_function", loss_function);
-
     if (getParam(cfg, "crop_mode", tmp)) {
         if (tmp == "none") {
             crop_mode = CropMode::none;
@@ -210,14 +187,36 @@ void Parameters::fromConfig(const std::string& file_name) {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }
     }
-    getParam(cfg, "use_covariance_filter", use_covariance_filter);
-    getParam(cfg, "covariance_filter_treshold", covariance_filter_treshold);
-    getParam(cfg, "sigmoid_scale", sigmoid_scale);
-
     getParam(cfg, "box_cropping_row_min", box_cropping_row_min);
     getParam(cfg, "box_cropping_row_max", box_cropping_row_max);
     getParam(cfg, "box_cropping_col_min", box_cropping_col_min);
     getParam(cfg, "box_cropping_col_max", box_cropping_col_max);
+
+    getParam(cfg, "loss_function", loss_function);
+    getParam(cfg, "loss_function_scale", loss_function_scale);
+
+    getParam(cfg, "max_num_iterations", solver.max_num_iterations);
+    getParam(cfg, "minimizer_progress_to_stdout", solver.minimizer_progress_to_stdout);
+    getParam(cfg, "num_threads", solver.num_threads);
+    getParam(cfg, "num_linear_solver_threads", solver.num_linear_solver_threads);
+    getParam(cfg, "max_solver_time_in_seconds", solver.max_solver_time_in_seconds);
+    getParam(cfg, "use_inner_iterations", solver.use_inner_iterations);
+    getParam(cfg, "use_nonmonotonic_steps", solver.use_nonmonotonic_steps);
+    getParam(cfg, "function_tolerance", solver.function_tolerance);
+
+    getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);
+    getParam(cfg, "use_functor_smoothness_normal", use_functor_smoothness_normal);
+    getParam(cfg, "use_functor_normal", use_functor_normal);
+    getParam(cfg, "use_functor_distance", use_functor_distance);
+    getParam(cfg, "use_functor_smoothness_distance", use_functor_smoothness_distance);
+
+    getParam(cfg, "pin_normals", pin_normals);
+    getParam(cfg, "pin_distances", pin_distances);
+    getParam(cfg, "pin_transform", pin_transform);
+
+    getParam(cfg, "estimate_covariances", estimate_covariances);
+    getParam(cfg, "use_covariance_filter", use_covariance_filter);
+    getParam(cfg, "covariance_filter_treshold", covariance_filter_treshold);
 }
 
 ceres::LossFunction* Parameters::createLossFunction() const {

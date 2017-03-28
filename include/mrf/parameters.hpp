@@ -82,7 +82,7 @@ struct Parameters {
     bool use_functor_normal{false};
     bool use_functor_normal_distance{true};
     bool use_functor_smoothness_normal{false};
-    bool use_functor_smoothness_distance{false}; ///< TODO wtf?
+    bool use_functor_smoothness_distance{false};
 
     bool pin_normals{false}; ///< TODO wtf?
     bool pin_distances{false};
