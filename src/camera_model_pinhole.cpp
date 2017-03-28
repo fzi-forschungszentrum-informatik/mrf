@@ -50,24 +50,3 @@ bool CameraModelPinhole::getViewingRay(const Eigen::Ref<const Eigen::Vector2d>& 
     CameraModelPinholeGetViewingRay getViewingRay;
     return getViewingRay(double(), intrinsics_, imagePoint, supportPoint, direction);
 }
-
-bool CameraModelPinhole::isSvp() const {
-    return true;
-}
-
-double CameraModelPinhole::getFocalLength() const {
-    return intrinsics_[0];
-}
-
-Eigen::Vector2d CameraModelPinhole::getPrincipalPoint() const {
-    return Eigen::Vector2d(intrinsics_[1], intrinsics_[2]);
-}
-
-std::unique_ptr<CameraModel> CameraModelPinhole::clone() const {
-    return std::unique_ptr<CameraModelPinhole>(
-        new CameraModelPinhole(*this)); // copy construct new element
-}
-
-CameraModelType CameraModelPinhole::getId() const {
-    return ID;
-}

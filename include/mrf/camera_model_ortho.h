@@ -35,7 +35,6 @@ struct CameraModelOrthoGetImagePoint {
 class CameraModelOrtho : public CameraModel {
 
 public:
-    inline CameraModelOrtho(){};
     inline CameraModelOrtho(int imgWidth, int imgHeight)
             : imgWidth_{imgWidth}, imgHeight_{imgHeight} {};
     inline virtual ~CameraModelOrtho(){};
@@ -67,36 +66,6 @@ public:
                                       Eigen::Ref<Eigen::Vector3d> direction) const override {
         CameraModelOrthoGetViewingRay getViewingRay;
         return getViewingRay(double(), imagePoint, supportPoint, direction);
-    }
-
-    /** @brief Checks if this camera is SVP
-     *  @return Always false */
-    inline virtual bool isSvp() const override {
-        return false;
-    }
-
-    /** @brief Get focal length of the camera
-     *  @return Always 0 */
-    inline virtual double getFocalLength() const override {
-        return 0;
-    }
-
-    /** @brief Get principal point of camera
-     *  @return Always zero vector */
-    inline virtual Eigen::Vector2d getPrincipalPoint() const override {
-        return Eigen::Vector2d::Zero();
-    }
-
-    /** @brief Clone this camera
-     *  @return Pointer to cloned camera */
-    inline virtual std::unique_ptr<CameraModel> clone() const override {
-        return std::unique_ptr<CameraModelOrtho>(new CameraModelOrtho(*this));
-    }
-
-    /** @brief Get type of camera model
-     *  @return CameraModelType::CAMERA_MODEL_PINHOLE */
-    inline virtual CameraModelType getId() const override {
-        return CameraModelType::CAMERA_MODEL_PINHOLE;
     }
 
 private:

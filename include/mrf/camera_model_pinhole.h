@@ -9,8 +9,6 @@
 class CameraModelPinhole : public CameraModel {
 
 public:
-    static const CameraModelType ID = CameraModelType::CAMERA_MODEL_PINHOLE;
-
     CameraModelPinhole();
     virtual ~CameraModelPinhole();
 
@@ -34,14 +32,6 @@ public:
     virtual bool getViewingRay(const Eigen::Ref<const Eigen::Vector2d>& imagePoint,
                                Eigen::Ref<Eigen::Vector3d> supportPoint,
                                Eigen::Ref<Eigen::Vector3d> direction) const override;
-
-    virtual bool isSvp() const override;
-    virtual double getFocalLength() const override;
-    virtual Eigen::Vector2d getPrincipalPoint() const override;
-
-    virtual std::unique_ptr<CameraModel> clone() const override;
-
-    virtual CameraModelType getId() const override;
 
 private:
     int imgWidth_;

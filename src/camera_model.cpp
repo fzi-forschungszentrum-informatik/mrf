@@ -50,36 +50,9 @@ std::vector<bool> CameraModel::getViewingRays(const Eigen::Ref<const Eigen::Matr
     return return_val;
 }
 
-/** @brief Get the name of the camera
- *  @return Name of the camera */
-const std::string& CameraModel::getName() const {
-    if (name_.empty() == true) {
-        throw std::runtime_error(
-            "No camera name specified! Call setName in derived camera model class.");
-    }
-    return name_;
-}
-
-/** @brief Set the name of the camera.
- *  @attention Can only be done once!
- *  @param name Name of the camera */
-void CameraModel::setName(const std::string& name) {
-    if (name_.empty() == false) {
-        throw std::runtime_error("Camera name was already specified!");
-    }
-    name_ = name;
-}
-
 std::ostream& operator<<(std::ostream& out, CameraModel& cam) {
-    out << "camera " << cam.getName();
-
     int imgWidth, imgHeight;
     cam.getImageSize(imgWidth, imgHeight);
     out << " [" << imgWidth << " x " << imgHeight << "]" << std::endl;
-
-    out << " - f = " << cam.getFocalLength() << std::endl;
-    out << " - cu = " << cam.getPrincipalPoint().x() << std::endl;
-    out << " - cv = " << cam.getPrincipalPoint().y() << std::endl;
-
     return out;
 }

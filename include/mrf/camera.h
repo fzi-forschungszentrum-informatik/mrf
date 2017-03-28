@@ -26,8 +26,6 @@ public:
         }
         return *this;
     }
-
-    Camera clone();
 };
 
 std::ostream& operator<<(std::ostream& out, Camera& cam);
