@@ -109,15 +109,11 @@ bool getTriangleNeighbors(const std::vector<int>& neighbors_in,
 }
 
 /** @brief Performs a K-nearest neighbor search on a given Pixel.
- *  @param coordinates Unused parameter?
  *  @param tree Index for search
  *  @param p Input Pixel
  *  @param num_neigh Number of neighbors to find
  *  @return Vector of indizes */
-std::vector<int> getNeighbors(const Eigen::Matrix2Xi& coordinates,
-                              const treeT& tree,
-                              const Pixel& p,
-                              const int num_neigh) {
+std::vector<int> getNeighbors(const treeT& tree, const Pixel& p, const int num_neigh) {
     // TODO: Why doesn't this work:
     //    std::vector<DataType> distances;
     //    return getNeighbors(coordinates, distances, tree, p, num_neigh);
@@ -138,14 +134,12 @@ std::vector<int> getNeighbors(const Eigen::Matrix2Xi& coordinates,
 
 
 /** @brief Performs a K-nearest neighbor search on a given Pixel and return indizes to neighbors.
- *  @param coordinates Unused parameter?
  *  @param distances Distances of the K-nearest neighbors
  *  @param tree Index for search
  *  @param p Input Pixel
  *  @param num_neigh Number of neighbors to find
  *  @return Vector of indizes of the neighbors */
-std::vector<int> getNeighbors(const Eigen::Matrix2Xi& coordinates,
-                              std::vector<DataType>& distances,
+std::vector<int> getNeighbors(std::vector<DataType>& distances,
                               const treeT& tree,
                               const Pixel& p,
                               const int num_neigh) {
@@ -247,7 +241,7 @@ void estimatePrior(const RayMapT& rays,
         LOG(INFO) << "Estimate prior via 'nearest_neighbor' method";
         for (auto const& el : rays) {
             const Pixel& p{el.first};
-            std::vector<int> neighbors{getNeighbors(coordinates, kd_index_ptr_, p, 1)};
+            std::vector<int> neighbors{getNeighbors(kd_index_ptr_, p, 1)};
             const Pixel nn(coordinates(0, neighbors[0]), coordinates(1, neighbors[0]));
             const Eigen::ParametrizedLine<double, 3>& ray{rays.at(nn)};
             const Eigen::Hyperplane<double, 3> plane(ray.direction(), projection.at(nn).position);
@@ -264,8 +258,7 @@ void estimatePrior(const RayMapT& rays,
         for (auto const& el : rays) {
             const Pixel& p{el.first};
             std::vector<double> dist_neighbors;
-            std::vector<int> all_neighbors{
-                getNeighbors(coordinates, dist_neighbors, kd_index_ptr_, p, 4)};
+            std::vector<int> all_neighbors{getNeighbors(dist_neighbors, kd_index_ptr_, p, 4)};
             double w_sum{0};
             double d_sum{0};
             std::vector<double> w_vector;
@@ -303,8 +296,7 @@ void estimatePrior(const RayMapT& rays,
         size_t inside_triangles{0};
         for (auto const& el : rays) {
             const Pixel& p{el.first};
-            std::vector<int> all_neighbors{
-                getNeighbors(coordinates, kd_index_ptr_, p, param.neighbor_search)};
+            std::vector<int> all_neighbors{getNeighbors(kd_index_ptr_, p, param.neighbor_search)};
             std::vector<int> triangle_neighbors(3);
             const bool found_triangle{
                 getTriangleNeighbors(all_neighbors, coordinates, p, triangle_neighbors)};

@@ -4,6 +4,12 @@ kd: 1
 # Smoothness weight (within discontinuity threshold)
 ks: 1
 
+# Depth limits that constrain the optimization
+# Available options: none, custom, adaptive
+limits: adaptive
+custom_depth_limit_min: 0
+custom_depth_limit_max: 1
+
 # Smoothness weighting type
 # Available options: none, step, linear, exponential
 smoothness_weighting: linear
@@ -28,12 +34,6 @@ radius_normal_estimation: 0.5
 
 # Number of neighbors to search for during initialization
 neighbor_search: 10
-
-# Depth limits that constrain the optimization
-# Available options: none, custom, adaptive
-limits: adaptive
-custom_depth_limit_min: 0
-custom_depth_limit_max: 1
 
 # Available options: none, nearest_neighbor, triangles, mean_depth, weighted_neighbor
 initialization: triangles
@@ -66,6 +66,7 @@ use_functor_normal_distance: true
 use_functor_smoothness_distance: false
 
 pin_distances: false
+pin_transform: true
 
 estimate_covariances: false
 use_covariance_filter: true

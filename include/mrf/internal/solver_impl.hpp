@@ -29,7 +29,7 @@ namespace mrf {
  *
  */
 template <typename T>
-ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_transform) {
+ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out) {
 
     LOG(INFO) << "Normalize image";
     cv::normalize(in.image, d_.image, 0, 1, cv::NORM_MINMAX);
@@ -166,8 +166,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 translation.data()));
 
         if (params_.use_functor_normal)
-            for (auto const& n : getNeighbors(
-                     p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min))
+            for (auto const& n : getNeighbors(p, d_.image, row_max, col_max, row_min, col_min))
                 ids_functor_normal.emplace_back(problem.AddResidualBlock(
                     FunctorNormal::create(el_projection.second.normal, rays.at(p), rays.at(n)),
                     new ScaledLoss(params_.createLossFunction(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
@@ -181,7 +180,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (auto const& el_ray : rays) {
         const Pixel& p{el_ray.first};
         const std::vector<Pixel> neighbors{
-            getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
+            getNeighbors(p, d_.image, row_max, col_max, row_min, col_min)};
         std::vector<double> weights;
         for (auto const& n : neighbors)
             weights.emplace_back(smoothnessWeight(p,
@@ -241,7 +240,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         }
     }
 
-    if (pin_transform) {
+    if (params_.pin_transform) {
         LOG(INFO) << "Pin transform";
         problem.SetParameterBlockConstant(rotation.coeffs().data());
         problem.SetParameterBlockConstant(translation.data());
@@ -283,7 +282,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (auto const& el : rays) {
         const Pixel& p{el.first};
         const std::vector<Pixel> neighbors{
-            getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
+            getNeighbors(p, d_.image, row_max, col_max, row_min, col_min)};
         weights(p.row, p.col) = smoothnessWeight(p,
                                                  neighbors[0],
                                                  params_.discontinuity_threshold,

@@ -95,8 +95,7 @@ std::string Parameters::toString() const {
 		<< pin_normals << del
 		<< pin_distances << del
 		<< loss_function_scale << del
-		<< static_cast<int>(initialization) << del
-		<< static_cast<int>(neighborhood) << del
+        << static_cast<int>(initialization) << del
 		<< estimate_covariances << del
 		<< static_cast<int>(crop_mode) << del
 		<< use_covariance_filter << del
@@ -192,18 +191,6 @@ void Parameters::fromConfig(const std::string& file_name) {
             initialization = Initialization::triangles;
         } else if (tmp == "weighted_neighbor") {
             initialization = Initialization::weighted_neighbor;
-        } else {
-            LOG(WARNING) << "No parameter " << tmp << " available.";
-        }
-    }
-
-    if (getParam(cfg, "neighborhood", tmp)) {
-        if (tmp == "two") {
-            neighborhood = Neighborhood::two;
-        } else if (tmp == "four") {
-            neighborhood = Neighborhood::four;
-        } else if (tmp == "eight") {
-            neighborhood = Neighborhood::eight;
         } else {
             LOG(WARNING) << "No parameter " << tmp << " available.";
         }

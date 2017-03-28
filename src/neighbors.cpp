@@ -1,13 +1,12 @@
 #include "neighbors.hpp"
-#include "neighbor_relation.hpp"
 #include "cv_helper.hpp"
+#include "neighbor_relation.hpp"
 
 namespace mrf {
 
 /** @brief Get neighbor Pixels of a given Pixel from a given image.
  *  @param p Input Pixel
  *  @param img Input image
- *  @param mode Neighborhood mode
  *  @param row_max Maximum row
  *  @param col_max Maximum column
  *  @param row_min Minimum row
@@ -15,7 +14,6 @@ namespace mrf {
  *  @return Vector with neighbor Pixels */
 std::vector<Pixel> getNeighbors(const Pixel& p,
                                 const cv::Mat& img,
-                                const Parameters::Neighborhood& mode,
                                 const int& row_max,
                                 const int& col_max,
                                 const int& row_min,
