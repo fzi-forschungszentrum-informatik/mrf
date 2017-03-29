@@ -42,12 +42,13 @@ initialization: triangles
 # Available options: none, min_max, box
 crop_mode: none
 
+# Custom minimum and maximum row and column values for crop mode 'box'
 box_cropping_row_min: 0
 box_cropping_row_max: 200
 box_cropping_col_min: 0
 box_cropping_col_max: 300
 
-# Optimizer parameters
+## Optimizer parameters
 # Available options: trivial, huber, cauchy
 loss_function: trivial
 loss_function_scale: 0.1
@@ -60,14 +61,28 @@ use_inner_iterations: false
 use_nonmonotonic_steps: false
 function_tolerance: 1e-5
 
+## Specify which residuals to use
+# Use distance between depth estimations and date measurements
 use_functor_distance: true
+
+# Use estimated surface normals from the range sensor
 use_functor_normal: false
+
+
 use_functor_normal_distance: true
+
+# Use colinearity of points weighted with the smoothness
 use_functor_smoothness_distance: false
 
+# Pin depth estimation to actual value for pixel with range measurements
 pin_distances: false
 pin_transform: true
 
+# Calculate covariances in postprocessing
 estimate_covariances: false
+
+# Perform covariance based filter in postprocessing
 use_covariance_filter: true
+
+# Threshold for covariance filter
 covariance_filter_threshold: 2

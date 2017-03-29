@@ -56,7 +56,6 @@ struct Parameters {
 
     double ks{1};                       ///< Smoothness weight
     double kd{1};                       ///< Distance weight
-    double kn{1};                       ///< TODO wtf?
     Limits limits{Limits::none};        ///< Min, max depth limit method
     double custom_depth_limit_min{0};   ///< Minimum depth if Limits::custom
     double custom_depth_limit_max{100}; ///< Maximum depth if Limits::custom
@@ -82,12 +81,9 @@ struct Parameters {
     bool use_functor_distance{true};
     bool use_functor_normal{false};
     bool use_functor_normal_distance{true};
-    bool use_functor_smoothness_normal{false};
     bool use_functor_smoothness_distance{false};
 
-    bool pin_normals{false}; ///< TODO wtf?
-    bool pin_distances{
-        false}; ///< Pin depth estimation to actual value for pixel with range measurments
+    bool pin_distances{false}; ///< Pin depth estimation to range measurements
     bool pin_transform{true};
     bool estimate_covariances{false};        ///< Calculate covariances in postprocessing
     bool use_covariance_filter{false};       ///< Perform covariance based filter in postprocessing
