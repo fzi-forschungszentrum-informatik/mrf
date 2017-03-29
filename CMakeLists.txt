@@ -2,10 +2,11 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(mrf)
 
-set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS}")
 
-set(CMAKE_MODULE_PATH ~/datkin_ws/src/CMAKE)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH})
+MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
 
 # find dependencies
 find_package(catkin REQUIRED)
@@ -39,22 +40,38 @@ catkin_package(
 set(glog_DIR glog)
 # setup targets
 include_directories(
-  include
+  include/mrf
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${GLOG_INCLUDE_DIRS}
+  ${CERES_INCLUDE_DIRS}
 )
+
+#get_cmake_property(_variableNames VARIABLES)
+#foreach (_variableName ${_variableNames})
+#    message(STATUS "${_variableName}=${${_variableName}}")
+#endforeach()
 
 link_directories(
   ${PCL_LIBRARY_DIRS}
   ${Eigen3_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} include/${PROJECT_NAME}/solver.hpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen3_LIBRARIES} ${OpenCV_LIBS} ${GLOG_LIBRARY})
+add_library(${PROJECT_NAME} 
+	include/${PROJECT_NAME}/solver.hpp 
+	src/camera.cpp
+	src/parameters.cpp
+        src/camera_model_pinhole.cpp
+        src/image_preprocessing.cpp
+        src/camera_model.cpp
+        src/neighbors.cpp
+        src/prior.cpp
+        src/smoothness_weight.cpp
+)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen3_LIBRARIES} ${OpenCV_LIBS} ${GLOG_LIBRARY} ${CERES_LIBRARIES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 #add_executable(foo_bin src/bin.cpp)
 #add_dependencies(foo_bin foo_lib)
