@@ -2,7 +2,15 @@
 
 #include <Eigen/Geometry>
 #include <glog/logging.h>
+
+#include <opencv2/core/version.hpp>
+#if CV_MAJOR_VERSION == 2
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/contrib/contrib.hpp>
+#elif CV_MAJOR_VERSION == 3
 #include <opencv2/imgproc.hpp>
+#endif
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
