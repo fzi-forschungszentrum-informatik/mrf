@@ -22,8 +22,7 @@ std::string Parameters::header() {
     std::ostringstream oss;
     // clang-format off
 	oss << "ks" << del
-		<< "kd" << del
-		<< "kn" << del
+        << "kd" << del
 		<< "discontinuity_threshold" << del
 		<< "limits" << del
 		<< "custom_depth_limit_min" << del
@@ -43,14 +42,12 @@ std::string Parameters::header() {
 		<< "estimate_normals" << del
 		<< "use_functor_distance" << del
 		<< "use_functor_normal" << del
-		<< "use_functor_normal_distance" << del
-		<< "use_functor_smoothness_normal" << del
-		<< "use_functor_smoothness_distance" << del
-		<< "pin_normals" << del
+        << "use_functor_normal_distance" << del
+        << "use_functor_smoothness_distance" << del
 		<< "pin_distances" << del
+        << "pin_transform" << del
 		<< "loss_function_scale" << del
-		<< "initialization" << del
-		<< "neighborhood" << del
+        << "initialization" << del
 		<< "estimate_covariances" << del
 		<< "crop_mode" << del
 		<< "use_covariance_filter" << del
@@ -68,8 +65,7 @@ std::string Parameters::toString() const {
     std::ostringstream oss;
     // clang-format off
 	oss << ks << del
-		<< kd << del
-		<< kn << del
+        << kd << del
 		<< discontinuity_threshold << del
 		<< static_cast<int>(limits) << del
 		<< custom_depth_limit_min << del
@@ -89,11 +85,10 @@ std::string Parameters::toString() const {
 		<< estimate_normals << del
 		<< use_functor_distance << del
 		<< use_functor_normal << del
-		<< use_functor_normal_distance << del
-		<< use_functor_smoothness_normal << del
-		<< use_functor_smoothness_distance << del
-		<< pin_normals << del
+        << use_functor_normal_distance << del
+        << use_functor_smoothness_distance << del
 		<< pin_distances << del
+        << pin_transform << del
 		<< loss_function_scale << del
         << static_cast<int>(initialization) << del
 		<< estimate_covariances << del
@@ -116,7 +111,6 @@ void Parameters::fromConfig(const std::string& file_name) {
 
     getParam(cfg, "ks", ks);
     getParam(cfg, "kd", kd);
-    getParam(cfg, "kn", kn);
 
     if (getParam(cfg, "limits", tmp)) {
         if (tmp == "none") {
@@ -205,12 +199,10 @@ void Parameters::fromConfig(const std::string& file_name) {
     getParam(cfg, "function_tolerance", solver.function_tolerance);
 
     getParam(cfg, "use_functor_normal_distance", use_functor_normal_distance);
-    getParam(cfg, "use_functor_smoothness_normal", use_functor_smoothness_normal);
     getParam(cfg, "use_functor_normal", use_functor_normal);
     getParam(cfg, "use_functor_distance", use_functor_distance);
     getParam(cfg, "use_functor_smoothness_distance", use_functor_smoothness_distance);
 
-    getParam(cfg, "pin_normals", pin_normals);
     getParam(cfg, "pin_distances", pin_distances);
     getParam(cfg, "pin_transform", pin_transform);
 

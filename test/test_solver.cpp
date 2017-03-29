@@ -47,7 +47,6 @@ TEST(Solver, Solve) {
     Parameters p("parameters.yaml");
     p.estimate_normals = false;
     p.pin_distances = true;
-    p.pin_normals = true;
     Solver solver{cam, p};
     solver.solve(in, out);
     const Data<pcl::PointXYZRGBNormal> debug{solver.getDebugInfo()};
