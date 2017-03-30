@@ -3,12 +3,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(mrf)
 
 set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS}")
-
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
-MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH})
-MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
 
-# find dependencies
 find_package(catkin REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(PCL REQUIRED)
@@ -20,16 +16,6 @@ find_package(Boost REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(Glog REQUIRED)
 
-# message generation
-#add_message_files(
-#  DIRECTORY msg
-#  FILES MyMessage.msg
-#)
-#generate_messages(
-#)
-
-# export information to downstream packages
-# must be called *before* the targets to generate them in the desired location in the devel space
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -38,7 +24,6 @@ catkin_package(
 )
 
 set(glog_DIR glog)
-# setup targets
 include_directories(
   include/mrf
   ${catkin_INCLUDE_DIRS}
@@ -50,18 +35,13 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
 )
 
-#get_cmake_property(_variableNames VARIABLES)
-#foreach (_variableName ${_variableNames})
-#    message(STATUS "${_variableName}=${${_variableName}}")
-#endforeach()
-
 link_directories(
   ${PCL_LIBRARY_DIRS}
   ${Eigen3_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} 
-	include/${PROJECT_NAME}/solver.hpp 
+add_library(${PROJECT_NAME}
+	include/${PROJECT_NAME}/solver.hpp
 	src/camera.cpp
 	src/parameters.cpp
         src/camera_model_pinhole.cpp
@@ -73,24 +53,6 @@ add_library(${PROJECT_NAME}
 )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen3_LIBRARIES} ${OpenCV_LIBS} ${GLOG_LIBRARY} ${CERES_LIBRARIES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-#add_executable(foo_bin src/bin.cpp)
-#add_dependencies(foo_bin foo_lib)
-
-
-# install artifacts
-#install(
-#  DIRECTORY cmake
-#  DESTINATION share/${PROJECT_NAME})
-#install(
-#  DIRECTORY include/
-#  DESTINATION include
-#)
-#install(
-#  TARGETS foo_lib foo_bin
-#  ARCHIVE DESTINATION lib
-#  LIBRARY DESTINATION lib
-#  RUNTIME DESTINATION bin
-#)
 
 # tests
 #if(CATKIN_ENABLE_TESTING)
