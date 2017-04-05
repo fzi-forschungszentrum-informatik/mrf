@@ -5,8 +5,8 @@
   <description>Library for interpolating images using Markov Random Fields.</description>
 
   <license>GPLv3</license>
-  <maintainer email="sascha.wirges@kit.edu">Sascha Wirges</maintainer>
-  <author email="sascha.wirges@kit.edu">Sascha Wirges</author>
+  <maintainer email="wirges@fzi.de">Sascha Wirges</maintainer>
+  <author email="wirges@fzi.de">Sascha Wirges</author>
   <url type="repository">git@gitlab.mrt.uni-karlsruhe.de:MRT/mrf.git</url>
 
   <buildtool_depend>catkin</buildtool_depend>
