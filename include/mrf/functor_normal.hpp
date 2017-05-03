@@ -1,7 +1,16 @@
 #pragma once
 
+#include <Eigen/Geometry>
 #include <ceres/autodiff_cost_function.h>
-#include <util_ceres/eigen.h>
+#include "eigen_quaternion_parameterization.hpp"
+
+namespace Eigen {
+template <typename T>
+using Affine3 = Transform<T, 3, Affine>;
+
+template <typename T>
+using Vector3 = Matrix<T, 3, 1>;
+}
 
 namespace mrf {
 
@@ -21,7 +30,7 @@ struct FunctorNormal {
                            const T* const d_0,
                            const T* const d_1,
                            T* res) const {
-        res[0] = Eigen::Hyperplane<T, 3>{util_ceres::fromQuaternion(rot) * n_.cast<T>(),
+        res[0] = Eigen::Hyperplane<T, 3>{mrf::fromQuaternion(rot) * n_.cast<T>(),
                                          ray_0_.cast<T>().pointAt(d_0[0])}
                      .signedDistance(ray_1_.cast<T>().pointAt(d_1[0]));
         return true;

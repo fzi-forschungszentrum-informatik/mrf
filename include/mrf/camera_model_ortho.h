@@ -1,10 +1,12 @@
 #pragma once
 
 #include <memory>
-#include <camera_models/camera_model.h>
+#include "camera_model.h"
 
 namespace mrf {
 
+/** @brief Determines support point and direction of the viewing ray of a given pixel
+ *  Will always return true */
 struct CameraModelOrthoGetViewingRay {
     template <typename T, typename T1, typename T2, typename T3>
     bool operator()(T, T1&& imagePoint, T2&& pos, T3&& direction) const {
@@ -17,6 +19,9 @@ struct CameraModelOrthoGetViewingRay {
         return true;
     }
 };
+
+/** @brief Determines if the 3D point is in front of an image point.
+ *  Will always return true */
 struct CameraModelOrthoGetImagePoint {
     template <typename T, typename T1, typename T2>
     inline bool operator()(T, T1&& point3d, T2&& imagePoint) const {
@@ -26,25 +31,36 @@ struct CameraModelOrthoGetImagePoint {
     }
 };
 
+/** @brief Orthographic camera class */
 class CameraModelOrtho : public CameraModel {
 
 public:
-    inline CameraModelOrtho(){};
     inline CameraModelOrtho(int imgWidth, int imgHeight)
             : imgWidth_{imgWidth}, imgHeight_{imgHeight} {};
     inline virtual ~CameraModelOrtho(){};
-
+    /** @brief Get the image size
+     * @param imgWidth Image width
+     * @param imgHeight Image height */
     inline virtual void getImageSize(int& imgWidth, int& imgHeight) const override {
         imgWidth = imgWidth_;
         imgHeight = imgHeight_;
     }
 
+    /** @brief Determines if a 3D point is in front of the image.
+     *  @param point3d 3D point to check
+     *  @param imagePoint Image point. Will have the according 3D point value if it's in front
+     *  @return Always true */
     inline virtual bool getImagePoint(const Eigen::Ref<const Eigen::Vector3d>& point3d,
                                       Eigen::Ref<Eigen::Vector2d> imagePoint) const override {
         CameraModelOrthoGetImagePoint getImagePoint;
         return getImagePoint(double(), point3d, imagePoint);
     }
 
+    /** @brief Get viewing ray from the camera origin to the pixel
+     *  @param imagePoint Image point
+     *  @param supportPoint Support point of the viewing ray
+     *  @param direction Direction of the viewing ray
+     *  @return Always true */
     inline virtual bool getViewingRay(const Eigen::Ref<const Eigen::Vector2d>& imagePoint,
                                       Eigen::Ref<Eigen::Vector3d> supportPoint,
                                       Eigen::Ref<Eigen::Vector3d> direction) const override {
@@ -52,29 +68,8 @@ public:
         return getViewingRay(double(), imagePoint, supportPoint, direction);
     }
 
-    inline virtual bool isSvp() const override {
-        return false;
-    }
-    inline virtual double getFocalLength() const override {
-        return 0;
-    }
-    inline virtual Eigen::Vector2d getPrincipalPoint() const override {
-        return Eigen::Vector2d::Zero();
-    }
-
-    inline virtual std::unique_ptr<CameraModel> clone() const override {
-        return std::unique_ptr<CameraModelOrtho>(new CameraModelOrtho(*this));
-    }
-
-    inline virtual void doLoad(cereal::PortableBinaryInputArchive&) override{};
-    inline virtual void doSave(cereal::PortableBinaryOutputArchive&) const override{};
-
-    inline virtual CameraModelType getId() const override {
-        return CameraModelType::CAMERA_MODEL_PINHOLE;
-    }
-
 private:
-    int imgWidth_;
-    int imgHeight_;
+    int imgWidth_;  ///< Image width
+    int imgHeight_; ///< Image height
 };
 }

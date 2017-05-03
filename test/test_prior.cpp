@@ -33,7 +33,7 @@ TEST(DepthPrior, initialisation) {
     LOG(INFO) << "Params: " << params;
     Solver solver{cam, params};
 
-    Data<pcl::PointXYZINormal> out;
+    Data<pcl::PointXYZRGBNormal> out;
     solver.solve(in, out);
 
     boost::filesystem::path path_name{"/tmp/test/depth_prior/"};

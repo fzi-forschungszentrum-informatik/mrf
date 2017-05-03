@@ -4,25 +4,20 @@
   <version>1.0.0</version>
   <description>Library for interpolating images using Markov Random Fields.</description>
 
-  <license>MRT/FZI</license>
-  <maintainer email="sascha.wirges@kit.edu">Sascha Wirges</maintainer>
-  <author email="sascha.wirges@kit.edu">Sascha Wirges</author>
+  <license>GPLv3</license>
+  <maintainer email="wirges@fzi.de">Sascha Wirges</maintainer>
+  <author email="wirges@fzi.de">Sascha Wirges</author>
   <url type="repository">git@gitlab.mrt.uni-karlsruhe.de:MRT/mrf.git</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>mrt_cmake_modules</build_depend>
   <test_depend>gtest</test_depend>
 
-  <depend>boost</depend>
-  <depend>camera_models</depend>
-  <depend>eigen</depend>
-  <depend>mrt_ceres</depend>
-  <depend>mrt_opencv</depend>
-  <depend>mrt_pcl</depend>
-  <depend>pcl_ceres</depend>
-  <depend>util_ceres</depend>
+  <depend>Boost</depend>
+  <depend>Eigen3</depend>
+  <depend>OpenCV</depend>
+  <depend>Glog</depend>
+  <depend>ceres-solver</depend>
+  <depend>PCL</depend>
   <depend>yaml-cpp</depend>
 
-  <export>
-  </export>
 </package>

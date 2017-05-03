@@ -108,16 +108,16 @@ TEST(Groundtruth, solve) {
         sparse = downsampleRandom<PointT>(gt_data.cloud, params.seedpoint_number);
     }
 
-    if (params.addCloudNoise) {
-        LOG(INFO) << "Add Noise";
-        sparse = addNoise<PointT>(
-            gt_data.cloud, params.noise_sigma, params.noise_sigma, params.noise_sigma);
-    }
+    //    if (params.addCloudNoise) {
+    //        LOG(INFO) << "Add Noise";
+    //        sparse = addNoise<PointT>(
+    //            gt_data.cloud, params.noise_sigma, params.noise_sigma, params.noise_sigma);
+    //    }
 
     LOG(INFO) << "Solve";
     std::shared_ptr<CameraModelOrtho> cam{new CameraModelOrtho(cols, rows)};
     Data<PointT> in(sparse, gt_data.image, gt_data.transform);
-    Data<pcl::PointXYZINormal> out;
+    Data<pcl::PointXYZRGBNormal> out;
     Solver solver{cam, Parameters("parameters.yaml")};
     solver.solve(in, out);
 

@@ -3,16 +3,13 @@
 #include <Eigen/Eigen>
 #include <ceres/ceres.h>
 #include <glog/logging.h>
-#include <pcl_ceres/point.hpp>
-#include <pcl_ceres/point_cloud.hpp>
-#include <pcl_ceres/transforms.hpp>
-#include <util_ceres/eigen_quaternion_parameterization.h>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <pcl/common/transforms.h>
 
 #include "../cloud_preprocessing.hpp"
 #include "../cv_helper.hpp"
+#include "../eigen_quaternion_parameterization.hpp"
 #include "../functor_collinearity.hpp"
 #include "../functor_distance.hpp"
 #include "../functor_normal.hpp"
@@ -20,18 +17,24 @@
 #include "../image_preprocessing.hpp"
 #include "../neighbors.hpp"
 #include "../normals.hpp"
+#include "../point.hpp"
+#include "../point_cloud.hpp"
 #include "../prior.hpp"
 #include "../smoothness_weight.hpp"
+#include "../transforms.hpp"
 
 namespace mrf {
 
+/** @brief Implementation of the whole optimization procedure
+ *
+ */
 template <typename T>
-ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_transform) {
+ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out) {
 
     LOG(INFO) << "Normalize image";
     cv::normalize(in.image, d_.image, 0, 1, cv::NORM_MINMAX);
     LOG(INFO) << "Image size: " << d_.image.cols << " x " << d_.image.rows << " = "
-              << d_.image.cols * d_.image.rows;
+              << d_.image.cols * d_.image.rows << ". Channels: " << d_.image.channels();
 
     LOG(INFO) << "Get Projection Image";
     projection_.image = get_gray_image(in.image);
@@ -43,19 +46,19 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
               << d_.cloud->size();
 
     if (params_.estimate_normals) {
-        d_.cloud->height = 1; /// < Make cloud unorganized to suppress warnings
+        d_.cloud->height = 1; ///< Make cloud unorganized to suppress warnings
         d_.cloud = estimateNormals<PointT, PointT>(d_.cloud, params_.radius_normal_estimation);
     }
 
-    using PType = pcl_ceres::Point<double>;
-    using ClType = pcl_ceres::PointCloud<PType>;
+    using PType = mrf::Point<double>;
+    using ClType = mrf::PointCloud<PType>;
     const ClType::Ptr cloud{ClType::create()};
     cloud->points.reserve(d_.cloud->size());
     for (size_t c = 0; c < d_.cloud->size(); c++) {
         cloud->emplace_back(PType(d_.cloud->points[c].getVector3fMap().cast<double>(),
                                   d_.cloud->points[c].getNormalVector3fMap().cast<double>()));
     }
-    const ClType::Ptr cloud_tf = pcl_ceres::transform<PType>(cloud, in.transform);
+    const ClType::Ptr cloud_tf = mrf::transform<PType>(cloud, in.transform);
 
     LOG(INFO) << "Compute point projections in camera image";
     const Eigen::Matrix3Xd pts_3d_tf{cloud_tf->getMatrixPoints()};
@@ -140,7 +143,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     Problem problem(params_.problem);
     problem.AddParameterBlock(rotation.coeffs().data(),
                               FunctorDistance::DimRotation,
-                              new util_ceres::EigenQuaternionParameterization);
+                              new mrf::EigenQuaternionParameterization);
     problem.AddParameterBlock(translation.data(), FunctorDistance::DimTranslation);
 
     LOG(INFO) << "Add " << rays.size() << " parameter blocks";
@@ -163,8 +166,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                 translation.data()));
 
         if (params_.use_functor_normal)
-            for (auto const& n : getNeighbors(
-                     p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min))
+            for (auto const& n : getNeighbors(p, d_.image, row_max, col_max, row_min, col_min))
                 ids_functor_normal.emplace_back(problem.AddResidualBlock(
                     FunctorNormal::create(el_projection.second.normal, rays.at(p), rays.at(n)),
                     new ScaledLoss(params_.createLossFunction(), params_.kd, DO_NOT_TAKE_OWNERSHIP),
@@ -178,7 +180,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (auto const& el_ray : rays) {
         const Pixel& p{el_ray.first};
         const std::vector<Pixel> neighbors{
-            getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
+            getNeighbors(p, d_.image, row_max, col_max, row_min, col_min)};
         std::vector<double> weights;
         for (auto const& n : neighbors)
             weights.emplace_back(smoothnessWeight(p,
@@ -216,7 +218,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
             for (size_t c = 0; c < neighbors.size(); c++)
                 problem.AddResidualBlock(
                     FunctorSmoothnessDistance::create(),
-                    new ScaledLoss(new TrivialLoss, weights[c], TAKE_OWNERSHIP),
+                    new ScaledLoss(new TrivialLoss, params_.ks * weights[c], TAKE_OWNERSHIP),
                     &depth_est_(p.row, p.col),
                     &depth_est_(neighbors[c].row, neighbors[c].col));
     }
@@ -238,7 +240,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
         }
     }
 
-    if (pin_transform) {
+    if (params_.pin_transform) {
         LOG(INFO) << "Pin transform";
         problem.SetParameterBlockConstant(rotation.coeffs().data());
         problem.SetParameterBlockConstant(translation.data());
@@ -263,7 +265,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     LOG(INFO) << summary.FullReport();
 
     LOG(INFO) << "Write output data";
-    out.transform = util_ceres::fromQuaternionTranslation(rotation, translation);
+    out.transform = mrf::fromQuaternionTranslation(rotation, translation);
+    const float depth_est_min{static_cast<float>(depth_est_.minCoeff())};
+    const float depth_est_max{static_cast<float>(depth_est_.maxCoeff())};
     cv::eigen2cv(depth_est_, out.image);
     out.cloud->width = cols;
     out.cloud->height = rows;
@@ -278,7 +282,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     for (auto const& el : rays) {
         const Pixel& p{el.first};
         const std::vector<Pixel> neighbors{
-            getNeighbors(p, d_.image, params_.neighborhood, row_max, col_max, row_min, col_min)};
+            getNeighbors(p, d_.image, row_max, col_max, row_min, col_min)};
         weights(p.row, p.col) = smoothnessWeight(p,
                                                  neighbors[0],
                                                  params_.discontinuity_threshold,
@@ -339,6 +343,9 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
     info.iterations_used = summary.iterations.size();
     info.has_weights = true;
     info.weights = weights;
+    info.out_depth_max = depth_est_max;
+    info.out_depth_min = depth_est_min;
+
 
     if (params_.estimate_covariances) {
         LOG(INFO) << "Estimate covariances";
@@ -373,7 +380,7 @@ ResultInfo Solver::solve(const Data<T>& in, Data<PointT>& out, const bool pin_tr
                         cov_max = info.covariance_depth(r, c);
                     else if (info.covariance_depth(r, c) < cov_min)
                         cov_min = info.covariance_depth(r, c);
-                    if (info.covariance_depth(r, c) > params_.covariance_filter_treshold) {
+                    if (info.covariance_depth(r, c) > params_.covariance_filter_threshold) {
                         out.cloud->at(c, r).x = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).y = std::numeric_limits<float>::quiet_NaN();
                         out.cloud->at(c, r).z = std::numeric_limits<float>::quiet_NaN();

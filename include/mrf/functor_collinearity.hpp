@@ -2,7 +2,7 @@
 
 #include <Eigen/Geometry>
 #include <ceres/autodiff_cost_function.h>
-
+#include "eigen.hpp"
 namespace mrf {
 
 struct FunctorCollinearity {

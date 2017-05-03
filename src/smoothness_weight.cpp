@@ -1,6 +1,6 @@
-#include "smoothness_weight.hpp"
-
 #include <cmath>
+
+#include "smoothness_weight.hpp"
 
 namespace mrf {
 
@@ -8,6 +8,15 @@ double sigmoid(const double& x, const double& alpha, const double& beta) {
     return 0;
 }
 
+/** @brief Calculates the smoothness weight between a Pixel and a neighbor
+ *  @param p Input Pixel
+ *  @param neighbor Neighbor Pixel
+ *  @param threshold Minimum difference before applying smoothness weighting
+ *  @param w_min Minimum weight. Chosen so there are no disconnected areas.
+ *  @param smoothness_weighting Type of smoothness weighting. E.g. exponential.
+ *  @param alpha Declination of linear and exponential scaling
+ *  @param beta
+ *  @return Calculated smoothness weight */
 double smoothnessWeight(const Pixel& p,
                         const Pixel& neighbor,
                         const double& threshold,

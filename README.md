@@ -1,32 +1,42 @@
-# Project Name
+# mrf
 
-TODO: Write a project description
+Markov-Random-Field based guided depth upsampling and reconstruction given camera images and laser observations.
+
+For further information, please refer to our publication "Guided Depth Upsampling for Precise Mapping of Urban Environments", presented at the IEEE Intelligent Vehicles Symposium 2017, Redondo Beach, CA, USA.
 
 ## Installation
 
-TODO: Describe the installation process
+Dependencies required:
+- [Ceres Solver](http://ceres-solver.org/)
+- [Point Cloud Library](http://www.pointclouds.org/)
+- [OpenCV](http://opencv.org/)
+- [yaml-cpp](https://github.com/jbeder/yaml-cpp)
+
+You can use [CMake](https://cmake.org/) to build this package.
+However, we recommend using [catkin](http://wiki.ros.org/catkin) which is part of [ROS](http://www.ros.org/).
 
 ## Usage
 
-TODO: Write usage instructions
+The 'Solver' class represents the interface for depth upsampling.
+It is initialized with a camera model and an optional parameters structure.
+Please refer to 'parameters.hpp' for hints on the different parameters.
+To solve a depth upsampling problem a 'Data' structure must be provided that consists of a 3D point cloud, a feature image and a transform between laser and camera.
 
-## Contributing
-
-1. Fork it!
-2. Create your feature branch: `git checkout -b my-new-feature`
-3. Commit your changes: `git commit -am 'Add some feature'`
-4. Push to the branch: `git push origin my-new-feature`
-5. Submit a pull request :D
+Please refer to the 'mrf_tool' for exemplary applications.
 
 ## History
 
-TODO: Write history
+2017-04-05 Initial commit
 
 ## Credits
 
-TODO: Write credits
+Sascha Wirges <wirges(at)fzi.de>, Matthias Mayr <mayr(at)fzi.de>, Björn Roxin <roxinbj(at)gmail.com>
+
+Partly based on the work of James Diebel and Sebastian Thrun, Stanford University.
 
 ## License
+
+Copyright (C) 2017  FZI Forschungszentrum Informatik
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

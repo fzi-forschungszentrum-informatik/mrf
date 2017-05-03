@@ -7,6 +7,10 @@
 
 namespace mrf {
 
+/** @brief Performs edge detection using Scharr.
+ *  @param in Input image
+ *  @param normalize Normalize image with edges
+ *  @return Image with edges */
 cv::Mat edge(const cv::Mat& in, const bool normalize) {
     using namespace cv;
 
@@ -29,12 +33,20 @@ cv::Mat edge(const cv::Mat& in, const bool normalize) {
     return out;
 }
 
+/** @brief Performs a Gaussian blur with a give kernel size.
+ *  @param in Input image
+ *  @param kernel_size Size of the kernel
+ *  @return Blurred image */
 cv::Mat blur(const cv::Mat& in, const size_t& kernel_size) {
     cv::Mat out;
     cv::GaussianBlur(in, out, cv::Size(kernel_size, kernel_size), 0);
     return out;
 }
 
+/** @brief Normalize color values of an image.
+ *  @param in Input image
+ *  @param use_instance Unused parameter
+ *  @return Normalized image */
 cv::Mat norm_color(const cv::Mat& in, const bool use_instance) {
     using namespace cv;
     const int channels{in.channels()};
@@ -42,7 +54,7 @@ cv::Mat norm_color(const cv::Mat& in, const bool use_instance) {
     std::vector<Mat> out_split;
     Mat out;
     split(in, in_split);
-    for (size_t i = 0; i < in.channels(); i++) {
+    for (int i = 0; i < in.channels(); i++) {
         double minVal;
         double maxVal;
         Point minLoc;
@@ -57,6 +69,13 @@ cv::Mat norm_color(const cv::Mat& in, const bool use_instance) {
     return out;
 }
 
+/** @brief Get gray image from multi channel image.
+ *   - 1 channel: Return input image.
+ *   - 2 channels: Extracts and returns first channel.
+ *   - 3 channels: Converts these.
+ *   - 4 channels: Converts first three channels-
+ *  @param in Input image
+ *  @return Grey image */
 cv::Mat get_gray_image(const cv::Mat& in) {
     using namespace cv;
     const int channels{in.channels()};

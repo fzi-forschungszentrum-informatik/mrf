@@ -7,6 +7,8 @@
 
 namespace mrf {
 
+/** @brief Storage for data used in the optimization problem.
+    Stores the pointcloud, the image and the transformation.  */
 template <typename T>
 struct Data {
     using Ptr = std::shared_ptr<Data>;
@@ -35,8 +37,8 @@ struct Data {
         return os;
     }
 
-    typename Cloud::Ptr cloud;
-    Image image;
-    Transform transform; ///< Transform between camera and laser
+    typename Cloud::Ptr cloud;      ///< Original cloud
+    Image image;                    ///< Camera image
+    Transform transform;            ///< Transform between camera and laser
 };
 }

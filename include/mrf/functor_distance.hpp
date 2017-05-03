@@ -1,7 +1,17 @@
 #pragma once
 
+#include <Eigen/Geometry>
 #include <ceres/autodiff_cost_function.h>
-#include <util_ceres/eigen.h>
+
+#include "eigen.hpp"
+
+namespace Eigen {
+template <typename T>
+using Affine3 = Transform<T, 3, Affine>;
+
+template <typename T>
+using Vector3 = Matrix<T, 3, 1>;
+}
 
 namespace mrf {
 
@@ -22,7 +32,7 @@ struct FunctorDistance {
                            T* res) const {
         Eigen::Map<Eigen::Vector3<T>>(res, DimResidual) =
             ray_.cast<T>().pointAt(depth[0]) -
-            util_ceres::fromQuaternionTranslation(rotation, translation) * p_.cast<T>();
+            fromQuaternionTranslation(rotation, translation) * p_.cast<T>();
         return true;
     }
 
