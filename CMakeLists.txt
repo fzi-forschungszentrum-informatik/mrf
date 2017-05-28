@@ -16,6 +16,10 @@ find_package(Boost REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(Glog REQUIRED)
 
+file(GLOB_RECURSE PROJECT_HEADER_FILES_INC RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "include/*.h" "include/*.hpp")
+file(GLOB PROJECT_SOURCE_FILES_INC RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "src/*.h" "src/*.hpp")
+file(GLOB PROJECT_SOURCE_FILES_SRC RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "src/*.cpp")
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -25,7 +29,7 @@ catkin_package(
 
 set(glog_DIR glog)
 include_directories(
-  include/mrf
+  include/${PROJECT_NAME}
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
@@ -40,18 +44,23 @@ link_directories(
   ${Eigen3_LIBRARY_DIRS}
 )
 
+# Declare a cpp library
 add_library(${PROJECT_NAME}
-	include/${PROJECT_NAME}/solver.hpp
-	src/camera.cpp
-	src/parameters.cpp
-        src/camera_model_pinhole.cpp
-        src/image_preprocessing.cpp
-        src/camera_model.cpp
-        src/neighbors.cpp
-        src/prior.cpp
-        src/smoothness_weight.cpp
+    ${PROJECT_HEADER_FILES_INC}
+    ${PROJECT_SOURCE_FILES_INC}
+    ${PROJECT_SOURCE_FILES_SRC}
 )
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Eigen3_LIBRARIES} ${OpenCV_LIBS} ${GLOG_LIBRARY} ${CERES_LIBRARIES})
+add_dependencies(${PROJECT_NAME}
+    ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+		${PCL_LIBRARIES}
+		${Eigen3_LIBRARIES}
+		${OpenCV_LIBRARIES}
+		${GLOG_LIBRARY}
+		${CERES_LIBRARIES}
+)
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 # tests

@@ -12,12 +12,12 @@
   <buildtool_depend>catkin</buildtool_depend>
   <test_depend>gtest</test_depend>
 
-  <depend>Boost</depend>
+  <depend>boost</depend>
   <depend>Eigen3</depend>
   <depend>OpenCV</depend>
   <depend>Glog</depend>
   <depend>ceres-solver</depend>
-  <depend>PCL</depend>
+  <depend>pcl</depend>
   <depend>yaml-cpp</depend>
 
 </package>
