@@ -22,7 +22,19 @@ It is initialized with a camera model and an optional parameters structure.
 Please refer to 'parameters.hpp' for hints on the different parameters.
 To solve a depth upsampling problem a 'Data' structure must be provided that consists of a 3D point cloud, a feature image and a transform between laser and camera.
 
-Please refer to the 'mrf_tool' for exemplary applications.
+This package currently contains two standalone applications:
+- `eval_planes`
+- `eval_scenenet`
+
+### `eval_planes`
+
+This is a simple program showing our upsampling approach on an artificially generated set of planes.
+Please follow the command line help, starting the program with the `--help` argument.
+
+### `eval_scenenet`
+
+We evaluated our approach on the [scenenet dataset](https://arxiv.org/abs/1612.05079) which is publicly available.
+Please follow the command line help, starting the program with the `--help` argument.
 
 ## History
 
@@ -30,23 +42,9 @@ Please refer to the 'mrf_tool' for exemplary applications.
 
 ## Credits
 
-Sascha Wirges <wirges(at)fzi.de>, Matthias Mayr <mayr(at)fzi.de>, Björn Roxin <roxinbj(at)gmail.com>
+Sascha Wirges <wirges(at)fzi.de>,
+Matthias Mayr <mayr(at)fzi.de>,
+Björn Roxin <roxinbj(at)gmail.com>
 
 Partly based on the work of James Diebel and Sebastian Thrun, Stanford University.
 
-## License
-
-Copyright (C) 2017  FZI Forschungszentrum Informatik
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.

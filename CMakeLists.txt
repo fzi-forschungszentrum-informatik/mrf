@@ -15,6 +15,7 @@ find_package(Boost REQUIRED COMPONENTS
 )
 find_package(OpenCV REQUIRED)
 find_package(Glog REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 file(GLOB_RECURSE PROJECT_HEADER_FILES_INC RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "include/*.h" "include/*.hpp")
 file(GLOB PROJECT_SOURCE_FILES_INC RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "src/*.h" "src/*.hpp")
@@ -54,14 +55,17 @@ add_dependencies(${PROJECT_NAME}
     ${catkin_EXPORTED_TARGETS}
 )
 target_link_libraries(${PROJECT_NAME}
-    ${catkin_LIBRARIES}
-		${PCL_LIBRARIES}
-		${Eigen3_LIBRARIES}
-		${OpenCV_LIBRARIES}
-		${GLOG_LIBRARY}
-		${CERES_LIBRARIES}
+        ${catkin_LIBRARIES}
+        ${PCL_LIBRARIES}
+        ${Eigen3_LIBRARIES}
+        ${OpenCV_LIBRARIES}
+        ${GLOG_LIBRARY}
+        ${CERES_LIBRARIES}
+        ${yaml-cpp_LIBRARIES}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+
+add_subdirectory(apps)
 
 # tests
 #if(CATKIN_ENABLE_TESTING)
