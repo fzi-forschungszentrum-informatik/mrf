@@ -45,7 +45,6 @@ link_directories(
   ${Eigen3_LIBRARY_DIRS}
 )
 
-# Declare a cpp library
 add_library(${PROJECT_NAME}
     ${PROJECT_HEADER_FILES_INC}
     ${PROJECT_SOURCE_FILES_INC}
@@ -67,13 +66,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 add_subdirectory(apps)
 
-# tests
-#if(CATKIN_ENABLE_TESTING)
-#  catkin_add_gtest(${PROJECT_NAME}_gtest test/my_test.cpp)
-#  if(TARGET ${PROJECT_NAME}_gtest)
-#   target_link_libraries(
-#      ${PROJECT_NAME}_gtest
-#      ${catkin_LIBRARIES}
-#    )
-#  endif()
-#endif()
+if(CATKIN_ENABLE_TESTING)
+        add_subdirectory(test)
+endif()

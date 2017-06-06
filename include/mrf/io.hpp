@@ -5,8 +5,8 @@
 
 #include <opencv2/core/version.hpp>
 #if CV_MAJOR_VERSION == 2
-#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/contrib/contrib.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #elif CV_MAJOR_VERSION == 3
 #include <opencv2/imgproc.hpp>
 #endif
@@ -104,8 +104,8 @@ void exportDepthImage(const Data<T>& d,
     int rows, cols;
     cam->getImageSize(cols, rows);
     cv::Mat img_depth{cv::Mat::zeros(rows, cols, cv::DataType<double>::type)};
-    const Eigen::Matrix3Xd pts_3d{
-        d.transform * d.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
+    const Eigen::Matrix3Xd pts_3d{d.transform *
+                                  d.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     const std::vector<bool> in_front{cam->getImagePoints(pts_3d, img_pts_raw)};
     for (size_t c = 0; c < in_front.size(); c++) {
@@ -116,12 +116,9 @@ void exportDepthImage(const Data<T>& d,
         cam->getViewingRay(Eigen::Vector2d(p.col, p.row), support, direction);
         const Eigen::Hyperplane<double, 3> plane(direction, pts_3d.col(c));
         img_depth.at<double>(p.row, p.col) =
-            (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) -
-             support)
-                .norm();
+            (Eigen::ParametrizedLine<double, 3>(support, direction).intersectionPoint(plane) - support).norm();
     }
-    exportImage(
-        createOutput(img_depth, normalize), p + "depth_", normalize, invert, apply_color_map);
+    exportImage(createOutput(img_depth, normalize), p + "depth_", normalize, invert, apply_color_map);
 }
 
 /** @brief Simple interpolation. */
@@ -167,9 +164,8 @@ void exportOverlay(const Data<T>& d,
     int rows, cols;
     cam->getImageSize(cols, rows);
     cv::Mat img{d.image};
-    const int channels{img.channels()};
-    const Eigen::Matrix3Xd pts_3d{
-        d.transform * d.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
+    const Eigen::Matrix3Xd pts_3d{d.transform *
+                                  d.cloud->getMatrixXfMap().template topRows<3>().template cast<double>()};
 
     Eigen::Matrix2Xd img_pts_raw{Eigen::Matrix2Xd::Zero(2, pts_3d.cols())};
     const std::vector<bool> in_front{cam->getImagePoints(pts_3d, img_pts_raw)};
@@ -183,12 +179,11 @@ void exportOverlay(const Data<T>& d,
             d = std::min(d, d_max);
             d = std::max(d, d_min);
             const double d_rel{2 * ((d - d_min) / (d_max - d_min) - 0.5)};
-            cv::circle(
-                img,
-                cv::Point(p.col, p.row),
-                2,
-                cv::Scalar(255 * (1 - blue(d_rel)), 255 * green(d_rel), 255 * (1 - red(d_rel))),
-                -1);
+            cv::circle(img,
+                       cv::Point(p.col, p.row),
+                       2,
+                       cv::Scalar(255 * (1 - blue(d_rel)), 255 * green(d_rel), 255 * (1 - red(d_rel))),
+                       -1);
         }
     }
     exportImage(createOutput(img, normalize), p + "depth_", normalize);

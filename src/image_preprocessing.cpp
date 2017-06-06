@@ -49,7 +49,6 @@ cv::Mat blur(const cv::Mat& in, const size_t& kernel_size) {
  *  @return Normalized image */
 cv::Mat norm_color(const cv::Mat& in, const bool use_instance) {
     using namespace cv;
-    const int channels{in.channels()};
     std::vector<Mat> in_split(in.channels());
     std::vector<Mat> out_split;
     Mat out;
